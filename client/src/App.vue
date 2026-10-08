@@ -1,0 +1,1 @@
+<template><AppNavigation/><main class="container py-4 pb-5"><RouterView/></main><footer class="container small text-muted pb-4">CareCircle • Sample family and care information are fictional • UI handoff prototype</footer></template><script setup>import AppNavigation from './components/layout/AppNavigation.vue'</script>
