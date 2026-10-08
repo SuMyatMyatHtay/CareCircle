@@ -1,0 +1,17 @@
+{
+  "name": "carecircle-server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "mongoose": "^8.9.5",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2"
+  }
+}
