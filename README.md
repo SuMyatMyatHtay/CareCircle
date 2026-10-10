@@ -10,7 +10,7 @@ CareCircle is a family-care coordination web application for sharing caregiving 
 
 | Resource                                           | Link                                                                                                                                                                            |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Task allocation & progress tracker                 | **[CareCircle Task Allocation — INSERT GOOGLE SHEET LINK](https://docs.google.com/spreadsheets/d/1q4JjWnC077RomNEm6pJjR2DpeRkb-RZyNa4O9ssRjLk/edit?gid=77767454#gid=77767454)** |
+| Task allocation & progress tracker                 | **[CareCircle Task Allocation](https://docs.google.com/spreadsheets/d/1q4JjWnC077RomNEm6pJjR2DpeRkb-RZyNa4O9ssRjLk/edit?gid=77767454#gid=77767454)** |
 | Wireframes (Figma)                                 | [Open wireframes](https://www.figma.com/design/oo8lDXmN1OIF7zJ75SPn3a/Preline-UI-Figma--Community-?node-id=299804-16564&t=bZtps8beujV1iiui-1)                                   |
 | Project proposal, specifications & database design | [Team Google Doc](https://docs.google.com/document/d/1C0RIz2fLhAb1berm-wca4x8c-Li_FNyRMWFHNJV37T8/edit?tab=t.0)                                                                 |
 
