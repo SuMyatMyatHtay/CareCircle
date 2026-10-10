@@ -3,6 +3,7 @@ import FamilyHomeView from '../features/family/views/FamilyHomeView.vue'
 import FamilySettingsView from '../features/settings/views/FamilySettingsView.vue'
 import JoinFamilyView from '../features/auth/views/JoinFamilyView.vue'
 import LoginView from '../features/auth/views/LoginView.vue'
+import SignupView from '../features/auth/views/SignupView.vue'
 import MyTasksView from '../features/my-tasks/views/MyTasksView.vue'
 import OpenTasksView from '../features/tasks/views/OpenTasksView.vue'
 import RecipientHubView from '../features/recipients/views/RecipientHubView.vue'
@@ -16,6 +17,7 @@ import TransitModeView from '../features/transit/views/TransitModeView.vue'
 const routes = [
   { path: '/', component: FamilyHomeView },
   { path: '/login', component: LoginView },
+  { path: '/signup', component: SignupView },
   { path: '/join-family', component: JoinFamilyView },
   { path: '/family', component: FamilyHomeView },
   { path: '/my-tasks', component: MyTasksView },
