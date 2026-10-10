@@ -1,3 +1,4 @@
+// Owner: Su Myat Myat Htay (Sera)
 
 import { authenticateUser, findCurrentUser } from './service.js'
 

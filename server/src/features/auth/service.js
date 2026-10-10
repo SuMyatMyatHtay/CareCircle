@@ -1,7 +1,8 @@
+// Owner: Su Myat Myat Htay (Sera)
 
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import User from './User.js'
+import User from './User.model.js'
 
 export function toPublicUser(user) {
   return {
