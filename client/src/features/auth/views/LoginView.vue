@@ -59,7 +59,7 @@ async function handleLogin() {
     sessionStorage.setItem('user', JSON.stringify(response.user))
 
     // 6. Navigate to family selection.
-    await router.push('/family-selection')
+    await router.push('/family')
 
   } catch (error) {
     loginError.value = getLoginErrorMessage(error)
