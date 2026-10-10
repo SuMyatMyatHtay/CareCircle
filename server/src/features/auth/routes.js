@@ -1,6 +1,14 @@
+
 import { Router } from 'express'
+import { login, getCurrentUser } from './controller.js'
+import { requireAuth } from '../../middleware/requireAuth.js'
+
 const router = Router()
-// These endpoints are placeholders; they do not yet implement business logic.
-router.post('/register', (_req, res) => res.status(501).json({ error: 'Not implemented', module: 'auth' }))
-router.post('/login', (_req, res) => res.status(501).json({ error: 'Not implemented', module: 'auth' }))
+
+// Public
+router.post('/login', login)
+
+// Protected
+router.get('/me', requireAuth, getCurrentUser)
+
 export default router

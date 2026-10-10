@@ -34,7 +34,7 @@ import './auth-design.css'
       <section class="cc-auth-main" aria-label="Account access">
         <div class="cc-auth-mobile-brand"><RouterLink class="cc-auth-brand" to="/login"><span class="cc-auth-mark">♡</span><span>Care<span class="cc-brand-accent">Circle</span></span></RouterLink></div>
         <div class="cc-auth-form"><div class="auth-card"><slot /></div></div>
-        <p class="cc-auth-foot">Made with <span>♥</span> for families everywhere.</p>
+        <p class="cc-auth-foot d-md-none">Made with <span>♥</span> for families everywhere.</p>
       </section>
     </div>
   </main>
