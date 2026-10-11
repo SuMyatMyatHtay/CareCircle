@@ -1,1 +1,21 @@
-<script setup>defineProps({id:{type:String,required:true}});const tabs=[['overview','Overview'],['tasks','Tasks'],['log','Care log'],['profile','Profile']]</script><template><nav class="nav nav-pills my-4 flex-wrap gap-2"><RouterLink v-for="[slug,label] in tabs" :key="slug" :to="`/recipients/${id}/${slug}`" class="nav-link" active-class="active">{{label}}</RouterLink></nav></template>
+<script setup>
+defineProps({ id: { type: String, required: true } })
+const tabs = [
+  ['overview', 'Overview'],
+  ['tasks', 'Tasks'],
+  ['log', 'Care log'],
+  ['profile', 'Profile'],
+]
+</script>
+<template>
+  <nav class="nav nav-pills my-4 flex-wrap gap-2">
+    <RouterLink
+      v-for="[slug, label] in tabs"
+      :key="slug"
+      :to="`/recipients/${id}/${slug}`"
+      class="nav-link"
+      active-class="active"
+      >{{ label }}</RouterLink
+    >
+  </nav>
+</template>

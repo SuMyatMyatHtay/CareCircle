@@ -1,3 +1,4 @@
+// Owner: SeungHak (F)
 import { Router } from 'express'
 const router = Router()
 // These endpoints are placeholders; they do not yet implement business logic.

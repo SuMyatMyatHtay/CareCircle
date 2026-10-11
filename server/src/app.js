@@ -3,7 +3,6 @@ import express from 'express'
 import cors from 'cors'
 import mongoose from 'mongoose'
 import apiRouter from './routes/index.js'
-import authRoutes from './features/auth/routes.js'
 
 export const app = express()
 
@@ -53,8 +52,6 @@ app.get('/api/health/db', async (_req, res) => {
 
 // Other API routes
 app.use('/api', apiRouter)
-
-app.use('/api/auth', authRoutes)
 
 // Global error handler
 app.use((err, _req, res, _next) => {
