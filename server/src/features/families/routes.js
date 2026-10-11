@@ -20,17 +20,9 @@ const member = [requireAuth, requireFamilyMember]
 const admin = [requireAuth, requireFamilyMember, requireFamilyAdmin]
 
 // ---- A (Sera): logged in, not tied to one family ----
-// Get the logged-in user's families
-router.get('/mine', getMyFamilies)
+router.get('/mine', getMyFamilies)      // Get the logged-in user's families
+router.post('/', createFamily)          // Create a new family
 
-// Create a new family
-router.post('/', createFamily)
-router.get('/', requireAuth, notImplemented)          // my families (family switcher)
-router.post('/', requireAuth, notImplemented)         // create a family; creator becomes admin
-router.post('/join', requireAuth, notImplemented)     // { inviteCode, relationship? }
-
-// ---- A (Sera): one family ----
-router.get('/:familyId', member, notImplemented)      // family details + members
 
 // ---- B (SangYoon): settings and members ----
 router.patch('/:familyId', admin, notImplemented)                 // { name }

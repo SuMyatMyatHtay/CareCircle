@@ -25,7 +25,7 @@ const routes = [
   { path: '/join-family', component: JoinFamilyView },
   { path: '/family', component: FamilyHomeView },
   { path: '/home', name: 'home', component: EmptyFamilyHomeView },
-{ path: '/create-family', name: 'create-family', component: CreateFamilyView },
+  { path: '/create-family', name: 'create-family', component: CreateFamilyView },
   { path: '/my-tasks', component: MyTasksView },
   { path: '/open-tasks', component: OpenTasksView },
   { path: '/family/settings', component: FamilySettingsView },
