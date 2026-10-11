@@ -1,6 +1,40 @@
 <script setup>
-import {useRoute} from 'vue-router';import {recipientById,taskById,milestones} from '../../../data/mock.js';const route=useRoute();const id=route.params.recipientId;const person=recipientById(id);const task=taskById(route.params.taskId)
+import { useRoute } from 'vue-router'
+import { recipientById, taskById, milestones } from '../../../data/mock.js'
+const route = useRoute()
+const id = route.params.recipientId
+const person = recipientById(id)
+const task = taskById(route.params.taskId)
 </script>
 <template>
-<RouterLink :to="`/recipients/${id}/tasks/${task.id}`">← Task detail</RouterLink><div class="page-head mt-3"><div class="eyebrow">Transit mode · Demo timeline</div><h1>{{task.title}}</h1><p class="muted">{{person.name}} · {{task.location}}</p></div><div class="row g-3"><div class="col-lg-8"><div class="card p-4"><h4>Journey progress</h4><div class="timeline mt-4"><div v-for="m in milestones" :key="m.title" class="timeline-item" :class="{done:m.done}"><div class="fw-semibold">{{m.title}}</div><div class="muted small">{{m.time}}</div></div></div></div></div><div class="col-lg-4"><div class="card p-4"><h5>Update family</h5><p class="muted">Milestones are sample records for UI handoff.</p><button class="btn btn-outline-primary pointer-disabled" disabled>Mark next milestone</button><div class="demo-note mt-3">Real journey state, notifications and location permission are future work. No live location tracking is active.</div></div></div></div>
+  <RouterLink :to="`/recipients/${id}/tasks/${task.id}`">← Task detail</RouterLink>
+  <div class="page-head mt-3">
+    <div class="eyebrow">Transit mode · Demo timeline</div>
+    <h1>{{ task.title }}</h1>
+    <p class="muted">{{ person.name }} · {{ task.location }}</p>
+  </div>
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <div class="card p-4">
+        <h4>Journey progress</h4>
+        <div class="timeline mt-4">
+          <div v-for="m in milestones" :key="m.title" class="timeline-item" :class="{ done: m.done }">
+            <div class="fw-semibold">{{ m.title }}</div>
+            <div class="muted small">{{ m.time }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card p-4">
+        <h5>Update family</h5>
+        <p class="muted">Milestones are sample records for UI handoff.</p>
+        <button class="btn btn-outline-primary pointer-disabled" disabled>Mark next milestone</button>
+        <div class="demo-note mt-3">
+          Real journey state, notifications and location permission are future work. No live location tracking is
+          active.
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
