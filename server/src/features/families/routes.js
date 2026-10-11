@@ -1,7 +1,16 @@
 import { Router } from 'express'
+import { requireAuth } from '../../middleware/requireAuth.js'
+import { createFamily, getMyFamilies } from './controller.js'
+
 const router = Router()
-// These endpoints are placeholders; they do not yet implement business logic.
-router.get('/', (_req, res) => res.status(501).json({ error: 'Not implemented', module: 'families' }))
-router.post('/', (_req, res) => res.status(501).json({ error: 'Not implemented', module: 'families' }))
-router.post('/:id/join', (_req, res) => res.status(501).json({ error: 'Not implemented', module: 'families' }))
+
+// All family routes require authentication
+router.use(requireAuth)
+
+// Get the logged-in user's families
+router.get('/mine', getMyFamilies)
+
+// Create a new family
+router.post('/', createFamily)
+
 export default router

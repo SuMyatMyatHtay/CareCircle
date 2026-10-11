@@ -13,13 +13,19 @@ import RecipientProfileView from '../features/recipients/views/RecipientProfileV
 import RecipientTasksView from '../features/tasks/views/RecipientTasksView.vue'
 import TaskDetailView from '../features/tasks/views/TaskDetailView.vue'
 import TransitModeView from '../features/transit/views/TransitModeView.vue'
+import EmptyFamilyHomeView from '../features/family/views/EmptyFamilyHomeView.vue'
+import CreateFamilyView from '../features/family/views/CreateFamilyView.vue'
 
 const routes = [
   { path: '/', component: FamilyHomeView },
   { path: '/login', component: LoginView },
   { path: '/signup', component: SignupView },
+  { path: '/', component: FamilyHomeView },
+  { path: '/family', component: FamilyHomeView },
   { path: '/join-family', component: JoinFamilyView },
   { path: '/family', component: FamilyHomeView },
+  { path: '/home', name: 'home', component: EmptyFamilyHomeView },
+{ path: '/create-family', name: 'create-family', component: CreateFamilyView },
   { path: '/my-tasks', component: MyTasksView },
   { path: '/open-tasks', component: OpenTasksView },
   { path: '/family/settings', component: FamilySettingsView },
