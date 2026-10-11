@@ -1,4 +1,4 @@
-// Owner: Sera (A) for families; SangYoon (B) for members and settings.
+// Owner: Sera (A); members and settings: SangYoon (B)
 // Only family-level routes live here. Feature routes (tasks, recipients,
 // logs, transit) are mounted in routes/index.js.
 import { Router } from 'express'

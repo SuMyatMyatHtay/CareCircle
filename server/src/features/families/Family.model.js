@@ -1,4 +1,4 @@
-// Owner: Marcus
+// Owner: Sera (A)
 // Define and export the Mongoose Family schema/model here.
 // Owner: Sera (package A)
 // Shape matches server/seed.js and the "CareCircle database design" doc.
