@@ -1,11 +1,21 @@
 <script setup>
 import '../../../styles/emptyFamilyHomeView.css'
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useActiveFamily } from '../../../composables/useActiveFamily.js'
+import HomeHeader from '../components/HomeHeader.vue'
+import SectionCard from '../../../components/common/SectionCard.vue'
+import NewTaskButton from '../../tasks/components/NewTaskButton.vue'
+import TaskList from '../../tasks/components/TaskList.vue'
+import { getFamilyTasks, getTaskErrorMessage } from '../../tasks/services/tasksApi.js'
+import TransitBanner from '../components/placeholders/TransitBanner.vue'
+import RecipientCard from '../components/placeholders/RecipientCard.vue'
+import RecentUpdates from '../components/placeholders/RecentUpdates.vue'
+import LiveUpdateToast from '../components/placeholders/LiveUpdateToast.vue'
+import * as placeholder from '../components/placeholders/placeholderData.js'
 
 // Families, selection, loading and errors come from the shared layout state.
 // The sidebar and the family loading now live in AppLayout.vue.
-const { families, selectedFamily, isLoading, errorMessage, loadFamilies } = useActiveFamily()
+const { families, selectedFamilyId, selectedFamily, isLoading, errorMessage, loadFamilies } = useActiveFamily()
 
 const user = ref({})
 
@@ -28,21 +38,72 @@ const greeting = computed(() => {
   if (hour < 18) return 'Good afternoon'
   return 'Good evening'
 })
+
+// ---- Tasks (D): "Today across the family" ----
+const tasks = ref([])
+const tasksLoading = ref(false)
+const tasksError = ref('')
+
+async function loadTasks() {
+  const familyId = selectedFamilyId.value
+  tasksError.value = ''
+
+  if (!familyId) {
+    tasks.value = []
+    return
+  }
+
+  tasksLoading.value = true
+  try {
+    const result = await getFamilyTasks(familyId)
+    // Ignore the reply if the user switched family while it was loading
+    if (familyId === selectedFamilyId.value) tasks.value = result
+  } catch (error) {
+    if (familyId === selectedFamilyId.value) {
+      tasks.value = []
+      tasksError.value = getTaskErrorMessage(error)
+    }
+  } finally {
+    if (familyId === selectedFamilyId.value) tasksLoading.value = false
+  }
+}
+
+onMounted(loadTasks)
+// Reload when the user picks another family in the sidebar
+watch(selectedFamilyId, loadTasks)
+
+const openTaskCount = computed(() =>
+  tasks.value.filter((task) => task.status === 'open').length
+)
+
+const todayLabel = new Date().toLocaleDateString('en-SG', {
+  weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Singapore'
+})
+
+const subtitle = computed(() => {
+  if (!selectedFamily.value) return 'Care together, closer always ♡'
+  if (tasksLoading.value || tasksError.value) return todayLabel
+
+  const count = openTaskCount.value
+  return count
+    ? `${todayLabel} · ${count} ${count === 1 ? 'task still needs' : 'tasks still need'} someone`
+    : `${todayLabel} · every task has someone ♡`
+})
+
+// TODO(D): open the task form once it is built
+function openNewTask() { }
+
+// ---- Placeholder sections (owners noted in placeholderData.js) ----
+// const showToast = ref(true)
 </script>
 
 <template>
   <div class="home-page">
-    <header class="main-header">
-      <div>
-        <h1>{{ greeting }}, {{ firstName }}!</h1>
-        <p>
-          {{ selectedFamily
-            ? `Welcome to ${selectedFamily.name} ♡`
-            : 'Care together, closer always ♡'
-          }}
-        </p>
-      </div>
-    </header>
+    <HomeHeader :title="`${greeting}, ${firstName}`" :subtitle="subtitle">
+      <template #actions>
+        <NewTaskButton v-if="selectedFamily" @create="openNewTask" />
+      </template>
+    </HomeHeader>
 
     <!-- LOADING -->
     <div v-if="isLoading" class="status-screen" role="status">
@@ -93,9 +154,30 @@ const greeting = computed(() => {
     </section>
 
     <!-- FAMILY EXISTS, NO DASHBOARD CONTENT YET -->
-    <section v-else class="family-workspace">
-      <!-- Actual care recipients, tasks, activity, etc.
-           will be implemented here later. -->
-    </section>
+    <div v-else class="family-workspace">
+      <!-- Placeholder (E): live transit -->
+      <TransitBanner :session="placeholder.transitSession" />
+
+      <!-- Placeholder (C): care recipients -->
+      <h2 class="section-heading">Who are we caring for?</h2>
+      <div class="recipient-grid">
+        <RecipientCard v-for="recipient in placeholder.recipients" :key="recipient.id" :recipient="recipient" />
+      </div>
+
+      <div class="dashboard-columns">
+        <!-- D: the family's tasks (live data) -->
+        <SectionCard title="Today across the family">
+          <TaskList :tasks="tasks" :is-loading="tasksLoading" :error-message="tasksError"
+            max-height="60vh" @retry="loadTasks" />
+        </SectionCard>
+
+        <!-- Placeholder (F): activity feed -->
+        <RecentUpdates :updates="placeholder.recentUpdates" />
+      </div>
+
+      <!-- Placeholder (D): live update toast -->
+      <LiveUpdateToast v-if="showToast" :avatar="placeholder.liveToast.avatar" :message="placeholder.liveToast.message"
+        @close="showToast = false" />
+    </div>
   </div>
 </template>

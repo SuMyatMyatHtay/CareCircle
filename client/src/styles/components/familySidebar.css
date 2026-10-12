@@ -1,7 +1,7 @@
 .family-sidebar {
     width: 264px;
     flex-shrink: 0;
-    min-height: 100vh;
+    height: 100vh;
     background: #fff;
     border-right: 1px solid #E5E7EB;
     display: flex;
@@ -127,6 +127,7 @@
 
 .sidebar-nav {
     flex: 1;
+    min-height: 0; /* lets the nav scroll if the screen is too short */
     padding-top: 20px;
 }
 
@@ -244,8 +245,9 @@
 
 
 @media (max-width: 767px) {
-    .fam  ily-sidebar {
+    .family-sidebar {
         width: 100%;
+        height: auto;
         min-height: auto;
         border-right: none;
         border-bottom: 1px solid #E5E7EB;

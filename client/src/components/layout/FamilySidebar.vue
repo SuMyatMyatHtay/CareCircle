@@ -70,7 +70,8 @@ async function handleLogout(){
 </script>
 
 <template>
-    <aside class="family-sidebar">
+    <!-- sticky-md-top + align-self-start: stays one screen tall while the page scrolls -->
+    <aside class="family-sidebar sticky-md-top align-self-start">
         <RouterLink to="/home" class="sidebar-brand">
         <span class="brand-icon">
             <i class="bi bi-heart-pulse"></i>
@@ -133,7 +134,7 @@ async function handleLogout(){
         </div>
 
         <!-- NAVIGATION -->
-        <nav class="sidebar-nav" aria-label="Family navigation">
+        <nav class="sidebar-nav overflow-y-auto" aria-label="Family navigation">
         <RouterLink to="/home" class="nav-item active">
             <i class="bi bi-house-door"></i>
             Family home
