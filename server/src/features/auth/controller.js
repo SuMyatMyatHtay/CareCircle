@@ -17,6 +17,7 @@ export async function login(req, res) {
         message: 'Email and password are required'
       })
     }
+    
 
     const result = await authenticateUser(email, password)
 

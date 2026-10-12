@@ -8,7 +8,7 @@
         <p class="muted">Use a family invitation code to share care plans and tasks.</p>
         <label class="form-label">Invitation code</label><input class="form-control" value="TAN-2026" readonly />
         <p class="demo-note mt-3">Demo only: invitation validation will be implemented by the authentication owner.</p>
-        <RouterLink class="btn btn-primary" to="/family">Preview Tan Family →</RouterLink>
+        <RouterLink class="btn btn-primary" to="/home">← Back to home</RouterLink>
       </div>
     </div>
   </div>
