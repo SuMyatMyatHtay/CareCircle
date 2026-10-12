@@ -2,13 +2,38 @@ import 'dotenv/config'
 import { app } from './app.js'
 import { connectDatabase } from './config/database.js'
 
-const port = Number(process.env.PORT || 3000)
-// The scaffold starts even without MongoDB configured. Feature endpoints are not implemented.
+let connectionPromise
+
 if (process.env.MONGODB_URI) {
-  connectDatabase(process.env.MONGODB_URI).catch((error) => {
+  connectionPromise = connectDatabase(
+    process.env.MONGODB_URI
+  ).catch((error) => {
+    connectionPromise = undefined
     console.error('MongoDB connection failed:', error.message)
+    throw error
   })
-} else {
-  console.warn('MONGODB_URI not set: database is not connected')
 }
-app.listen(port, () => console.log(`CareCircle API at http://localhost:${port}`))
+
+app.use(async (_req, res, next) => {
+  if (!connectionPromise) return next()
+
+  try {
+    await connectionPromise
+    next()
+  } catch (error) {
+    res.status(503).json({
+      success: false,
+      message: 'Database unavailable'
+    })
+  }
+})
+
+if (!process.env.VERCEL) {
+  const port = Number(process.env.PORT || 3000)
+
+  app.listen(port, () => {
+    console.log(`CareCircle API running on port ${port}`)
+  })
+}
+
+export default app
