@@ -19,7 +19,7 @@ const props = defineProps({
     user: { type: Object, default: () => ({}) }
 })
 
-const emit = defineEmits(['select-family', 'navigate'])
+const emit = defineEmits(['select-family', 'navigate', 'collapse'])
 
 const showSwitcher = ref(false)
 

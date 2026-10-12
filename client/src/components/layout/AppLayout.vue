@@ -3,6 +3,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import FamilySidebar from './FamilySidebar.vue'
 import { useActiveFamily } from '../../composables/useActiveFamily.js'
+import '../../styles/appLayout.css'
 
 const { families, selectedFamilyId, loadFamilies, selectFamily } =
   useActiveFamily()
@@ -67,6 +68,7 @@ onUnmounted(() => {
         :user="user"
         @select-family="selectFamily"
         @navigate="closeMobileSidebar"
+        @collapse="sidebarOpen = false"
       />
     </div>
 
@@ -76,10 +78,10 @@ onUnmounted(() => {
       <header class="app-topbar d-flex align-items-center justify-content-between px-3 px-md-4">
         <div class="d-flex align-items-center gap-3">
           <button
+            v-if="!sidebarOpen"
             type="button"
             class="btn app-menu-button"
-            :aria-expanded="sidebarOpen"
-            aria-label="Toggle navigation menu"
+            aria-label="Open navigation menu"
             @click="toggleSidebar"
           >
             <i class="bi bi-list fs-4"></i>
@@ -110,100 +112,3 @@ onUnmounted(() => {
   </div>
 </template>
 
-<style scoped>
-.app-layout {
-  min-height: 100vh;
-  background: #FCFBF8;
-  color: #2F2F2F;
-  font-family: 'Nunito', system-ui, sans-serif;
-}
-
-.sidebar-wrapper {
-  width: 264px;
-  flex: 0 0 264px;
-  min-width: 0;
-  overflow: hidden;
-  transition: width 0.25s ease, flex-basis 0.25s ease;
-}
-
-.sidebar-wrapper.sidebar-hidden {
-  width: 0;
-  flex-basis: 0;
-}
-
-.app-content {
-  min-width: 0;
-}
-
-.app-topbar {
-  min-height: 70px;
-  background: white;
-  border-bottom: 1px solid #E5EDE6;
-}
-
-.app-menu-button {
-  color: #398A51;
-  background: #E8F5E9;
-  border: none;
-}
-
-.app-menu-button:hover {
-  background: #D6ECD9;
-}
-
-.app-topbar-brand {
-  color: #398A51;
-  font-size: 19px;
-}
-
-.app-profile-button {
-  color: #398A51;
-  border: 1px solid #B5DDC0;
-}
-
-.app-profile-button:hover {
-  background: #E8F5E9;
-  color: #2E7D43;
-}
-
-.app-main {
-  padding: 0 32px 32px;
-}
-
-@media (max-width: 767.98px) {
-  .sidebar-wrapper,
-  .sidebar-wrapper.sidebar-hidden {
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    z-index: 1050;
-    width: 264px;
-    flex-basis: 264px;
-    overflow: visible;
-    transition: transform 0.25s ease;
-  }
-
-  .sidebar-wrapper.sidebar-hidden {
-    transform: translateX(-100%);
-    pointer-events: none;
-  }
-
-  .sidebar-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 1040;
-    background: rgba(33, 48, 38, 0.35);
-  }
-
-  .app-main {
-    padding: 0 18px 25px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sidebar-wrapper {
-    transition: none;
-  }
-}
-</style>
