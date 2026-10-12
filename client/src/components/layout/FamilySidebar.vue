@@ -11,7 +11,7 @@ import {
 const router = useRouter() 
 const isLoggingOut = ref(false)
 const logoutError = ref('')
-
+const copiedInviteCode = ref('')
 
 const props = defineProps({
     families: { type: Array, default: () => [] },
@@ -19,7 +19,7 @@ const props = defineProps({
     user: { type: Object, default: () => ({}) }
 })
 
-const emit = defineEmits(['select-family'])
+const emit = defineEmits(['select-family', 'navigate'])
 
 const showSwitcher = ref(false)
 
@@ -39,7 +39,25 @@ const userRole = computed(() => {
 
 function selectFamily(familyId) {
     emit('select-family', familyId)
+    emit('navigate')
     showSwitcher.value = false
+}
+
+async function copyInviteCode(inviteCode) {
+    if (!inviteCode) return
+
+    try {
+        await navigator.clipboard.writeText(inviteCode)
+        copiedInviteCode.value = inviteCode
+
+        setTimeout(() => {
+            if (copiedInviteCode.value === inviteCode) {
+                copiedInviteCode.value = ''
+            }
+        }, 1500)
+    } catch (error) {
+        console.error('Failed to copy invite code:', error)
+    }
 }
 
 async function handleLogout(){ 
@@ -70,9 +88,8 @@ async function handleLogout(){
 </script>
 
 <template>
-    <!-- sticky-md-top + align-self-start: stays one screen tall while the page scrolls -->
-    <aside class="family-sidebar sticky-md-top align-self-start">
-        <RouterLink to="/home" class="sidebar-brand">
+    <aside class="family-sidebar">
+        <RouterLink to="/home" class="sidebar-brand" @click="emit('navigate')">
         <span class="brand-icon">
             <i class="bi bi-heart-pulse"></i>
         </span>
@@ -89,10 +106,25 @@ async function handleLogout(){
         >
             <span>
             <strong>{{ selectedFamily?.name || 'My Families' }}</strong>
-            <small v-if="selectedFamily">
-                {{ memberCount }} {{ memberCount === 1 ? 'member' : 'members' }}
-                · {{ selectedFamily.inviteCode }}
-            </small>
+            <div v-if="selectedFamily" class="family-selector-meta">
+                <small>
+                    {{ memberCount }} {{ memberCount === 1 ? 'member' : 'members' }}
+                </small>
+
+                <span
+                    class="invite-code-chip"
+                    role="button"
+                    tabindex="0"
+                    title="Click to copy invite code"
+                    @click.stop="copyInviteCode(selectedFamily.inviteCode)"
+                >
+                    <i
+                        class="bi"
+                        :class="copiedInviteCode === selectedFamily.inviteCode ? 'bi-check2' : 'bi-copy'"
+                    ></i>
+                    {{ copiedInviteCode === selectedFamily.inviteCode ? 'Copied!' : selectedFamily.inviteCode }}
+                </span>
+            </div>
             <small v-else>No family selected</small>
             </span>
             <i class="bi bi-chevron-down"></i>
@@ -123,7 +155,7 @@ async function handleLogout(){
 
             <div class="switcher-divider"></div>
 
-            <RouterLink to="/create-family" class="switcher-action">
+            <RouterLink to="/create-family" class="switcher-action" >
             <i class="bi bi-plus-lg"></i> Create a new family
             </RouterLink>
 
@@ -135,7 +167,7 @@ async function handleLogout(){
 
         <!-- NAVIGATION -->
         <nav class="sidebar-nav overflow-y-auto" aria-label="Family navigation">
-        <RouterLink to="/home" class="nav-item active">
+        <RouterLink to="/home" class="nav-item active" active-class="active" @click="emit('navigate')">
             <i class="bi bi-house-door"></i>
             Family home
         </RouterLink>
@@ -166,35 +198,42 @@ async function handleLogout(){
 
         <!-- BOTTOM AREA -->
         <div class="sidebar-bottom">
-        <div v-if="selectedFamily" class="nav-item unavailable">
-            <i class="bi bi-gear"></i>
-            Family settings
-            <span class="coming-tag">Soon</span>
-        </div>
+            <div v-if="selectedFamily" class="nav-item unavailable">
+                <i class="bi bi-gear"></i>
+                Family settings
+                <span class="coming-tag">Soon</span>
+            </div>
+            <RouterLink to="/profile" class="nav-item" active-class="active" @click="emit('navigate')">
+                <i class="bi bi-person-circle"></i>
+                My profile
+            </RouterLink>
 
-        <div class="profile-row">
-            <span class="profile-avatar">
-            {{ user.name?.charAt(0)?.toUpperCase() || '?' }}
-            </span>
-            <span class="profile-details">
-            <strong>{{ user.name || 'My Profile' }}</strong>
-            <small v-if="selectedFamily">{{ userRole }}</small>
-            <small v-else>Welcome to CareCircle</small>
-            </span>
-        </div>
-        <button
-            type="button"
-            class="logout-button"
-            :disabled="isLoggingOut"
-            @click="handleLogout"
-            >
-            <i class="bi bi-box-arrow-right"></i>
-            {{ isLoggingOut ? 'Logging out...' : 'Log out' }}
-        </button>
+            <RouterLink
+                to="/profile"
+                class="profile-row text-decoration-none text-reset"
+                >
+                <span class="profile-avatar">
+                {{ user.name?.charAt(0)?.toUpperCase() || '?' }}
+                </span>
+                <span class="profile-details">
+                <strong>{{ user.name || 'My Profile' }}</strong>
+                <small v-if="selectedFamily">{{ userRole }}</small>
+                <small v-else>Welcome to CareCircle</small>
+                </span>
+            </RouterLink>
+            <button
+                type="button"
+                class="logout-button"
+                :disabled="isLoggingOut"
+                @click="handleLogout"
+                >
+                <i class="bi bi-box-arrow-right"></i>
+                {{ isLoggingOut ? 'Logging out...' : 'Log out' }}
+            </button>
 
-        <p v-if="logoutError" class="logout-error" role="alert">
-            {{ logoutError }}
-        </p>
+            <p v-if="logoutError" class="logout-error" role="alert">
+                {{ logoutError }}
+            </p>
         </div>
     </aside>
 </template>

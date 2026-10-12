@@ -1,5 +1,5 @@
 // Owner: Su Myat Myat Htay (Sera)
-import { authenticateUser, findCurrentUser } from './service.js'
+import { authenticateUser, findCurrentUser, toPublicUser } from './service.js'
 import User from './User.model.js'
 
 export async function login(req, res) {
@@ -96,6 +96,77 @@ export async function logout(req, res) {
     return res.status(500).json({
       success: false,
       message: 'Unable to log out'
+    })
+  }
+}
+
+export async function updateProfile(req, res) {
+  try {
+    const { name, phone, preferredLang, telegramUsername, isCaretaker } = req.body ?? {}
+
+    if (
+      typeof name !== 'string' ||
+      name.trim().length < 2 ||
+      name.trim().length > 80
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name must be between 2 and 80 characters.'
+      })
+    }
+
+    if (
+      typeof phone !== 'string' ||
+      phone.trim().length > 30 ||
+      typeof telegramUsername !== 'string' ||
+      telegramUsername.trim().length > 32 ||
+      !['en', 'zh', 'ms', 'ta'].includes(preferredLang)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please check your profile details.'
+      })
+    }
+
+    if (typeof isCaretaker !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: 'Caretaker status must be true or false.'
+      })
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user.userId,
+      {
+        $set: {
+          name: name.trim(),
+          phone: phone.trim(),
+          preferredLang,
+          telegramUsername: telegramUsername.trim()
+        }
+      },
+      { new: true, runValidators: true }
+    )
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      })
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      user: toPublicUser(user)
+    })
+
+  } catch (error) {
+    console.error('Update profile error:', error)
+
+    return res.status(500).json({
+      success: false,
+      message: 'Unable to update profile'
     })
   }
 }

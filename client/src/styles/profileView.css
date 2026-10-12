@@ -1,0 +1,152 @@
+
+.profile-page {
+    max-width: 1250px;
+    margin: 0 auto;
+    padding-bottom: 40px;
+    font-family: 'Nunito', system-ui, sans-serif;
+    color: #2F2F2F;
+}
+
+.profile-page h1 {
+    font-size: clamp(28px, 3vw, 36px);
+}
+
+.profile-eyebrow {
+    color: #589B72;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 1px;
+}
+
+.profile-card {
+    border: 1px solid #F0EAE7;
+    box-shadow: 0 10px 28px rgba(93, 132, 106, 0.06);
+}
+
+.profile-initial {
+    width: 70px;
+    height: 70px;
+    display: grid;
+    place-items: center;
+    background: #E8F5E9;
+    color: #3A9254;
+    font-size: 29px;
+    font-weight: 900;
+}
+
+.profile-pill {
+    background: #E8F5E9;
+    color: #398A51;
+}
+
+.profile-green {
+    color: #6DBF7C;
+}
+
+.profile-outline {
+    border: 1px solid #B5DDC0;
+    color: #398A51;
+    background: white;
+}
+
+.profile-outline:hover {
+    background: #E8F5E9;
+    color: #2E7D43;
+}
+
+.profile-primary {
+    background: #6DBF7C;
+    border: 1px solid #6DBF7C;
+    color: white;
+}
+
+.profile-primary:hover:not(:disabled) {
+    background: #5AA96D;
+    border-color: #5AA96D;
+    color: white;
+}
+
+.profile-primary:disabled {
+    background: #B5DDBE;
+    border-color: #B5DDBE;
+    color: white;
+}
+
+.profile-page .form-control:focus,
+.profile-page .form-select:focus {
+    border-color: #6DBF7C;
+    box-shadow: 0 0 0 3px rgba(109, 191, 124, .15);
+}
+
+.profile-page .form-control:disabled,
+.profile-page .form-select:disabled {
+    background: #FAFAF8;
+    color: #626A65;
+    opacity: 1;
+}
+
+.btn-success {
+    background-color: #6DBF7C;
+    border-color: #6DBF7C;
+}
+
+.btn-success:hover:not(:disabled),
+.btn-success:focus:not(:disabled) {
+    background-color: #5AA96D;
+    border-color: #5AA96D;
+}
+
+.btn-success:disabled {
+    background-color: #B5DDBE;
+    border-color: #B5DDBE;
+}
+
+.pet-display {
+    background: linear-gradient(160deg, #E8F5E9, #FFF0EA);
+    border: 1px solid #E5EFE6;
+}
+
+.pet-stage {
+    position: relative;
+    width: min(100%, 260px);
+    aspect-ratio: 1;
+}
+
+.pet-placeholder {
+    background: rgba(255,255,255,.7);
+    border: 2px dashed #B6DAC1;
+    border-radius: 35px;
+    color: #75A985;
+}
+
+.pet-placeholder-icon {
+    font-size: 60px;
+    color: #E7AFA8;
+}
+
+.caretaker-option {
+  background: #F1F8F1;
+  border: 1px solid #DCECDD;
+}
+
+.caretaker-option .form-check-input:checked {
+  background-color: #6DBF7C;
+  border-color: #6DBF7C;
+}
+
+.caretaker-option .form-check-input:focus {
+  box-shadow: 0 0 0 3px rgba(109, 191, 124, 0.15);
+}
+
+@media (max-width: 575.98px) {
+    .profile-initial {
+      width: 58px;
+      height: 58px;
+      font-size: 24px;
+    }
+
+    .pet-stage {
+      width: min(100%, 220px);
+    }
+}
+

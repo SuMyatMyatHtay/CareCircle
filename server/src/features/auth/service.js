@@ -12,8 +12,10 @@ export function toPublicUser(user) {
     phone: user.phone,
     preferredLang: user.preferredLang,
     telegramUsername: user.telegramUsername,
+    isCaretaker: user.isCaretaker ?? false,
+    petAppearance: user.petAppearance ?? null, 
     createdAt: user.createdAt,
-    updatedAt: user.updatedAt
+    updatedAt: user.updatedAt,
   }
 }
 

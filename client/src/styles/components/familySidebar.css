@@ -1,13 +1,17 @@
 .family-sidebar {
     width: 264px;
     flex-shrink: 0;
-    height: 100vh;
-    background: #fff;
+    height: 100dvh;
+    position: sticky;
+    top: 0;
+
+    background: white;
     border-right: 1px solid #E5E7EB;
     display: flex;
     flex-direction: column;
     padding: 22px 16px 18px;
     color: #2F2F2F;
+    overflow: hidden;
 }
 
 .sidebar-brand {
@@ -106,6 +110,44 @@
 .family-option-text strong { font-size: 13px; }
 .family-option-text small { font-size: 11px; color: #7A8391; }
 .family-option .bi-check-lg { color: #2E7D43; }
+
+.family-selector-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 3px;
+    flex-wrap: wrap;
+}
+
+.family-selector-meta small {
+    font-size: 11px;
+    color: #7A8391;
+    margin: 0;
+}
+
+.invite-code-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #E8F5E9;
+    color: #2E7D43;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.invite-code-chip:hover {
+    background: #D9EFDE;
+    transform: translateY(-1px);
+}
+
+.invite-code-chip i {
+    font-size: 11px;
+}
 
 .switcher-divider {
     border-top: 1px solid #EDF0ED;
@@ -246,11 +288,11 @@
 
 @media (max-width: 767px) {
     .family-sidebar {
-        width: 100%;
-        height: auto;
-        min-height: auto;
-        border-right: none;
-        border-bottom: 1px solid #E5E7EB;
+        position: relative;
+        width: 264px;
+        height: 100dvh;
+        border-right: 1px solid #E5E7EB;
+        border-bottom: none;
     }
 
     .sidebar-nav { padding-top: 10px; }

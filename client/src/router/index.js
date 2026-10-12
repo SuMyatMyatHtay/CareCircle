@@ -5,6 +5,7 @@ import SignupView from '../features/auth/views/SignupView.vue'
 import JoinFamilyView from '../features/auth/views/JoinFamilyView.vue'
 import CreateFamilyView from '../features/family/views/CreateFamilyView.vue'
 import EmptyFamilyHomeView from '../features/family/views/EmptyFamilyHomeView.vue'
+import ProfileView from '../features/auth/views/ProfileView.vue'
 import { verifySession, clearUserSession } from '../features/auth/services/authApi.js'
 
 const routes = [
@@ -13,6 +14,7 @@ const routes = [
   { path: '/signup', component: SignupView },
   { path: '/create-family', name: 'create-family', component: CreateFamilyView, meta: { requiresAuth: true } },
   { path: '/join-family', component: JoinFamilyView, meta: { requiresAuth: true } },
+
 
   // ---- Every logged-in page: sidebar layout ----
   // Add each page here as it is rebuilt from the wireframe, and point its
@@ -24,8 +26,9 @@ const routes = [
     children: [
       { path: '', redirect: '/home' },
       { path: 'home', name: 'home', component: EmptyFamilyHomeView },
-      { path: 'family', redirect: '/home' } // old links still point here
-
+      { path: 'family', redirect: '/home' }, // old links still point here
+      { path: 'profile', name: 'profile', component: ProfileView }
+  
       // Planned pages, by package:
       // B  { path: 'family/settings', component: FamilySettingsView },
       // C  { path: 'recipients/:recipientId', component: RecipientHubView },

@@ -110,3 +110,32 @@ export function clearUserSession() {
   sessionStorage.removeItem('user')
   sessionStorage.removeItem('activeFamilyId')
 }
+
+
+export async function getMyProfile() {
+  const token = sessionStorage.getItem('token')
+
+  const response = await authApi.get('/auth/me', {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  })
+
+  return response.data.user
+}
+
+export async function updateMyProfile(profile) {
+  const token = sessionStorage.getItem('token')
+
+  const response = await authApi.patch(
+    '/auth/me',
+    profile,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  )
+
+  return response.data.user
+}
