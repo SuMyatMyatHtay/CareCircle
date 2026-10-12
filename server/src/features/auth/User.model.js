@@ -63,6 +63,8 @@ const userSchema = new mongoose.Schema(
       },
       equipped: {
         outfit: { type: String, default: '' },
+        bottom: { type: String, default: '' },
+        shoes: { type: String, default: '' },
         hat: { type: String, default: '' },
         accessory: { type: String, default: '' }
       }

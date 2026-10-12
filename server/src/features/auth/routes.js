@@ -1,3 +1,4 @@
+import { updatePet } from './pet.controller.js'
 // Owner: Su Myat Myat Htay (Sera)
 
 import { Router } from 'express'
@@ -13,5 +14,6 @@ router.post('/login', login)
 router.get('/me', requireAuth, getCurrentUser)
 router.post('/logout', requireAuth, logout)
 router.patch('/me', requireAuth, updateProfile)
+router.patch('/me/pet', requireAuth, updatePet)
 
 export default router

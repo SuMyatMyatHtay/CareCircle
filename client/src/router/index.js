@@ -6,6 +6,7 @@ import JoinFamilyView from '../features/auth/views/JoinFamilyView.vue'
 import CreateFamilyView from '../features/family/views/CreateFamilyView.vue'
 import EmptyFamilyHomeView from '../features/family/views/EmptyFamilyHomeView.vue'
 import ProfileView from '../features/auth/views/ProfileView.vue'
+import PetDressupView from '../features/auth/views/PetDressupView.vue'
 import { verifySession, clearUserSession } from '../features/auth/services/authApi.js'
 
 const routes = [
@@ -27,7 +28,8 @@ const routes = [
       { path: '', redirect: '/home' },
       { path: 'home', name: 'home', component: EmptyFamilyHomeView },
       { path: 'family', redirect: '/home' }, // old links still point here
-      { path: 'profile', name: 'profile', component: ProfileView }
+      { path: 'profile', name: 'profile', component: ProfileView },
+      { path: 'dress-up', name: 'dress-up', component: PetDressupView }
   
       // Planned pages, by package:
       // B  { path: 'family/settings', component: FamilySettingsView },

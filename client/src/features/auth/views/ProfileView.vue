@@ -1,5 +1,6 @@
 
 <script setup>
+import PetAvatar from '../components/PetAvatar.vue'
 import { ref, reactive, onMounted, computed } from 'vue'
 import { getMyProfile, updateMyProfile } from '../services/authApi.js'
 import '../../../styles/profileView.css'
@@ -347,16 +348,7 @@ onMounted(loadProfile)
                 <div class="pet-display rounded-4 p-4 text-center">
 
                 <div class="pet-stage mx-auto mb-3">
-                    <!-- The layered pet PNGs will go here -->
-                    <div
-                    class="pet-placeholder d-flex flex-column
-                            justify-content-center align-items-center h-100"
-                    >
-                    <i class="bi bi-stars pet-placeholder-icon"></i>
-                    <span class="small fw-semibold mt-2">
-                        Your pet lives here ♡
-                    </span>
-                    </div>
+                  <PetAvatar :appearance="pet || { species: 'fox', equipped: {} }" />
                 </div>
 
                 <h3 class="h5 fw-bold mb-1">
@@ -373,16 +365,13 @@ onMounted(loadProfile)
                 </div>
 
                 <div class="d-grid gap-2 mt-3">
-                <button
-                    type="button"
+                <RouterLink
+                    to="/dress-up"
                     class="btn profile-primary rounded-pill py-2 fw-bold"
-                    disabled
-                    title="Pet customization is coming next"
                 >
                     <i class="bi bi-stars me-2"></i>
-                    Change clothes
-                    <span class="small ms-1">(Soon)</span>
-                </button>
+                    Change clothes ♡
+                </RouterLink>
                 </div>
 
                 <p class="small text-secondary text-center mt-3 mb-0">

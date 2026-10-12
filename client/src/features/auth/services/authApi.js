@@ -139,3 +139,12 @@ export async function updateMyProfile(profile) {
 
   return response.data.user
 }
+
+
+export async function updateMyPet(appearance) {
+  const token = sessionStorage.getItem('token')
+  const response = await authApi.patch('/auth/me/pet', appearance, {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+  return response.data.user
+}
