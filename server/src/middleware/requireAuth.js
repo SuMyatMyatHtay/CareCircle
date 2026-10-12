@@ -1,8 +1,8 @@
-// Owner: Su Myat Myat Htay (Sera)
 
 import jwt from 'jsonwebtoken'
+import User from '../features/auth/User.model.js'
 
-export function requireAuth(req, res, next) {
+export async function requireAuth(req, res, next) {
   const authorization = req.headers.authorization
 
   const match = typeof authorization === 'string'
@@ -21,6 +21,7 @@ export function requireAuth(req, res, next) {
       throw new Error('JWT_SECRET is not configured')
     }
 
+    // Step 1: Verify JWT signature and expiration
     const payload = jwt.verify(
       match[1],
       process.env.JWT_SECRET,
@@ -38,21 +39,36 @@ export function requireAuth(req, res, next) {
       })
     }
 
-    req.user = { userId: payload.userId }
+    // Step 2: Retrieve user from MongoDB FIRST
+    const user = await User.findById(payload.userId)
+
+    // Step 3: Check user existence and token revocation
+    if (
+      !user ||
+      payload.tokenVersion !== (user.tokenVersion ?? 0)
+    ) {
+      return res.status(401).json({
+        success: false,
+        message: 'Session expired or revoked. Please log in again.'
+      })
+    }
+
+    // Step 4: Attach authenticated user to request
+    req.user = {
+      userId: user._id.toString()
+    }
+
     return next()
 
   } catch (error) {
-    if (
-      error instanceof jwt.JsonWebTokenError ||
-      error instanceof jwt.TokenExpiredError
-    ) {
+    if (error instanceof jwt.JsonWebTokenError) {
       return res.status(401).json({
         success: false,
         message: 'Invalid or expired authentication token'
       })
     }
 
-    console.error('Authentication middleware error:', error)
+    console.error('Authentication error:', error)
 
     return res.status(500).json({
       success: false,

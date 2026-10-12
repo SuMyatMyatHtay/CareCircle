@@ -5,6 +5,7 @@ import SignupView from '../features/auth/views/SignupView.vue'
 import JoinFamilyView from '../features/auth/views/JoinFamilyView.vue'
 import CreateFamilyView from '../features/family/views/CreateFamilyView.vue'
 import EmptyFamilyHomeView from '../features/family/views/EmptyFamilyHomeView.vue'
+import { verifySession, clearUserSession } from '../features/auth/services/authApi.js'
 
 const routes = [
   // ---- Pages without the app frame ----
@@ -45,11 +46,62 @@ const routes = [
 const router = createRouter({ history: createWebHistory(), routes })
 
 // Send logged-out users to the login page
-router.beforeEach((to) => {
-  const needsLogin = to.matched.some((record) => record.meta.requiresAuth)
-  if (needsLogin && !sessionStorage.getItem('token')) {
-    return { path: '/login' }
+
+
+router.beforeEach(async (to) => {
+  const token = sessionStorage.getItem('token')
+
+  const needsLogin = to.matched.some(
+    record => record.meta.requiresAuth
+  )
+
+  const isAuthPage =
+    to.path === '/login' ||
+    to.path === '/signup'
+
+  // 1. No token
+  if (!token) {
+    if (needsLogin) {
+      return { path: '/login' }
+    }
+
+    return true
   }
+
+  // 2. Verify the token with backend
+  const result = await verifySession()
+
+  // 3. Expired or revoked token
+  if (result.status === 'invalid') {
+    clearUserSession()
+
+    if (needsLogin) {
+      return { path: '/login' }
+    }
+
+    return true
+  }
+
+  // 4. Backend unavailable
+  if (result.status === 'unavailable') {
+    // Don't treat server errors as invalid credentials.
+    // Block protected pages until verification succeeds.
+    if (needsLogin) {
+      return { path: '/login', query: { serviceUnavailable: '1' } }
+    }
+
+    return true
+  }
+
+  // 5. Valid token: don't allow login/signup
+  if (isAuthPage) {
+    return { path: '/home' }
+  }
+
+  // 6. Valid token: continue
+  return true
 })
+
+
 
 export default router

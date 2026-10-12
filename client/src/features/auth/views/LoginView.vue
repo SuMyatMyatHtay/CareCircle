@@ -1,10 +1,11 @@
 <script setup>
 import { ref, computed } from 'vue'
 import AuthShell from '../components/AuthShell.vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { loginUser, getLoginErrorMessage } from '../services/authApi.js'
 
 const router = useRouter()
+const route = useRoute()
 const isLoading = ref(false)
 const loginError = ref('')
 const email = ref('')
@@ -73,6 +74,14 @@ async function handleLogin() {
     <div class="auth-eyebrow">WELCOME BACK</div>
     <h2>Lovely to see you again!</h2>
     <p class="auth-subtitle">Log in to your family circle and keep the care going. ♡</p>
+    <p
+      v-if="route.query.serviceUnavailable === '1'"
+      class="auth-error"
+      role="alert"
+    >
+      Unable to verify your session right now.
+      Please try again when the server is available.
+    </p>
     <form @submit.prevent="handleLogin" novalidate>
       <div class="form-group">
         <label for="email">Email address</label>

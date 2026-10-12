@@ -1,6 +1,6 @@
 // Owner: Su Myat Myat Htay (Sera)
-
 import { authenticateUser, findCurrentUser } from './service.js'
+import User from './User.model.js'
 
 export async function login(req, res) {
   try {
@@ -66,6 +66,36 @@ export async function getCurrentUser(req, res) {
     return res.status(500).json({
       success: false,
       message: 'Internal server error'
+    })
+  }
+}
+
+
+export async function logout(req, res) {
+  try {
+    const result = await User.updateOne(
+      { _id: req.user.userId },
+      { $inc: { tokenVersion: 1 } }
+    )
+
+    if (result.matchedCount === 0) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not found'
+      })
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Logged out successfully'
+    })
+
+  } catch (error) {
+    console.error('Logout error:', error)
+
+    return res.status(500).json({
+      success: false,
+      message: 'Unable to log out'
     })
   }
 }

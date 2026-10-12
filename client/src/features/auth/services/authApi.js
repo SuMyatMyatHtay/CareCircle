@@ -46,3 +46,67 @@ export function getLoginErrorMessage(error) {
       return 'Unable to log in. Please try again.'
   }
 }
+
+export async function verifySession() {
+  const token = sessionStorage.getItem('token')
+
+  if (!token) {
+    return { status: 'invalid' }
+  }
+
+  try {
+    const response = await authApi.get('/auth/me', {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+
+    if (response.data.success === true && response.data.user) {
+      // Refresh locally stored user details
+      sessionStorage.setItem(
+        'user',
+        JSON.stringify(response.data.user)
+      )
+
+      return { status: 'valid' }
+    }
+
+    return { status: 'unavailable' }
+
+  } catch (error) {
+    // Token expired, revoked, malformed or user deleted
+    if (error.response?.status === 401 ||
+        error.response?.status === 404) {
+      clearUserSession()
+      return { status: 'invalid' }
+    }
+
+    // Network/server problems are not authentication failures
+    return { status: 'unavailable' }
+  }
+}
+
+
+export async function logoutUser() {
+  const token = sessionStorage.getItem('token')
+
+  if (!token) {
+    return
+  }
+
+  await authApi.post(
+    '/auth/logout',
+    {},
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  )
+}
+
+export function clearUserSession() {
+  sessionStorage.removeItem('token')
+  sessionStorage.removeItem('user')
+  sessionStorage.removeItem('activeFamilyId')
+}

@@ -2,6 +2,16 @@
 <script setup>
 import { ref, computed } from 'vue'
 import '../../styles/components/familySidebar.css'
+import { useRouter } from 'vue-router'
+import {
+  logoutUser,
+  clearUserSession
+} from '../../features/auth/services/authApi.js'
+
+const router = useRouter() 
+const isLoggingOut = ref(false)
+const logoutError = ref('')
+
 
 const props = defineProps({
     families: { type: Array, default: () => [] },
@@ -31,6 +41,32 @@ function selectFamily(familyId) {
     emit('select-family', familyId)
     showSwitcher.value = false
 }
+
+async function handleLogout(){ 
+    if(isLoggingOut.value){ 
+        return
+    }
+    isLoggingOut.value = true
+    logoutError.value = ""
+
+    try{ 
+        await logoutUser()
+        clearUserSession() 
+        await router.replace('/login')
+    } catch(error){ 
+        if(error.response?.status === 401){ 
+            clearUserSession()
+            await router.replace('/login')
+            return
+        }
+
+        console.error('Logout failed: ', error)
+        logoutError.value = "Unable to log out. Please try again."
+    } finally { 
+        isLoggingOut.value = false
+    }
+}
+
 </script>
 
 <template>
@@ -145,6 +181,19 @@ function selectFamily(familyId) {
             <small v-else>Welcome to CareCircle</small>
             </span>
         </div>
+        <button
+            type="button"
+            class="logout-button"
+            :disabled="isLoggingOut"
+            @click="handleLogout"
+            >
+            <i class="bi bi-box-arrow-right"></i>
+            {{ isLoggingOut ? 'Logging out...' : 'Log out' }}
+        </button>
+
+        <p v-if="logoutError" class="logout-error" role="alert">
+            {{ logoutError }}
+        </p>
         </div>
     </aside>
 </template>

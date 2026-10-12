@@ -33,7 +33,10 @@ export async function authenticateUser(email, password) {
   }
 
   const token = jwt.sign(
-    { userId: user._id.toString() },
+    {
+      userId: user._id.toString(),
+      tokenVersion: user.tokenVersion ?? 0
+    },
     process.env.JWT_SECRET,
     { expiresIn: '1d', algorithm: 'HS256' }
   )

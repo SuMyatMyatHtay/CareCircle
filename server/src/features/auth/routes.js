@@ -1,7 +1,7 @@
 // Owner: Su Myat Myat Htay (Sera)
 
 import { Router } from 'express'
-import { login, getCurrentUser } from './controller.js'
+import { login, logout, getCurrentUser } from './controller.js'
 import { requireAuth } from '../../middleware/requireAuth.js'
 
 const router = Router()
@@ -11,5 +11,6 @@ router.post('/login', login)
 
 // Protected
 router.get('/me', requireAuth, getCurrentUser)
+router.post('/logout', requireAuth, logout)
 
 export default router
