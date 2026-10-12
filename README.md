@@ -1,4 +1,4 @@
-<img width="1917" height="1032" alt="image" src="https://github.com/user-attachments/assets/e9e59e89-4ca1-4089-a534-6e829b8c2c87" /># CareCircle 💚🩷
+# CareCircle 💚🩷
 
 **Care together, closer always.**
 
