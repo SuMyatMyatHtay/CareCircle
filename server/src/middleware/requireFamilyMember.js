@@ -32,7 +32,7 @@ export async function requireFamilyMember(req, res, next) {
       return res.status(404).json({ error: 'Family not found' })
     }
 
-    const membership = family.members.find((m) => m.user.toString() === userId)
+    const membership = family.members.find((m) => m.userId.toString() === userId)
     if (!membership) {
       return res.status(403).json({ error: 'You are not a member of this family' })
     }
