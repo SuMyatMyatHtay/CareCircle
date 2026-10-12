@@ -1,4 +1,4 @@
-
+import { connectDatabase } from './config/database.js'
 import express from 'express'
 import cors from 'cors'
 import mongoose from 'mongoose'
@@ -15,6 +15,45 @@ app.get('/api/health', (_req, res) => {
     status: 'ok',
     app: 'CareCircle'
   })
+})
+
+// Cache the connection promise for serverless reuse
+let dbConnectionPromise = null
+
+async function ensureDatabaseConnected() {
+  if (!process.env.MONGODB_URI) {
+    throw new Error('MONGODB_URI is not configured')
+  }
+
+  if (mongoose.connection.readyState === 1) {
+    return
+  }
+
+  if (!dbConnectionPromise) {
+    dbConnectionPromise = connectDatabase(
+      process.env.MONGODB_URI
+    ).catch((error) => {
+      dbConnectionPromise = null
+      throw error
+    })
+  }
+
+  await dbConnectionPromise
+}
+
+// Connect before database-dependent API requests
+app.use('/api', async (req, res, next) => {
+  try {
+    await ensureDatabaseConnected()
+    next()
+  } catch (error) {
+    console.error('MongoDB connection failed:', error.message)
+
+    res.status(503).json({
+      success: false,
+      message: 'Database connection unavailable'
+    })
+  }
 })
 
 // Check whether MongoDB is connected
