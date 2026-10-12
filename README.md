@@ -1,4 +1,4 @@
-# CareCircle 💚🩷
+<img width="1917" height="1032" alt="image" src="https://github.com/user-attachments/assets/e9e59e89-4ca1-4089-a534-6e829b8c2c87" /># CareCircle 💚🩷
 
 **Care together, closer always.**
 
@@ -14,6 +14,7 @@ CareCircle is a family-care coordination web application for sharing caregiving 
 | Wireframes (Figma)                                 | [Open wireframes](https://www.figma.com/design/oo8lDXmN1OIF7zJ75SPn3a/Preline-UI-Figma--Community-?node-id=299804-16564&t=bZtps8beujV1iiui-1)                                   |
 | Project proposal, specifications & database design | [Team Google Doc](https://docs.google.com/document/d/1C0RIz2fLhAb1berm-wca4x8c-Li_FNyRMWFHNJV37T8/edit?tab=t.0)                                                                 |
 | Presentation Slide for Project Update (13th Oct) | [Canva Link](https://www.canva.com/design/DAHXlRxCktA/P5yOdcJa_RUiOY1k8l6CRQ/edit)                                                                 |
+| Hosting | [Vercel Web](https://care-circle-delta-one.vercel.app/)                                                                 |
 
 ## ✨ Project scope
 
