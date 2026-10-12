@@ -4,7 +4,8 @@
 
 import {
   createFamilyForUser,
-  getFamiliesForUser
+  getFamiliesForUser, 
+  joinFamilyForUser
 } from './service.js'
 
 // POST /api/families
@@ -65,4 +66,45 @@ export async function getMyFamilies(req, res) {
         message: 'Unable to retrieve families'
         })
     }
+}
+
+
+export async function joinFamily(req, res) {
+  try {
+    const { inviteCode } = req.body ?? {}
+
+    // Validate invitation code
+    if (
+      typeof inviteCode !== 'string' ||
+      !/^[A-F0-9]{10}$/i.test(inviteCode.trim())
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter a valid 10-character invitation code.'
+      })
+    }
+
+    const family = await joinFamilyForUser(
+      inviteCode,
+      req.user.userId
+    )
+
+    return res.status(200).json({
+      success: true,
+      message: 'You have joined the family successfully!',
+      family
+    })
+
+  } catch (error) {
+    if (!error.status || error.status >= 500) {
+      console.error('Join family error:', error)
+    }
+
+    return res.status(error.status || 500).json({
+      success: false,
+      message: error.status
+        ? error.message
+        : 'Unable to join family. Please try again.'
+    })
+  }
 }

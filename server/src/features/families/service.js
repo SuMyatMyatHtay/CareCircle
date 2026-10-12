@@ -90,3 +90,76 @@ export async function getFamiliesForUser(userId) {
 
     return families.map(formatFamily)
 }
+
+
+export async function joinFamilyForUser(inviteCode, userId) {
+  // 1. Validate authenticated user
+  if (!mongoose.isValidObjectId(userId)) {
+    throw Object.assign(
+      new Error('Invalid user ID'),
+      { status: 401 }
+    )
+  }
+
+  const user = await User.findById(userId)
+
+  if (!user) {
+    throw Object.assign(
+      new Error('User not found'),
+      { status: 401 }
+    )
+  }
+
+  // 2. Normalize invitation code
+  const code = inviteCode.trim().toUpperCase()
+
+  // 3. Find the family
+  const family = await Family.findOne({ inviteCode: code })
+
+  if (!family) {
+    throw Object.assign(
+      new Error('Invalid invitation code. Please check and try again.'),
+      { status: 404 }
+    )
+  }
+
+  // 4. Prevent duplicate membership
+  const alreadyMember = family.members.some(
+    member => member.userId.toString() === userId
+  )
+
+  if (alreadyMember) {
+    throw Object.assign(
+      new Error('You are already a member of this family.'),
+      { status: 409 }
+    )
+  }
+
+  // 5. Atomically add member if not already present.
+  // This protects against two simultaneous join requests.
+  const updatedFamily = await Family.findOneAndUpdate(
+    {
+      _id: family._id,
+      'members.userId': { $ne: new mongoose.Types.ObjectId(userId) }
+    },
+    {
+      $push: {
+        members: {
+          userId,
+          role: 'member',
+          joinedAt: new Date()
+        }
+      }
+    },
+    { new: true }
+  )
+
+  if (!updatedFamily) {
+    throw Object.assign(
+      new Error('You are already a member of this family.'),
+      { status: 409 }
+    )
+  }
+
+  return formatFamily(updatedFamily)
+}

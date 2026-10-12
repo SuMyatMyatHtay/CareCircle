@@ -56,3 +56,24 @@ export function getFamilyErrorMessage(error) {
         'Something went wrong. Please try again.'
     )
 }
+
+
+export async function joinFamily(inviteCode) {
+    const token = sessionStorage.getItem('token')
+
+    if (!token) {
+        throw new Error('Please log in first.')
+    }
+
+    const response = await axios.post(
+        `${API_URL}/families/join`,
+        { inviteCode },
+        {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+        }
+    )
+
+    return response.data
+}

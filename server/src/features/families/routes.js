@@ -4,7 +4,7 @@
 import { Router } from 'express'
 import { requireAuth } from '../../middleware/requireAuth.js'
 import { requireFamilyMember, requireFamilyAdmin } from '../../middleware/requireFamilyMember.js'
-import { createFamily, getMyFamilies } from './controller.js'
+import { createFamily, getMyFamilies, joinFamily } from './controller.js'
 
 const router = Router()
 
@@ -22,6 +22,7 @@ const admin = [requireAuth, requireFamilyMember, requireFamilyAdmin]
 // ---- A (Sera): logged in, not tied to one family ----
 router.get('/mine', getMyFamilies)      // Get the logged-in user's families
 router.post('/', createFamily)          // Create a new family
+router.post('/join', joinFamily)
 
 
 // ---- B (SangYoon): settings and members ----
