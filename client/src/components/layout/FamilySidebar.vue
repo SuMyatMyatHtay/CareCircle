@@ -89,12 +89,23 @@ async function handleLogout(){
 
 <template>
     <aside class="family-sidebar">
-        <RouterLink to="/home" class="sidebar-brand" @click="emit('navigate')">
-        <span class="brand-icon">
-            <i class="bi bi-heart-pulse"></i>
-        </span>
-        CareCircle
-        </RouterLink>
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <RouterLink to="/home" class="sidebar-brand mb-0">
+                <span class="brand-icon">
+                <i class="bi bi-heart-pulse"></i>
+                </span>
+                CareCircle
+            </RouterLink>
+
+            <button
+                type="button"
+                class="btn btn-sm sidebar-collapse-button"
+                aria-label="Hide sidebar"
+                @click="emit('collapse')"
+            >
+                <i class="bi bi-layout-sidebar-inset-reverse"></i>
+            </button>
+        </div>
 
         <!-- FAMILY SWITCHER -->
         <div class="switcher-container">

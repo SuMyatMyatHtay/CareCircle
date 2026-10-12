@@ -68,7 +68,7 @@ onUnmounted(() => {
         :user="user"
         @select-family="selectFamily"
         @navigate="closeMobileSidebar"
-        @collapse="sidebarOpen = false"
+        @collapse="toggleSidebar"
       />
     </div>
 
