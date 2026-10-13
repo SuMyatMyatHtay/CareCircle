@@ -1,39 +1,81 @@
+
 export const categories = [
-  { id: 'bases', label: 'Avatar', icon: 'bi-person-standing' },
-  { id: 'tops', label: 'Tops', icon: 'bi-bag-heart' },
-  { id: 'bottoms', label: 'Bottoms', icon: 'bi-grid' },
-  { id: 'shoes', label: 'Shoes', icon: 'bi-stars' },
+  { id: 'bases', label: 'Characters', icon: 'bi-person-hearts' },
+  { id: 'dresses', label: 'Dresses', icon: 'bi-heart' },
+  { id: 'tops', label: 'Tops', icon: 'bi-stars' },
+  { id: 'skirts', label: 'Skirts', icon: 'bi-flower1' },
+  { id: 'shorts', label: 'Shorts', icon: 'bi-grid' },
+  { id: 'shoes', label: 'Shoes', icon: 'bi-bag' },
   { id: 'accessories', label: 'Accessories', icon: 'bi-gem' }
 ]
 
-// Place SAME-SIZE transparent PNGs in client/public/avatars/<category>/.
-// These are starter asset IDs; PNG files are not included because your reference
-// image shows fully dressed figures, not separate transparent clothing pieces.
+// All available characters
+const bases = [
+  'cat',
+  'dog',
+  'fox',
+  'elephant',
+  'dinosaur',
+  'rabbit',
+  'chick',
+  'duck'
+]
+
+// Characters that cannot be selected yet
+export const lockedBases = ['rabbit', 'chick', 'duck']
+
 export const wardrobe = {
-  bases: [
-    { id: 'base-01', name: 'Classic', image: '/avatars/bases/base-01.png' },
-    { id: 'base-02', name: 'Soft', image: '/avatars/bases/base-02.png' }
-  ],
-  tops: [
-    { id: 'top-01', name: 'Everyday Tee', image: '/avatars/tops/top-01.png' },
-    { id: 'top-02', name: 'Pink Outfit', image: '/avatars/tops/top-02.png' }
-  ],
-  bottoms: [
-    { id: 'bottom-01', name: 'Casual Skirt', image: '/avatars/bottoms/bottom-01.png' },
-    { id: 'bottom-02', name: 'Denim Shorts', image: '/avatars/bottoms/bottom-02.png' }
-  ],
-  shoes: [
-    { id: 'shoes-01', name: 'White Sneakers', image: '/avatars/shoes/shoes-01.png' },
-    { id: 'shoes-02', name: 'Pink Shoes', image: '/avatars/shoes/shoes-02.png' }
-  ],
-  accessories: [
-    { id: 'accessory-01', name: 'Cute Bag', image: '/avatars/accessories/accessory-01.png' }
-  ]
+  bases: bases.map(name => ({
+    id: name,
+    name: name[0].toUpperCase() + name.slice(1),
+    image: `/avatars/bases/${name}.png`,
+
+    // Lock Rabbit and Chick
+    comingSoon: lockedBases.includes(name)
+  })),
+
+  ...Object.fromEntries(
+    ['dresses', 'tops', 'skirts', 'shorts', 'shoes', 'accessories'].map(
+      category => [
+        category,
+        Array.from({ length: 12 }, (_, i) => ({
+          id: `${category}-${String(i + 1).padStart(2, '0')}`,
+
+          name: `${
+            category === 'accessories' ? 'Accessory'
+            : category === 'shoes' ? 'Shoes'
+            : category === 'shorts' ? 'Shorts'
+            : category === 'skirts' ? 'Skirt'
+            : category === 'dresses' ? 'Dress'
+            : 'Top'
+          } ${i + 1}`,
+
+          image: `/avatars/${category}/${category}-${String(i + 1).padStart(2, '0')}.png`
+        }))
+      ]
+    )
+  )
 }
+
 export const defaultAppearance = () => ({
-  baseId: 'base-01',
-  equipped: { top: '', bottom: '', shoes: '', accessory: '' }
+  baseId: 'cat',
+  equipped: {
+    dress: '',
+    top: '',
+    bottom: '',
+    shoes: '',
+    accessory: ''
+  }
 })
+
 export function findItem(category, id) {
   return wardrobe[category]?.find(item => item.id === id) || null
+}
+
+export function categoryForBottom(id) {
+  return id?.startsWith('skirts-')
+    ? 'skirts'
+    : id?.startsWith('shorts-')
+      ? 'shorts'
+      : null
 }
