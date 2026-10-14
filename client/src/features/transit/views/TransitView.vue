@@ -1,0 +1,913 @@
+<script setup>
+// Owner: Chaithra (E). Matches Figma frame "06 · Transit mode" (CareCircle Wireframe). CC-14 + CC-19.
+// Route: /transit/:familyId/:taskId
+// - The companion (who claimed the task) posts each step: a preset chip or their own text.
+// - Every step is saved with the time it was posted (the server sets the time).
+// - Everyone else in the family sees the same timeline, refreshed every 10 seconds.
+// - "Safely back home" ends the trip and completes the task (done on the server).
+// - "End transit" stops the trip without completing the task.
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import ClinicSearch from '../components/ClinicSearch.vue'
+import PersonAvatar from '../../my-tasks/components/PersonAvatar.vue'
+import { getTask, getTransitSession, postMilestone, endTransit } from '../services/transitApi.js'
+import { startTask, getErrorMessage } from '../../my-tasks/services/myTasksApi.js'
+import { formatTime, recipientName } from '../../my-tasks/utils/formatters.js'
+import { useActiveFamily } from '../../../composables/useActiveFamily.js'
+
+const props = defineProps({
+    familyId: { type: String, required: true },
+    taskId: { type: String, required: true }
+})
+
+const router = useRouter()
+const { families } = useActiveFamily()
+const POLL_MS = 10 * 1000
+
+const task = ref(null)
+const session = ref(null)
+const isLoading = ref(true)
+const loadError = ref('')
+const actionError = ref('')
+const notice = ref('')
+const isPosting = ref(false)
+const customText = ref('')
+const lookedUpPlace = ref(null)
+
+let me = {}
+try { me = JSON.parse(sessionStorage.getItem('user') || '{}') } catch { me = {} }
+
+const idOf = (value) => (value && typeof value === 'object' ? value._id : value)
+const isActive = computed(() => session.value?.status === 'active')
+const isEnded = computed(() => session.value?.status === 'ended')
+const isCompanion = computed(() => Boolean(me.id) && idOf(session.value?.companion) === me.id)
+const isClaimer = computed(() => Boolean(me.id) && idOf(task.value?.claimedBy) === me.id)
+const canStart = computed(() => !session.value && isClaimer.value && task.value?.status === 'claimed')
+const taskDone = computed(() => task.value?.status === 'completed')
+
+const who = computed(() => recipientName(task.value))
+const companionName = computed(() => session.value?.companion?.name || task.value?.claimedBy?.name || '')
+const companionFirst = computed(() => companionName.value.split(' ')[0])
+const familyName = computed(() => families.value.find((f) => f.id === props.familyId)?.name || 'family')
+const destination = computed(() => task.value?.location || null)
+const placeName = computed(() => destination.value?.name || destination.value?.address || '')
+
+const milestones = computed(() => session.value?.milestones || [])
+const latest = computed(() => milestones.value[milestones.value.length - 1] || null)
+const postedLabels = computed(() => new Set(milestones.value.map((m) => m.label.toLowerCase())))
+const postedTypes = computed(() => new Set(milestones.value.map((m) => m.type)))
+
+// Preset chips. departed / arrived / heading_home / home are the server's step types;
+// the rest are saved as custom updates with that text. Used chips disappear.
+const chips = computed(() => {
+    const all = [
+        { type: 'departed', label: who.value ? `On the way to fetch ${who.value}` : 'On the way' },
+        { type: 'custom', label: who.value ? `Fetched ${who.value}` : 'Picked up' },
+        { type: 'arrived', label: 'Reached hospital' },
+        { type: 'custom', label: 'Seeing the doctor' },
+        { type: 'custom', label: 'Collecting medicine' },
+        { type: 'custom', label: 'Going for lunch' },
+        { type: 'heading_home', label: 'Heading home' },
+        { type: 'home', label: 'Safely back home' }
+    ]
+    return all.filter((chip) =>
+        chip.type === 'custom' ? !postedLabels.value.has(chip.label.toLowerCase()) : !postedTypes.value.has(chip.type)
+    )
+})
+
+const subtitle = computed(() => {
+    const parts = [task.value?.title]
+    if (companionFirst.value) parts.push(who.value ? `${companionFirst.value} is with ${who.value}` : `with ${companionFirst.value}`)
+    if (session.value?.startedAt) parts.push(`started ${formatTime(session.value.startedAt)}`)
+    if (isActive.value) parts.push('family can follow live')
+    if (isEnded.value) parts.push(taskDone.value ? 'safely back home' : 'transit ended')
+    return parts.filter(Boolean).join(' · ')
+})
+
+const mapCaption = computed(() => {
+    const at = placeName.value ? ` at ${placeName.value}` : ''
+    if (!latest.value) return placeName.value ? `Live map · ${placeName.value}` : 'No location on this task'
+    return `Live map · last ping ${formatTime(latest.value.at)}${at}`
+})
+
+const hasCoords = computed(() => Number.isFinite(destination.value?.lat) && Number.isFinite(destination.value?.lng))
+const mapEmbedUrl = computed(() =>
+    hasCoords.value ? `https://maps.google.com/maps?q=${destination.value.lat},${destination.value.lng}&z=16&output=embed` : ''
+)
+
+// The message the family's Telegram group gets for the latest step (sent by F's notify())
+const telegramPreview = computed(() => {
+    if (!latest.value) return ''
+    const step = latest.value
+    const withWho = companionFirst.value ? `, with ${companionFirst.value}` : ''
+    const subject = who.value || companionFirst.value || 'The trip'
+    const lines = {
+        departed: `${companionFirst.value || 'Someone'} is on the way${who.value ? ` to fetch ${who.value}` : ''}.`,
+        arrived: `${subject} has arrived${placeName.value ? ` at ${placeName.value}` : ''}${withWho}.`,
+        consultation_done: `${subject}'s consultation is done${withWho}.`,
+        heading_home: `${subject} is heading home${withWho}.`,
+        home: `${subject} is safely back home${withWho}.`
+    }
+    const text = lines[step.type] || `${step.label}${withWho}.`
+    return `${text} ${formatTime(step.at)} · View in CareCircle`
+})
+
+function directionsUrl(place) {
+    if (!place) return ''
+    const target = Number.isFinite(place.lat) && Number.isFinite(place.lng)
+        ? `${place.lat},${place.lng}`
+        : [place.name, place.address].filter(Boolean).join(' ')
+    return target ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(target)}` : ''
+}
+
+async function load({ quiet = false } = {}) {
+    if (!quiet) isLoading.value = true
+    try {
+        // Reload the task each time too, so "completed" shows for people following along
+        task.value = await getTask(props.familyId, props.taskId)
+        session.value = await getTransitSession(props.familyId, props.taskId)
+        loadError.value = ''
+    } catch (error) {
+        if (!quiet) loadError.value = getErrorMessage(error)
+    } finally {
+        isLoading.value = false
+    }
+}
+
+async function run(action) {
+    isPosting.value = true
+    actionError.value = ''
+    try {
+        await action()
+    } catch (error) {
+        actionError.value = getErrorMessage(error)
+        // 409: the trip ended or the task changed elsewhere. Show the latest state.
+        if ([404, 409].includes(error.response?.status)) await load({ quiet: true })
+    } finally {
+        isPosting.value = false
+    }
+}
+
+function post(milestone) {
+    if (milestone.type === 'home' &&
+        !window.confirm('Is everyone safely back home? This ends the trip and marks the task as done.')) return
+
+    run(async () => {
+        session.value = await postMilestone(props.familyId, props.taskId, milestone)
+        if (milestone.type === 'custom') customText.value = ''
+        if (milestone.type === 'home') task.value = await getTask(props.familyId, props.taskId)
+    })
+}
+
+function postCustom() {
+    const label = customText.value.trim()
+    if (!label) {
+        actionError.value = 'Type your update first.'
+        return
+    }
+    post({ type: 'custom', label })
+}
+
+function endTrip() {
+    if (!window.confirm('End transit without marking the task as done? Use "Safely back home" if everyone is home.')) return
+    run(async () => {
+        session.value = await endTransit(props.familyId, props.taskId)
+    })
+}
+
+function startTrip() {
+    run(async () => {
+        const result = await startTask(props.familyId, props.taskId)
+        task.value = { ...task.value, ...result.task }
+        session.value = result.transitSession
+        if (!result.transitSession) notice.value = 'This task has no transit, so it was just started.'
+    })
+}
+
+function addNote() {
+    // Care logs (F, SeungHak) will own this page: /recipients/:recipientId/log
+    notice.value = 'Consultation notes are part of Care Logs, which is coming soon.'
+}
+
+// Poll while the trip is active so the family sees new steps without reloading
+let timer = null
+function stopPolling() {
+    clearInterval(timer)
+    timer = null
+}
+function startPolling() {
+    stopPolling()
+    timer = setInterval(() => {
+        if (document.visibilityState === 'visible' && !isPosting.value) load({ quiet: true })
+    }, POLL_MS)
+}
+watch(isActive, (active) => (active ? startPolling() : stopPolling()))
+
+// Opening a different trip while on this page
+watch(() => [props.familyId, props.taskId], () => {
+    task.value = null
+    session.value = null
+    load()
+})
+
+onMounted(load)
+onUnmounted(stopPolling)
+</script>
+
+<template>
+    <div class="transit-page">
+        <div v-if="isLoading" class="status" role="status">
+            <div class="spinner-border spinner-border-sm" aria-hidden="true"></div>
+            Loading transit...
+        </div>
+
+        <div v-else-if="loadError" class="status is-error" role="alert">
+            <span>{{ loadError }}</span>
+            <button type="button" class="btn-secondary" @click="load()">Try again</button>
+        </div>
+
+        <template v-else-if="task">
+            <!-- Header -->
+            <header class="page-header">
+                <div class="title">
+                    <div class="title-row">
+                        <h1>Transit mode</h1>
+                        <span v-if="isActive" class="badge badge-live">● Live</span>
+                        <span v-else-if="isEnded" class="badge badge-ended">Ended</span>
+                    </div>
+                    <p>{{ subtitle }}</p>
+                </div>
+                <button v-if="isActive && isCompanion" type="button" class="btn-secondary" :disabled="isPosting" @click="endTrip">
+                    End transit
+                </button>
+                <button v-else type="button" class="btn-secondary" @click="router.push({ name: 'my-tasks' })">
+                    Back to My tasks
+                </button>
+            </header>
+
+            <div v-if="notice" class="notice" role="status">
+                {{ notice }}
+                <button type="button" class="notice-close" aria-label="Dismiss" @click="notice = ''">×</button>
+            </div>
+            <div v-if="actionError" class="notice is-error" role="alert">{{ actionError }}</div>
+
+            <div class="columns">
+                <!-- Map column -->
+                <div class="map-column">
+                    <section class="map" aria-label="Map">
+                        <iframe
+                            v-if="mapEmbedUrl"
+                            :src="mapEmbedUrl"
+                            title="Map of the destination"
+                            loading="lazy"
+                            referrerpolicy="no-referrer-when-downgrade"
+                        ></iframe>
+                        <div class="map-caption" :class="{ overlay: mapEmbedUrl }">
+                            <i v-if="!mapEmbedUrl" class="bi bi-geo-alt map-pin" aria-hidden="true"></i>
+                            <span>{{ mapCaption }}</span>
+                            <a v-if="directionsUrl(destination)" :href="directionsUrl(destination)" target="_blank" rel="noopener">
+                                Directions
+                            </a>
+                        </div>
+                    </section>
+
+                    <section v-if="telegramPreview" class="card telegram">
+                        <span class="telegram-label">
+                            <i class="bi bi-send" aria-hidden="true"></i>
+                            What the {{ familyName }} Telegram group sees
+                        </span>
+                        <p>{{ telegramPreview }}</p>
+                    </section>
+
+                    <details class="card lookup">
+                        <summary><i class="bi bi-search" aria-hidden="true"></i> Find a clinic with OneMap</summary>
+                        <ClinicSearch @select="(place) => (lookedUpPlace = place)" />
+                        <div v-if="lookedUpPlace" class="looked-up">
+                            <span>
+                                <strong>{{ lookedUpPlace.name }}</strong>
+                                <small>{{ lookedUpPlace.address }}</small>
+                            </span>
+                            <a :href="directionsUrl(lookedUpPlace)" target="_blank" rel="noopener">Directions</a>
+                        </div>
+                    </details>
+                </div>
+
+                <!-- Journey updates -->
+                <aside class="card journey">
+                    <header class="people">
+                        <span class="avatars">
+                            <PersonAvatar :name="who" :size="44" />
+                            <PersonAvatar v-if="companionName" :name="companionName" :size="44" tone="peach" class="second" />
+                        </span>
+                        <h2>Journey timeline</h2>
+                    </header>
+
+                    <div v-if="!session" class="not-started">
+                        <p>Transit starts when {{ companionFirst || 'the person who claimed this task' }} taps "Start transit".</p>
+                        <button v-if="canStart" type="button" class="btn-primary-cc wide" :disabled="isPosting" @click="startTrip">
+                            Start transit mode
+                        </button>
+                    </div>
+
+                    <p v-else-if="!milestones.length" class="empty">No updates yet.</p>
+
+                    <ol v-else class="updates">
+                        <li
+                            v-for="(step, index) in milestones"
+                            :key="`${step.type}-${step.at}`"
+                            :class="{ current: index === milestones.length - 1 }"
+                        >
+                            <span class="rail" aria-hidden="true"><span class="rail-dot"></span><span class="rail-line"></span></span>
+                            <span class="update-text">
+                                <strong>{{ step.label }}</strong>
+                                <small>
+                                    <time :datetime="step.at">{{ formatTime(step.at) }}</time>
+                                    <template v-if="companionFirst"> · {{ companionFirst }}</template>
+                                    <template v-if="step.type === 'custom'"> · custom update</template>
+                                </small>
+                            </span>
+                        </li>
+                    </ol>
+
+                    <p v-if="isEnded" class="ended-note">
+                        <i class="bi" :class="taskDone ? 'bi-house-heart-fill' : 'bi-flag'" aria-hidden="true"></i>
+                        {{ taskDone ? 'Safely back home. The task is marked as done.' : 'Transit ended. The task is still in progress.' }}
+                    </p>
+
+                    <section v-if="isActive && isCompanion" class="post-box" aria-labelledby="post-title">
+                        <h3 id="post-title">Post the next update</h3>
+                        <div class="chips">
+                            <button
+                                v-for="chip in chips"
+                                :key="`${chip.type}-${chip.label}`"
+                                type="button"
+                                class="badge chip"
+                                :class="{ 'chip-home': chip.type === 'home' }"
+                                :disabled="isPosting"
+                                @click="post({ type: chip.type, label: chip.label })"
+                            >
+                                <template v-if="chip.type === 'home'">✓ </template>{{ chip.label }}
+                            </button>
+                        </div>
+
+                        <form class="custom-row" @submit.prevent="postCustom">
+                            <input
+                                v-model="customText"
+                                type="text"
+                                maxlength="80"
+                                placeholder="Or type your own update…"
+                                aria-label="Your own update"
+                            />
+                            <button type="submit" class="btn-primary-cc" :disabled="isPosting">Post</button>
+                        </form>
+
+                        <p class="post-note">
+                            Each update is time-stamped and sent to the family. “Safely back home” marks the task completed.
+                        </p>
+                    </section>
+
+                    <p v-else-if="isActive" class="viewer-note">
+                        <i class="bi bi-eye" aria-hidden="true"></i>
+                        You're following live. Only {{ companionFirst || 'the companion' }} can post updates.
+                    </p>
+
+                    <span class="push-down"></span>
+                    <button type="button" class="btn-secondary wide" @click="addNote">Add consultation note</button>
+                </aside>
+            </div>
+        </template>
+    </div>
+</template>
+
+<style scoped>
+/* Values from Figma file "CareCircle Wireframe", frame 06 · Transit mode */
+.transit-page {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    color: #2e2e2e;
+}
+
+.status {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 18px 4px;
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.status .spinner-border {
+    color: #2f7a3f;
+}
+
+.status.is-error {
+    color: #a33a26;
+}
+
+/* Header */
+.page-header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.title {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 260px;
+}
+
+.title-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+h1 {
+    margin: 0;
+    font-size: 30px;
+    letter-spacing: 0.15px;
+    font-weight: 700;
+    color: #2e2e2e;
+}
+
+.title p {
+    margin: 0;
+    font-size: 16px;
+    line-height: 24px;
+    letter-spacing: 0.08px;
+    color: #6b7280;
+}
+
+/* Badge component: 6px 10px, pill, 12px medium */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    border: none;
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 16px;
+    letter-spacing: 0.06px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.badge-live {
+    background: #2f7a3f;
+    color: white;
+}
+
+.badge-ended {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+/* Buttons: 12px 16px, radius 8, 14px medium */
+.btn-secondary,
+.btn-primary-cc {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: 0.07px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.btn-secondary {
+    border: 1px solid #e5e7eb;
+    background: white;
+    color: #1f2937;
+}
+
+.btn-secondary:hover {
+    background: #f9fafb;
+}
+
+.btn-primary-cc {
+    border: 1px solid #2f7a3f;
+    background: #2f7a3f;
+    color: white;
+}
+
+.btn-primary-cc:hover {
+    background: #286a36;
+}
+
+.wide {
+    width: 100%;
+}
+
+button:disabled {
+    opacity: 0.6;
+}
+
+/* Messages */
+.notice {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    border: 1px solid #ffe6a3;
+    border-radius: 12px;
+    background: #fff8e1;
+    font-size: 14px;
+    color: #7a5a00;
+}
+
+.notice.is-error {
+    border-color: #ffd2c8;
+    background: #ffe9e4;
+    color: #a33a26;
+}
+
+.notice-close {
+    border: none;
+    background: none;
+    color: inherit;
+    font-size: 18px;
+    line-height: 1;
+}
+
+/* Columns */
+.columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    gap: 24px;
+    align-items: stretch;
+}
+
+.map-column {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+.card {
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    background: white;
+}
+
+/* Map placeholder / live map */
+.map {
+    position: relative;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 520px;
+    overflow: hidden;
+    border-radius: 12px;
+    background: #e8f5e9;
+}
+
+.map iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+.map-caption {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: 0.07px;
+    font-weight: 500;
+    color: #2f7a3f;
+    text-align: center;
+}
+
+.map-caption.overlay {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    flex-direction: row;
+    justify-content: space-between;
+    border-radius: 12px;
+    background: #e8f5e9;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.map-caption a {
+    font-weight: 600;
+    color: #2f7a3f;
+    text-decoration: underline;
+}
+
+.map-pin {
+    font-size: 30px;
+}
+
+.telegram {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px;
+}
+
+.telegram-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    line-height: 16px;
+    letter-spacing: 0.06px;
+    font-weight: 600;
+    color: #6b7280;
+}
+
+.telegram p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: 0.07px;
+    color: #2e2e2e;
+}
+
+.lookup {
+    padding: 14px 16px;
+}
+
+.lookup summary {
+    font-size: 14px;
+    font-weight: 600;
+    color: #2f7a3f;
+    cursor: pointer;
+}
+
+.lookup[open] summary {
+    margin-bottom: 10px;
+}
+
+.looked-up {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.looked-up span {
+    display: flex;
+    flex-direction: column;
+}
+
+.looked-up strong {
+    font-size: 14px;
+    color: #2e2e2e;
+}
+
+.looked-up small {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.looked-up a {
+    font-size: 14px;
+    font-weight: 600;
+    color: #2f7a3f;
+}
+
+/* Journey updates panel */
+.journey {
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+}
+
+.people {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.avatars {
+    display: flex;
+}
+
+.avatars .second {
+    margin-left: -12px;
+}
+
+h2 {
+    margin: 0;
+    font-size: 18px;
+    letter-spacing: 0.09px;
+    font-weight: 600;
+    color: #2e2e2e;
+}
+
+.updates {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.updates li {
+    display: flex;
+    gap: 12px;
+}
+
+.rail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.rail-dot {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #2f7a3f;
+}
+
+.current .rail-dot {
+    box-shadow: 0 0 0 5px #e8f5e9;
+}
+
+.rail-line {
+    flex: 1;
+    width: 2px;
+    background: #6dbf7c;
+}
+
+.current .rail-line {
+    display: none;
+}
+
+.update-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-bottom: 16px;
+}
+
+.update-text strong {
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: 0.07px;
+    font-weight: 500;
+    color: #2e2e2e;
+}
+
+.current .update-text strong {
+    font-weight: 700;
+}
+
+.update-text small {
+    font-size: 12px;
+    line-height: 16px;
+    letter-spacing: 0.06px;
+    color: #6b7280;
+}
+
+.empty,
+.not-started p {
+    margin: 0 0 14px;
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.ended-note,
+.viewer-note {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: 14px;
+}
+
+.ended-note {
+    background: #e8f5e9;
+    color: #2f7a3f;
+    font-weight: 600;
+}
+
+.viewer-note {
+    border: 1px solid #e5e7eb;
+    background: #fbfbf7;
+    color: #6b7280;
+}
+
+/* Post the next update */
+.post-box {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    background: #fbfbf7;
+}
+
+h3 {
+    margin: 0;
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: 0.07px;
+    font-weight: 600;
+    color: #2e2e2e;
+}
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.chip {
+    background: white;
+    color: #2e2e2e;
+}
+
+.chip:hover {
+    box-shadow: inset 0 0 0 1px #6dbf7c;
+}
+
+.chip-home {
+    background: #e8f5e9;
+    color: #2f7a3f;
+}
+
+.custom-row {
+    display: flex;
+    gap: 8px;
+}
+
+.custom-row input {
+    flex: 1;
+    min-width: 0;
+    padding: 12px 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: white;
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: 0.07px;
+    font-weight: 500;
+    color: #2e2e2e;
+}
+
+.custom-row input::placeholder {
+    color: #6b7280;
+}
+
+.custom-row input:focus {
+    outline: 2px solid #6dbf7c;
+    outline-offset: -1px;
+}
+
+.post-note {
+    margin: 0;
+    font-size: 12px;
+    line-height: 16px;
+    letter-spacing: 0.06px;
+    color: #6b7280;
+}
+
+.push-down {
+    flex: 1;
+    min-height: 16px;
+}
+
+@media (max-width: 991px) {
+    .columns {
+        grid-template-columns: 1fr;
+    }
+
+    /* On phones the timeline comes first, map below */
+    .journey {
+        order: -1;
+    }
+
+    .map {
+        min-height: 260px;
+    }
+
+    h1 {
+        font-size: 24px;
+    }
+}
+</style>

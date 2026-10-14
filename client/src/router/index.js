@@ -8,6 +8,8 @@ import EmptyFamilyHomeView from '../features/family/views/EmptyFamilyHomeView.vu
 import ProfileView from '../features/auth/views/ProfileView.vue'
 import PetDressupView from '../features/auth/views/PetDressupView.vue'
 import { verifySession, clearUserSession } from '../features/auth/services/authApi.js'
+import MyTasksView from '../features/my-tasks/views/MyTasksView.vue'
+import TransitView from '../features/transit/views/TransitView.vue'
 
 const routes = [
   // ---- Pages without the app frame ----
@@ -29,7 +31,9 @@ const routes = [
       { path: 'home', name: 'home', component: EmptyFamilyHomeView },
       { path: 'family', redirect: '/home' }, // old links still point here
       { path: 'profile', name: 'profile', component: ProfileView },
-      { path: 'dress-up', name: 'dress-up', component: PetDressupView }
+      { path: 'dress-up', name: 'dress-up', component: PetDressupView },
+      {path:'my-tasks',name:'my-tasks',component:MyTasksView},
+      {path:'transit/:familyId/:taskId',name:'transit',component:TransitView,props:true}
   
       // Planned pages, by package:
       // B  { path: 'family/settings', component: FamilySettingsView },
@@ -37,8 +41,6 @@ const routes = [
       // D  { path: 'open-tasks', component: OpenTasksView },
       // D  { path: 'recipients/:recipientId/tasks', component: RecipientTasksView },
       // D  { path: 'recipients/:recipientId/tasks/:taskId', component: TaskDetailView },
-      // E  { path: 'my-tasks', component: MyTasksView },
-      // E  { path: 'recipients/:recipientId/tasks/:taskId/transit', component: TransitModeView },
       // F  { path: 'recipients/:recipientId/log', component: RecipientLogView },
       // F  { path: 'calendar', component: CalendarView },
     ]

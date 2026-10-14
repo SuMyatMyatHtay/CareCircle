@@ -178,3 +178,31 @@ export async function listTransitSessions(req, res, next) {
         return handleError(error, res, next)
     }
 }
+
+// POST /api/families/:familyId/tasks/:taskId/transit/end   (companion only)
+// "End transit": stops the trip without completing the task (e.g. the appointment was
+// called off on the way). The task stays in progress, so it can still be marked done or
+// cancelled from My Tasks / Task Detail. "Safely back home" is the normal way to finish.
+export async function endTransit(req, res, next) {
+    try {
+        const taskId = getTaskId(req)
+        const session = await TransitSession.findOne({ task: taskId, family: req.family._id })
+        if (!session) throw httpError(404, 'Transit session not found')
+
+        if (session.companion.toString() !== req.user.userId) {
+            throw httpError(403, 'Only the person on this trip can end it')
+        }
+
+        const ended = await TransitSession.findOneAndUpdate(
+            { _id: session._id, status: TRANSIT_STATUS.ACTIVE },
+            { $set: { status: TRANSIT_STATUS.ENDED, endedAt: new Date() } },
+            { new: true }
+        )
+        if (!ended) throw httpError(409, 'This trip has already ended')
+
+        const transitSession = await populateSession(TransitSession.findById(session._id))
+        return res.json({ transitSession })
+    } catch (error) {
+        return handleError(error, res, next)
+    }
+}
