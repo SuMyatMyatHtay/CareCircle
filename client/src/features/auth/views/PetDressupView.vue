@@ -11,15 +11,14 @@ const saving = ref(false)
 const error = ref('')
 const success = ref('')
 const tab = ref('tops')
-const pet = ref({ species: 'fox', name: 'My buddy', equipped: { outfit: '', bottom: '', shoes: '' } })
+const pet = ref({ species: 'fox', name: 'My buddy', equipped: { outfit: '', bottom: '' } })
 const lastSaved = ref('')
 const pictures = import.meta.glob('../../../assets/pets/**/*.png', { eager: true, query: '?url', import: 'default' })
 const imageFor = (type, id) => pictures[`../../../assets/pets/${type}/${id}.png`] || ''
 const sections = [
   { id: 'tops', label: 'Tops', icon: 'bi-bag-heart', field: 'outfit', prefix: 'tops', count: 10 },
   { id: 'skirts', label: 'Skirts', icon: 'bi-stars', field: 'bottom', prefix: 'skirts', count: 16 },
-  { id: 'shorts', label: 'Shorts', icon: 'bi-suit-heart', field: 'bottom', prefix: 'shorts', count: 20 },
-  { id: 'shoes', label: 'Shoes', icon: 'bi-handbag', field: 'shoes', prefix: 'shoes', count: 12 }
+  { id: 'shorts', label: 'Shorts', icon: 'bi-suit-heart', field: 'bottom', prefix: 'shorts', count: 20 }
 ]
 const active = computed(() => sections.find(s => s.id === tab.value) || sections[0])
 const items = computed(() => Array.from({ length: active.value.count }, (_, i) => ({
@@ -28,13 +27,12 @@ const items = computed(() => Array.from({ length: active.value.count }, (_, i) =
 })))
 const selected = computed(() => pet.value.equipped?.[active.value.field] || '')
 const changed = computed(() => JSON.stringify(pet.value) !== lastSaved.value)
-
 function selectItem(id) {
   pet.value.equipped[active.value.field] = id
   success.value = ''
 }
 function resetClothes() {
-  pet.value.equipped = { outfit: '', bottom: '', shoes: '' }
+  pet.value.equipped = { outfit: '', bottom: '' }
   success.value = ''
 }
 async function load() {
@@ -46,8 +44,7 @@ async function load() {
       name: saved.name || 'My buddy',
       equipped: {
         outfit: saved.equipped?.outfit || '',
-        bottom: saved.equipped?.bottom || '',
-        shoes: saved.equipped?.shoes || ''
+        bottom: saved.equipped?.bottom || ''
       }
     }
     lastSaved.value = JSON.stringify(pet.value)
@@ -65,8 +62,7 @@ async function save() {
       name: updated.petAppearance.name,
       equipped: {
         outfit: updated.petAppearance.equipped?.outfit || '',
-        bottom: updated.petAppearance.equipped?.bottom || '',
-        shoes: updated.petAppearance.equipped?.shoes || ''
+        bottom: updated.petAppearance.equipped?.bottom || ''
       }
     }
     lastSaved.value = JSON.stringify(pet.value)
