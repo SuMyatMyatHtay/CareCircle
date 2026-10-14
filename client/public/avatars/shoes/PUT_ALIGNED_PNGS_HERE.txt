@@ -1,1 +1,0 @@
-All images must have the exact same canvas size and alignment as the avatar base.

@@ -1,20 +1,18 @@
 import User from './User.model.js'
 import { toPublicUser } from './service.js'
 
-const validIds = (prefix, count) => Array.from({length: count}, (_, i) => `${prefix}-${String(i + 1).padStart(2, '0')}`)
+const validIds = (prefix, count) =>
+  Array.from({ length: count }, (_, i) => `${prefix}-${String(i + 1).padStart(2, '0')}`)
 const tops = new Set(['', ...validIds('tops', 10)])
 const bottoms = new Set(['', ...validIds('skirts', 16), ...validIds('shorts', 20)])
-const shoes = new Set(['', ...validIds('shoes', 12)])
 
 export async function updatePet(req, res) {
   try {
     const { species, name, equipped } = req.body ?? {}
-    if (
-      !['fox', 'cat'].includes(species) ||
-      typeof name !== 'string' || name.trim().length > 30 ||
-      !equipped || typeof equipped !== 'object' || Array.isArray(equipped) ||
-      !tops.has(equipped.outfit) || !bottoms.has(equipped.bottom) || !shoes.has(equipped.shoes)
-    ) {
+    if (!['fox', 'cat'].includes(species) ||
+        typeof name !== 'string' || name.trim().length > 30 ||
+        !equipped || typeof equipped !== 'object' || Array.isArray(equipped) ||
+        !tops.has(equipped.outfit) || !bottoms.has(equipped.bottom)) {
       return res.status(400).json({ success: false, message: 'Invalid pet appearance or outfit.' })
     }
 
@@ -23,9 +21,9 @@ export async function updatePet(req, res) {
         'petAppearance.species': species,
         'petAppearance.name': name.trim(),
         'petAppearance.equipped.outfit': equipped.outfit,
-        'petAppearance.equipped.bottom': equipped.bottom,
-        'petAppearance.equipped.shoes': equipped.shoes
-      }
+        'petAppearance.equipped.bottom': equipped.bottom
+      },
+      $unset: { 'petAppearance.equipped.shoes': '' }
     }, { new: true, runValidators: true })
 
     if (!user) return res.status(404).json({ success: false, message: 'User not found.' })
