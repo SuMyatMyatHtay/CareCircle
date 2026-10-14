@@ -26,6 +26,13 @@ async function taskAction(familyId, taskId, action) {
 export const startTask = (familyId, taskId) => taskAction(familyId, taskId, 'start')
 export const unclaimTask = (familyId, taskId) => taskAction(familyId, taskId, 'unclaim')
 export const completeTask = (familyId, taskId) => taskAction(familyId, taskId, 'complete')
+export const claimTask = (familyId, taskId) => taskAction(familyId, taskId, 'claim')
+
+// D's endpoint: DELETE a task (creator or admin)
+export async function deleteTask(familyId, taskId) {
+    const response = await http.delete(`/families/${familyId}/tasks/${taskId}`, { headers: authHeaders() })
+    return response.data
+}
 
 // Works for both error shapes: { error, errors } (tasks, transit) and { message } (auth)
 export function getErrorMessage(error) {

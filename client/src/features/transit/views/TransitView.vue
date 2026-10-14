@@ -9,6 +9,9 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import ClinicSearch from '../components/ClinicSearch.vue'
+import OneMapTiles from '../components/OneMapTiles.vue'
+import TransitMobile from '../components/TransitMobile.vue'
+import { useIsMobile } from '../../my-tasks/utils/useIsMobile.js'
 import PersonAvatar from '../../my-tasks/components/PersonAvatar.vue'
 import { getTask, getTransitSession, postMilestone, endTransit } from '../services/transitApi.js'
 import { startTask, getErrorMessage } from '../../my-tasks/services/myTasksApi.js'
@@ -21,6 +24,7 @@ const props = defineProps({
 })
 
 const router = useRouter()
+const isMobile = useIsMobile()
 const { families } = useActiveFamily()
 const POLL_MS = 10 * 1000
 
@@ -90,10 +94,6 @@ const mapCaption = computed(() => {
     return `Live map · last ping ${formatTime(latest.value.at)}${at}`
 })
 
-const hasCoords = computed(() => Number.isFinite(destination.value?.lat) && Number.isFinite(destination.value?.lng))
-const mapEmbedUrl = computed(() =>
-    hasCoords.value ? `https://maps.google.com/maps?q=${destination.value.lat},${destination.value.lng}&z=16&output=embed` : ''
-)
 
 // The message the family's Telegram group gets for the latest step (sent by F's notify())
 const telegramPreview = computed(() => {
@@ -148,8 +148,8 @@ async function run(action) {
     }
 }
 
-function post(milestone) {
-    if (milestone.type === 'home' &&
+function post(milestone, { confirmed = false } = {}) {
+    if (milestone.type === 'home' && !confirmed &&
         !window.confirm('Is everyone safely back home? This ends the trip and marks the task as done.')) return
 
     run(async () => {
@@ -215,7 +215,30 @@ onUnmounted(stopPolling)
 </script>
 
 <template>
-    <div class="transit-page">
+    <!-- Phones: Figma "Mobile prototype" → 16 · Transit mode -->
+    <div v-if="isMobile">
+        <p v-if="isLoading" class="status" role="status">Loading transit...</p>
+        <p v-else-if="loadError" class="status is-error" role="alert">{{ loadError }}</p>
+        <TransitMobile
+            v-else-if="task"
+            :task="task"
+            :session="session"
+            :who="who"
+            :companion-first="companionFirst"
+            :is-companion="isCompanion"
+            :can-start="canStart"
+            :is-posting="isPosting"
+            :action-error="actionError"
+            :notice="notice"
+            @back="router.push({ name: 'task-detail', params: { familyId, taskId } })"
+            @post="(m) => post(m, { confirmed: true })"
+            @start="startTrip"
+            @dismiss="notice = ''"
+        />
+    </div>
+
+    <!-- Laptops: Figma "Web wireframes" → 06 · Transit mode -->
+    <div v-else class="transit-page">
         <div v-if="isLoading" class="status" role="status">
             <div class="spinner-border spinner-border-sm" aria-hidden="true"></div>
             Loading transit...
@@ -240,8 +263,8 @@ onUnmounted(stopPolling)
                 <button v-if="isActive && isCompanion" type="button" class="btn-secondary" :disabled="isPosting" @click="endTrip">
                     End transit
                 </button>
-                <button v-else type="button" class="btn-secondary" @click="router.push({ name: 'my-tasks' })">
-                    Back to My tasks
+                <button v-else type="button" class="btn-secondary" @click="router.push({ name: 'task-detail', params: { familyId, taskId } })">
+                    Back to task
                 </button>
             </header>
 
@@ -255,20 +278,15 @@ onUnmounted(stopPolling)
                 <!-- Map column -->
                 <div class="map-column">
                     <section class="map" aria-label="Map">
-                        <iframe
-                            v-if="mapEmbedUrl"
-                            :src="mapEmbedUrl"
-                            title="Map of the destination"
-                            loading="lazy"
-                            referrerpolicy="no-referrer-when-downgrade"
-                        ></iframe>
-                        <div class="map-caption" :class="{ overlay: mapEmbedUrl }">
-                            <i v-if="!mapEmbedUrl" class="bi bi-geo-alt map-pin" aria-hidden="true"></i>
-                            <span>{{ mapCaption }}</span>
-                            <a v-if="directionsUrl(destination)" :href="directionsUrl(destination)" target="_blank" rel="noopener">
-                                Directions
-                            </a>
-                        </div>
+                        <OneMapTiles
+                            :lat="destination?.lat ?? null"
+                            :lng="destination?.lng ?? null"
+                            :label="mapCaption"
+                            :height="520"
+                        />
+                        <a v-if="directionsUrl(destination)" :href="directionsUrl(destination)" target="_blank" rel="noopener" class="directions">
+                            Directions
+                        </a>
                     </section>
 
                     <section v-if="telegramPreview" class="card telegram">
@@ -558,62 +576,26 @@ button:disabled {
     background: white;
 }
 
-/* Map placeholder / live map */
+/* Map (OneMap) */
 .map {
     position: relative;
     display: flex;
     flex: 1;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 520px;
-    overflow: hidden;
-    border-radius: 12px;
-    background: #e8f5e9;
+    min-height: 0;
 }
 
-.map iframe {
+.directions {
     position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    border: 0;
-}
-
-.map-caption {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 16px;
-    font-size: 14px;
-    line-height: 20px;
-    letter-spacing: 0.07px;
-    font-weight: 500;
-    color: #2f7a3f;
-    text-align: center;
-}
-
-.map-caption.overlay {
-    position: absolute;
-    left: 12px;
     right: 12px;
-    bottom: 12px;
-    flex-direction: row;
-    justify-content: space-between;
-    border-radius: 12px;
-    background: #e8f5e9;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.map-caption a {
+    top: 12px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: white;
+    font-size: 14px;
     font-weight: 600;
     color: #2f7a3f;
-    text-decoration: underline;
-}
-
-.map-pin {
-    font-size: 30px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
 }
 
 .telegram {
@@ -897,14 +879,15 @@ h3 {
         grid-template-columns: 1fr;
     }
 
+    .map :deep(.onemap) {
+        height: 260px !important;
+    }
+
     /* On phones the timeline comes first, map below */
     .journey {
         order: -1;
     }
 
-    .map {
-        min-height: 260px;
-    }
 
     h1 {
         font-size: 24px;

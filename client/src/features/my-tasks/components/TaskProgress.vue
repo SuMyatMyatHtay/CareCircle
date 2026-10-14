@@ -40,7 +40,7 @@ const steps = computed(() => [
 .task-progress {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 8px;
     margin: 0;
     padding: 0;
@@ -60,7 +60,8 @@ const steps = computed(() => [
 }
 
 .line {
-    width: 40px;
+    flex: 0 1 40px;
+    min-width: 12px;
     height: 2px;
     background: #e5e7eb;
 }

@@ -6,10 +6,13 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import MyTaskCard from '../components/MyTaskCard.vue'
 import WeekStrip from '../components/WeekStrip.vue'
+import MyTasksMobile from '../components/MyTasksMobile.vue'
+import { useIsMobile } from '../utils/useIsMobile.js'
 import { getMyTasks, startTask, unclaimTask, completeTask, getErrorMessage } from '../services/myTasksApi.js'
 import { downloadTasksAsCalendar } from '../utils/calendarExport.js'
 
 const router = useRouter()
+const isMobile = useIsMobile()
 
 const TABS = [
     { key: 'claimed', label: 'Upcoming', empty: 'Nothing coming up. Claim a task from Family home.' },
@@ -165,7 +168,23 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div class="my-tasks-page">
+    <!-- Phones: Figma "Mobile prototype" layout -->
+    <MyTasksMobile
+        v-if="isMobile"
+        :tasks="filteredTasks"
+        :active-tab="activeTab"
+        :counts="counts"
+        :visible-tasks="visibleTasks"
+        :reminder="reminder"
+        :is-loading="isLoading"
+        :error-message="errorMessage"
+        :now="now"
+        @select-tab="selectTab"
+        @retry="loadTasks"
+    />
+
+    <!-- Laptops: Figma "Web wireframes" layout -->
+    <div v-else class="my-tasks-page">
         <header class="page-header">
             <div class="title">
                 <h1>My tasks</h1>

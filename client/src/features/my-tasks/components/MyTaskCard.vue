@@ -49,8 +49,15 @@ const statusLabel = computed(() => {
         </button>
 
         <div v-if="expanded" class="progress-box">
-            <TaskProgress :task="task" />
+            <TaskProgress :task="task" class="progress-steps" />
             <span class="spacer"></span>
+            <RouterLink
+                v-if="task.family?._id"
+                :to="{ name: 'task-detail', params: { familyId: task.family._id, taskId: task._id } }"
+                class="details-link"
+            >
+                View task →
+            </RouterLink>
 
             <template v-if="task.status === 'claimed'">
                 <button type="button" class="btn-secondary" :disabled="busy" @click="emit('give-back')">Give back</button>
@@ -185,8 +192,21 @@ const statusLabel = computed(() => {
     background: #fbfbf7;
 }
 
+.progress-steps {
+    flex: 1 1 340px;
+}
+
 .spacer {
-    flex: 1;
+    flex: 0 1 0;
+}
+
+.details-link {
+    padding: 0 6px;
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+    color: #2f7a3f;
+    white-space: nowrap;
 }
 
 /* Button component (Buttons page): 12px 16px, radius 8, 14px medium */

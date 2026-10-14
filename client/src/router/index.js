@@ -10,6 +10,7 @@ import PetDressupView from '../features/auth/views/PetDressupView.vue'
 import { verifySession, clearUserSession } from '../features/auth/services/authApi.js'
 import MyTasksView from '../features/my-tasks/views/MyTasksView.vue'
 import TransitView from '../features/transit/views/TransitView.vue'
+import TaskDetailView from '../features/transit/views/TaskDetailView.vue'
 
 const routes = [
   // ---- Pages without the app frame ----
@@ -33,7 +34,8 @@ const routes = [
       { path: 'profile', name: 'profile', component: ProfileView },
       { path: 'dress-up', name: 'dress-up', component: PetDressupView },
       {path:'my-tasks',name:'my-tasks',component:MyTasksView},
-      {path:'transit/:familyId/:taskId',name:'transit',component:TransitView,props:true}
+      {path:'transit/:familyId/:taskId',name:'transit',component:TransitView,props:true},
+      {path:'families/:familyId/tasks/:taskId',name:'task-detail',component:TaskDetailView,props:true}
   
       // Planned pages, by package:
       // B  { path: 'family/settings', component: FamilySettingsView },

@@ -9,7 +9,7 @@ import { initials } from '../utils/formatters.js'
 const props = defineProps({
     name: { type: String, default: '' },
     size: { type: Number, default: 40 },
-    tone: { type: String, default: 'green' } // green | peach
+    tone: { type: String, default: 'green' } // green | peach | yellow
 })
 
 // Figma avatars, exported as PNGs into client/public/avatars/people/
@@ -61,6 +61,12 @@ watch(src, () => { failed.value = false })
 .tone-peach {
     background: #ffe9e4;
     color: #b5583f;
+}
+
+.tone-yellow {
+    background: #fff6e0;
+    color: #7a4b00;
+    font-weight: 900;
 }
 
 img {
