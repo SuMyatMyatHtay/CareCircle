@@ -2,24 +2,25 @@
 <script setup>
 import { ref, computed } from 'vue'
 import '../../styles/components/familySidebar.css'
-import { useRouter } from 'vue-router'
-import {
-  logoutUser,
-  clearUserSession
-} from '../../features/auth/services/authApi.js'
+import CareAvatar from '../common/CareAvatar.vue'
+import { useSettingsAccountActions } from '../../features/settings/composables/useSettingsAccountActions.js'
 
-const router = useRouter() 
-const isLoggingOut = ref(false)
-const logoutError = ref('')
+const { loggingOut: isLoggingOut, logoutError, logOut: handleLogout } = useSettingsAccountActions()
 const copiedInviteCode = ref('')
 
 const props = defineProps({
     families: { type: Array, default: () => [] },
     selectedFamilyId: { type: String, default: '' },
-    user: { type: Object, default: () => ({}) }
+    user: { type: Object, default: () => ({}) },
+    recipients: { type: Array, default: () => [] },
+    recipientsLoading: Boolean,
+    recipientsError: { type: String, default: '' },
+    preview: Boolean,
+    homePath: { type: String, default: '/home' },
+    settingsPath: { type: String, default: '/settings' }
 })
 
-const emit = defineEmits(['select-family', 'navigate', 'collapse'])
+const emit = defineEmits(['select-family', 'navigate', 'collapse', 'open-recipient'])
 
 const showSwitcher = ref(false)
 
@@ -60,37 +61,12 @@ async function copyInviteCode(inviteCode) {
     }
 }
 
-async function handleLogout(){ 
-    if(isLoggingOut.value){ 
-        return
-    }
-    isLoggingOut.value = true
-    logoutError.value = ""
-
-    try{ 
-        await logoutUser()
-        clearUserSession() 
-        await router.replace('/login')
-    } catch(error){ 
-        if(error.response?.status === 401){ 
-            clearUserSession()
-            await router.replace('/login')
-            return
-        }
-
-        console.error('Logout failed: ', error)
-        logoutError.value = "Unable to log out. Please try again."
-    } finally { 
-        isLoggingOut.value = false
-    }
-}
-
 </script>
 
 <template>
     <aside class="family-sidebar">
         <div class="d-flex align-items-center justify-content-between mb-4">
-            <RouterLink to="/home" class="sidebar-brand mb-0">
+            <RouterLink :to="homePath" class="sidebar-brand mb-0">
                 <span class="brand-icon">
                 <i class="bi bi-heart-pulse"></i>
                 </span>
@@ -128,6 +104,8 @@ async function handleLogout(){
                     tabindex="0"
                     title="Click to copy invite code"
                     @click.stop="copyInviteCode(selectedFamily.inviteCode)"
+                    @keydown.enter.stop.prevent="copyInviteCode(selectedFamily.inviteCode)"
+                    @keydown.space.stop.prevent="copyInviteCode(selectedFamily.inviteCode)"
                 >
                     <i
                         class="bi"
@@ -166,11 +144,11 @@ async function handleLogout(){
 
             <div class="switcher-divider"></div>
 
-            <RouterLink to="/create-family" class="switcher-action" >
+            <RouterLink v-if="!preview" to="/create-family" class="switcher-action" >
             <i class="bi bi-plus-lg"></i> Create a new family
             </RouterLink>
 
-            <RouterLink to="/join-family" class="switcher-action">
+            <RouterLink v-if="!preview" to="/join-family" class="switcher-action">
             <i class="bi bi-person-plus"></i> Join with invite code
             </RouterLink>
         </div>
@@ -178,7 +156,7 @@ async function handleLogout(){
 
         <!-- NAVIGATION -->
         <nav class="sidebar-nav overflow-y-auto" aria-label="Family navigation">
-        <RouterLink to="/home" class="nav-item active" active-class="active" @click="emit('navigate')">
+        <RouterLink :to="homePath" class="nav-item" exact-active-class="active" @click="emit('navigate')">
             <i class="bi bi-house-door"></i>
             Family home
         </RouterLink>
@@ -195,9 +173,8 @@ async function handleLogout(){
             </div>
 
             <div class="nav-heading">CARE RECIPIENTS</div>
-            <p class="empty-recipients">
-            No care recipients yet.
-            </p>
+            <p v-if="recipientsLoading || recipientsError || !recipients.length" class="empty-recipients">{{ recipientsLoading ? 'Loading recipients…' : recipientsError ? 'Recipients not connected yet.' : 'No care recipients yet.' }}</p>
+            <button v-for="recipient in recipients" :key="recipient._id || recipient.id" type="button" class="care-sidebar-recipient" @click="emit('open-recipient', recipient)"><CareAvatar :person="recipient" size="small" /><span><strong>{{ recipient.nickname || recipient.name }}</strong><small>{{ recipient.careType === 'elderly' ? 'Elderly care' : recipient.careType === 'infant' ? 'Infant' : 'Care recipient' }}</small></span></button>
 
             <div class="nav-item unavailable">
             <i class="bi bi-plus-lg"></i>
@@ -209,18 +186,17 @@ async function handleLogout(){
 
         <!-- BOTTOM AREA -->
         <div class="sidebar-bottom">
-            <div v-if="selectedFamily" class="nav-item unavailable">
+            <RouterLink v-if="selectedFamily" :to="settingsPath" class="nav-item" exact-active-class="active" @click="emit('navigate')">
                 <i class="bi bi-gear"></i>
                 Family settings
-                <span class="coming-tag">Soon</span>
-            </div>
-            <RouterLink to="/profile" class="nav-item" active-class="active" @click="emit('navigate')">
+            </RouterLink>
+            <RouterLink v-if="!preview" to="/profile" class="nav-item care-profile-nav" active-class="active" @click="emit('navigate')">
                 <i class="bi bi-person-circle"></i>
                 My profile
             </RouterLink>
 
             <RouterLink
-                to="/profile"
+                :to="preview ? settingsPath : '/profile'"
                 class="profile-row text-decoration-none text-reset"
                 >
                 <span class="profile-avatar">
@@ -233,6 +209,7 @@ async function handleLogout(){
                 </span>
             </RouterLink>
             <button
+                v-if="!preview"
                 type="button"
                 class="logout-button"
                 :disabled="isLoggingOut"

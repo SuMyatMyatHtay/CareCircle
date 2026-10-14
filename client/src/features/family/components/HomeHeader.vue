@@ -34,7 +34,7 @@ h1 {
 
 p {
     margin: 0;
-    color: #7B8391;
+    color: var(--care-muted, #7B8391);
     font-size: 15px;
 }
 

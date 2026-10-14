@@ -5,6 +5,7 @@ import { Router } from 'express'
 import { requireAuth } from '../../middleware/requireAuth.js'
 import { requireFamilyMember, requireFamilyAdmin } from '../../middleware/requireFamilyMember.js'
 import { createFamily, getMyFamilies, joinFamily } from './controller.js'
+import { listMembers, updateMember, deleteMember, regenerateInviteCode } from './settings.controller.js'
 
 const router = Router()
 
@@ -27,9 +28,9 @@ router.post('/join', joinFamily)
 
 // ---- B (SangYoon): settings and members ----
 router.patch('/:familyId', admin, notImplemented)                 // { name }
-router.post('/:familyId/invite-code', admin, notImplemented)      // new code; old one stops working
-router.get('/:familyId/members', member, notImplemented)
-router.patch('/:familyId/members/:userId', admin, notImplemented) // { role?, relationship? }
-router.delete('/:familyId/members/:userId', member, notImplemented) // admin, or yourself leaving: check in controller
+router.post('/:familyId/invite-code', admin, regenerateInviteCode)
+router.get('/:familyId/members', member, listMembers)
+router.patch('/:familyId/members/:userId', admin, updateMember) // { role }; existing schema has no relationship field
+router.delete('/:familyId/members/:userId', member, deleteMember)
 
 export default router
