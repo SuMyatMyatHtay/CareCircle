@@ -221,7 +221,7 @@ Base: `/api/families/:familyId/logs`
 | Method | Path | Who | Body / query | Response | Status |
 |---|---|---|---|---|---|
 | GET | `/` | member | Query: `recipient=<id>`, `before=<date>`, `limit` (1–50, default 20) | `{ logs }`, newest first, `author` populated | Implemented |
-| POST | `/` | member | `{ recipient, type, content, task?, consultation?, medicationChanges?, inputMethod?, originalLang? }` | `201 { log }`. `author` is the logged-in user. `consultation` is kept only when `type` is `consultation`. Will send `log.created`, plus `medication.changed` if `medicationChanges` is set, once `notify()` exists. | Implemented |
+| POST | `/` | member | `{ recipient, type, content, task?, consultation?, medicationChanges?, inputMethod?, originalLang?, notify? }` | `201 { log }`. `author` is the logged-in user. `consultation` is kept only when `type` is `consultation`. Will send `log.created`, plus `medication.changed` if `medicationChanges` is set, once `notify()` exists; `notify: false` skips both. | Implemented |
 | GET | `/:logId` | member | Query: `lang=zh` (optional) | `{ log }`. `lang` / `translatedContent` is not built yet: each translation will be cached in `translations`, so a text is translated only once. | Implemented (without `lang`) |
 | PATCH | `/:logId` | author or admin | `{ content?, type?, consultation?, medicationChanges? }` | `{ log }`. Changing `content` clears the cached translations; changing `type` away from `consultation` clears `consultation`. `recipient`, `task`, `author` and `inputMethod` can't change. | Implemented |
 | DELETE | `/:logId` | author or admin | none | `204` | Implemented |

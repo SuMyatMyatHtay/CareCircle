@@ -1,10 +1,7 @@
 // Owner: SeungHak (F)
-// Care log entries written about a recipient, e.g. notes after an appointment.
-// Stored in the 'logentries' collection, which server/seed.js fills with sample data.
 import mongoose from 'mongoose'
 import { LOG_TYPES, INPUT_METHODS, MEDICATION_CHANGES } from '../../constants.js'
 
-// One medication change, e.g. { name: 'Amlodipine', change: 'dosage_changed', details: '5mg to 10mg' }
 const medicationChangeSchema = new mongoose.Schema({
     name: {
         type: String,
@@ -28,7 +25,6 @@ const medicationChangeSchema = new mongoose.Schema({
     }
 }, { _id: false })
 
-// Only used when type is 'consultation'
 const consultationSchema = new mongoose.Schema({
     doctorName: { type: String, trim: true, maxlength: 100, default: '' },
     clinic: { type: String, trim: true, maxlength: 120, default: '' },
@@ -48,7 +44,6 @@ const logEntrySchema = new mongoose.Schema({
         required: [true, 'Recipient is required']
     },
 
-    // Set when the log is written from a task, e.g. after an appointment
     task: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Task',
@@ -77,14 +72,12 @@ const logEntrySchema = new mongoose.Schema({
         maxlength: [5000, 'Content must be at most 5000 characters']
     },
 
-    // Language the content was written in
     originalLang: {
         type: String,
         trim: true,
         default: 'en'
     },
 
-    // Translation cache: language code -> translated content, e.g. { zh: '...' }
     translations: {
         type: Map,
         of: String,
@@ -111,11 +104,8 @@ const logEntrySchema = new mongoose.Schema({
     }
 }, { timestamps: true })
 
-// Recipient log tab: newest first
 logEntrySchema.index({ recipient: 1, createdAt: -1 })
-// Family activity feed: newest first
 logEntrySchema.index({ family: 1, createdAt: -1 })
 
-// The model must be named 'LogEntry' so it reads the seeded 'logentries' collection
 export default mongoose.models.LogEntry ||
     mongoose.model('LogEntry', logEntrySchema, 'logentries')

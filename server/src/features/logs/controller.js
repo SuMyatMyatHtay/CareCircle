@@ -1,8 +1,4 @@
 // Owner: SeungHak (F)
-// Handlers for /api/families/:familyId/logs. See docs/API-CONTRACT.md (section F).
-//
-// requireAuth + requireFamilyMember run before every handler, so these are always set:
-//   req.user.userId, req.family, req.memberRole
 
 import mongoose from 'mongoose'
 import LogEntry from './CareLog.model.js'
@@ -14,13 +10,10 @@ const MAX_LIMIT = 50
 const USER_FIELDS = 'name telegramUsername'
 const RECIPIENT_FIELDS = 'name nickname careType'
 
-// ---------- Helpers ----------
-
 function httpError(status, message, errors) {
     return Object.assign(new Error(message), { status, errors })
 }
 
-// Send known errors as { error, errors? }; pass anything else to the global handler
 function handleError(error, res, next) {
     if (error instanceof mongoose.Error.ValidationError) {
         return res.status(400).json({
@@ -44,22 +37,14 @@ function parseDate(value) {
     return Number.isNaN(date.getTime()) ? null : date
 }
 
-// author is always populated; recipient only once package C registers its model
 function populateRefs(query) {
     query.populate('author', USER_FIELDS)
     if (mongoose.models.CareRecipient) query.populate('recipient', RECIPIENT_FIELDS)
     return query
 }
 
-// Placeholder until utils/notify.js (Telegram) and Socket.IO exist.
-// Every log write already calls this, so wiring them up is a one-line change.
 function announce(_eventType, _log) {}
 
-// Copy only the fields a client may set. family and author always come from the
-// request, never from the body.
-//   partial: false (create) requires recipient, type and content.
-//   partial: true  (update) accepts only content, type, consultation, medicationChanges;
-//                  recipient, task, author and inputMethod can't change after creation.
 function parseLogInput(body, { partial }) {
     const input = body && typeof body === 'object' ? body : {}
     const data = {}
@@ -119,13 +104,11 @@ function parseLogInput(body, { partial }) {
     return data
 }
 
-// Consultation details only make sense on a consultation log, so drop them otherwise
 function dropConsultationUnlessConsultation(data, type) {
     if (type !== 'consultation') data.consultation = null
     return data
 }
 
-// 404 for a malformed id or a log from another family, so ids can't be probed
 async function findLogInFamily(familyId, logId) {
     if (!mongoose.isValidObjectId(logId)) throw httpError(404, 'Log not found')
 
@@ -134,7 +117,6 @@ async function findLogInFamily(familyId, logId) {
     return log
 }
 
-// Only the author or a family admin may edit or delete a log
 function assertCanChange(log, req) {
     const isAuthor = log.author.toString() === req.user.userId
     if (!isAuthor && req.memberRole !== 'admin') {
@@ -142,8 +124,6 @@ function assertCanChange(log, req) {
     }
 }
 
-// The recipient and task must belong to this family. Each check runs only once
-// its package has registered the model (C: CareRecipient, D: Task).
 async function assertRefsInFamily(data, familyId) {
     const errors = []
     const { CareRecipient, Task } = mongoose.models
@@ -158,10 +138,6 @@ async function assertRefsInFamily(data, familyId) {
     if (errors.length) throw httpError(400, 'Validation failed', errors)
 }
 
-// ---------- Handlers ----------
-
-// GET /api/families/:familyId/logs?recipient=<id>&before=<date>&limit=<n>
-// Newest first. Use `before` with the oldest createdAt you have to load the next page.
 export async function listLogs(req, res, next) {
     try {
         const { recipient, before, limit } = req.query
@@ -199,8 +175,6 @@ export async function listLogs(req, res, next) {
     }
 }
 
-// POST /api/families/:familyId/logs
-// Body: { recipient, type, content, task?, consultation?, medicationChanges?, inputMethod?, originalLang? }
 export async function createLog(req, res, next) {
     try {
         const parsed = parseLogInput(req.body, { partial: false })
@@ -214,8 +188,10 @@ export async function createLog(req, res, next) {
         })
 
         const populated = await populateRefs(LogEntry.findById(log._id))
-        announce(EVENTS.LOG_CREATED, populated)
-        if (populated.medicationChanges.length) announce(EVENTS.MEDICATION_CHANGED, populated)
+        if (req.body?.notify !== false) {
+            announce(EVENTS.LOG_CREATED, populated)
+            if (populated.medicationChanges.length) announce(EVENTS.MEDICATION_CHANGED, populated)
+        }
 
         return res.status(201).json({ log: populated })
     } catch (error) {
@@ -223,8 +199,6 @@ export async function createLog(req, res, next) {
     }
 }
 
-// GET /api/families/:familyId/logs/:logId
-// TODO: ?lang=zh will add translatedContent once LibreTranslate is wired up.
 export async function getLog(req, res, next) {
     try {
         const log = await findLogInFamily(req.family._id, req.params.logId)
@@ -234,8 +208,6 @@ export async function getLog(req, res, next) {
     }
 }
 
-// PATCH /api/families/:familyId/logs/:logId   (author or admin)
-// Body: any of { content, type, consultation, medicationChanges }
 export async function updateLog(req, res, next) {
     try {
         const log = await findLogInFamily(req.family._id, req.params.logId)
@@ -248,11 +220,9 @@ export async function updateLog(req, res, next) {
             ])
         }
 
-        // Switching away from 'consultation' clears its details
         const nextType = data.type ?? log.type
         if (nextType !== 'consultation') data.consultation = null
 
-        // Cached translations describe the old text, so drop them when it changes
         if (data.content !== undefined && data.content.trim() !== log.content) {
             log.translations = new Map()
         }
@@ -269,7 +239,6 @@ export async function updateLog(req, res, next) {
     }
 }
 
-// DELETE /api/families/:familyId/logs/:logId   (author or admin)
 export async function deleteLog(req, res, next) {
     try {
         const log = await findLogInFamily(req.family._id, req.params.logId)

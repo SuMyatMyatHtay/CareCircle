@@ -8,6 +8,7 @@ import EmptyFamilyHomeView from '../features/family/views/EmptyFamilyHomeView.vu
 import ProfileView from '../features/auth/views/ProfileView.vue'
 import PetDressupView from '../features/auth/views/PetDressupView.vue'
 import AvatarStudioView from '../features/avatar/views/AvatarStudioView.vue'
+import RecipientLogView from '../features/logs/views/RecipientLogView.vue'
 import { verifySession, clearUserSession } from '../features/auth/services/authApi.js'
 const routes = [
   {path:'/login',component:LoginView},
@@ -20,7 +21,8 @@ const routes = [
     {path:'family',redirect:'/home'},
     {path:'profile',name:'profile',component:ProfileView},
     {path:'dress-up',name:'dress-up',component:PetDressupView},
-    {path:'avatar-studio',name:'avatar-studio',component:AvatarStudioView}
+    {path:'avatar-studio',name:'avatar-studio',component:AvatarStudioView},
+    {path:'recipients/:recipientId/log',name:'recipient-log',component:RecipientLogView}
   ]},
   {path:'/:pathMatch(.*)*',redirect:'/home'}
 ]
