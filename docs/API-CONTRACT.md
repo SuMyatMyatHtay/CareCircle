@@ -222,6 +222,18 @@ Base: `/api/families/:familyId/tasks/:taskId/transit` (mounted before D's tasks 
 - Calls OneMap's public search API from the server. `lat`/`lng` are numbers and `postal` is 6 digits or `''`, so a result can be saved as `task.location` directly.
 - Frontend: `client/src/features/transit/components/ClinicSearch.vue` emits `select` with the location. D can use it in the task form: `<ClinicSearch @select="(loc) => (form.location = loc)" />`.
 
+### Shared components and pages
+
+All in `client/src/features/transit/components/`:
+
+- **`TaskLocationCard.vue`** (`:task`): OneMap map, address and Directions button. For D's Task detail page.
+- **`TaskTransitActions.vue`** (`:task`): Start transit / Open transit, live milestone, Add to Google Calendar. Has `#middle` and `#end` slots for D's own buttons. For D's Task detail page.
+- **`LiveTransitBanner.vue`** (`:family-id`): "on the way" banner, polls every 15 s. For B's Family Home, replacing the TransitBanner placeholder.
+
+Pages: `/my-tasks` (My Tasks; "Sync to Google Calendar" downloads an `.ics` file, no server endpoint) and `/transit/:familyId/:taskId` (Transit mode).
+
+**Temporary:** `client/src/features/transit/views/TaskDetailView.vue` at `/families/:familyId/tasks/:taskId` is a stand-in until D's Task detail page is ready. D can delete it and point the route to his own view.
+
 ---
 
 ## F: Care Logs & Integrations (SeungHak)
