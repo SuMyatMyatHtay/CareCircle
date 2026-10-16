@@ -1,7 +1,13 @@
 // Owner: SeungHak (F)
 import { Router } from 'express'
+import { listLogs, createLog, getLog, updateLog, deleteLog } from './controller.js'
+
 const router = Router()
-// These endpoints are placeholders; they do not yet implement business logic.
-router.get('/', (_req, res) => res.status(501).json({ error: 'Not implemented', module: 'logs' }))
-router.post('/', (_req, res) => res.status(501).json({ error: 'Not implemented', module: 'logs' }))
+
+router.get('/', listLogs)
+router.post('/', createLog)
+router.get('/:logId', getLog)
+router.patch('/:logId', updateLog)
+router.delete('/:logId', deleteLog)
+
 export default router

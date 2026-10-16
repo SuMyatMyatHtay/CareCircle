@@ -28,6 +28,10 @@ export const TRANSIT_STATUS = {
 export const TRANSIT_STATUSES = Object.values(TRANSIT_STATUS)
 export const MILESTONE_TYPES = ['departed', 'arrived', 'consultation_done', 'heading_home', 'home', 'custom']
 
+export const LOG_TYPES = ['consultation', 'medication_change', 'diet', 'symptom', 'general']
+export const INPUT_METHODS = ['text', 'voice']
+export const MEDICATION_CHANGES = ['added', 'stopped', 'dosage_changed']
+
 export const EVENTS = {
   TASK_CREATED: 'task.created',
   TASK_CLAIMED: 'task.claimed',
