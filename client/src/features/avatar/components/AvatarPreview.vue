@@ -54,6 +54,6 @@ watch(layers, () => { failed.value = {} })
 .cc-avatar-bottom { left: 24%; top: 66%; width: 32%; height: 23%; }
 .cc-avatar-skirt { top: 66%; left: 27%; width: 36%; height: 22%; }
 .cc-avatar-shorts { top: 69%; left: 32%; width: 28%; height: 22%; }
-.cc-avatar-accessory { left: 32%; top: 24%; width: 36%; height: 22%; }
+.cc-avatar-accessory { left: 17%; top: 4%; width: 66%; height: 44%; }
 .cc-avatar-warning { position: absolute; inset: 0; display: grid; place-items: center; color: #B46D66; }
 </style>
