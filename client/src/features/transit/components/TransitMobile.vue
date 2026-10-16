@@ -4,6 +4,7 @@
 // this component only shows it and sends events back.
 import { ref, computed } from 'vue'
 import { formatTime } from '../../my-tasks/utils/formatters.js'
+import OneMapTiles from './OneMapTiles.vue'
 
 const props = defineProps({
     task: { type: Object, required: true },
@@ -14,7 +15,9 @@ const props = defineProps({
     canStart: { type: Boolean, default: false },
     isPosting: { type: Boolean, default: false },
     actionError: { type: String, default: '' },
-    notice: { type: String, default: '' }
+    notice: { type: String, default: '' },
+    liveSpot: { type: Object, default: null },    // { lat, lng, at } while the trip is live
+    locationNote: { type: String, default: '' }   // companion only: "Sharing your location…"
 })
 const emit = defineEmits(['back', 'post', 'start', 'dismiss'])
 
@@ -111,6 +114,20 @@ function safelyHome() {
         </div>
 
         <template v-else>
+            <!-- Live map: only once there's a live position to show -->
+            <section v-if="liveSpot" class="live-map body" aria-label="Live map">
+                <OneMapTiles
+                    :lat="task.location?.lat ?? null"
+                    :lng="task.location?.lng ?? null"
+                    :live-lat="liveSpot.lat"
+                    :live-lng="liveSpot.lng"
+                    :live-label="companionFirst"
+                    :label="`Live · updated ${time(liveSpot.at)}`"
+                    :height="200"
+                    :fit-width="320"
+                />
+            </section>
+
             <!-- Checklist -->
             <ol class="steps body" aria-label="Trip progress">
                 <li
@@ -149,6 +166,7 @@ function safelyHome() {
                         <i class="bi bi-arrow-right" aria-hidden="true"></i>
                     </button>
                 </form>
+                <p v-if="locationNote" class="location-note">{{ locationNote }}</p>
             </section>
 
             <p v-else-if="isActive" class="hint body">
@@ -171,6 +189,16 @@ function safelyHome() {
 </template>
 
 <style scoped>
+.live-map {
+    margin-top: 12px;
+}
+
+.location-note {
+    margin: 10px 0 0;
+    font-size: 13px;
+    color: #5b6470;
+}
+
 /* Values from Figma "Mobile prototype" → 16 · Transit mode (390 × 844) */
 .m-transit {
     display: flex;

@@ -36,6 +36,12 @@ export async function endTransit(familyId, taskId) {
     return response.data.transitSession
 }
 
+// Live location: the companion's browser sends { lat, lng } while the trip is active
+export async function updateLocation(familyId, taskId, position) {
+    const response = await http.patch(`${base(familyId, taskId)}/transit/location`, position, { headers: authHeaders() })
+    return response.data.lastLocation
+}
+
 // For the live banner on Family Home
 export async function getActiveTransitSessions(familyId) {
     const response = await http.get(`/families/${familyId}/transit`, {

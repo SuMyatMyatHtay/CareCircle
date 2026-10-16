@@ -8,8 +8,7 @@ All endpoints, by package. **Implemented** means the endpoint is merged and test
 | B | SangYoon | `/api/families/:familyId` (members, settings), `/api/users/me` | Planned |
 | C | Jhen | `/api/families/:familyId/recipients` | Planned |
 | D | Marcus | `/api/families/:familyId/tasks` | Planned (model and routes done; controller stubs return 501) |
-
-| E | Chaithra | `/api/me/tasks`, `/api/families/:familyId/tasks/:taskId/transit`, `/api/families/:familyId/transit`, `/api/integrations/clinics` | Implemented (except `PATCH /location`, stretch) |
+| E | Chaithra | `/api/me/tasks`, `/api/families/:familyId/tasks/:taskId/transit`, `/api/families/:familyId/transit`, `/api/integrations/clinics` | Implemented |
 | F | SeungHak | `/api/families/:familyId/logs`, `/api/families/:familyId/notifications`, `/api/integrations` | Logs implemented; notifications and integrations planned |
 
 Only the tasks router is mounted so far. Any other path returns `404` until its package adds a router to `server/src/routes/index.js`, at the path listed in this file.
@@ -205,7 +204,7 @@ Base: `/api/families/:familyId/tasks/:taskId/transit` (mounted before D's tasks 
 | GET | `/` | member | none | `{ transitSession }`; `404` if the task has no session | Implemented |
 | POST | `/milestones` | companion | `{ type, label?, lat?, lng? }` | `201 { transitSession }`. The server sets `at`. `403` if not the companion, `409` if the trip has ended. | Implemented |
 | POST | `/end` | companion | none | `{ transitSession }` with `status: 'ended'`. "End transit": stops the trip **without** completing the task (it stays `in_progress`). `409` if already ended. | Implemented |
-| PATCH | `/location` | companion | `{ lat, lng }` | `{ transitSession }` (stretch goal) | Planned |
+| PATCH | `/location` | companion | `{ lat, lng }` | `{ lastLocation }`. Sent every ~20 s by the companion's browser while active. `403` if not the companion, `409` if ended. | Implemented |
 
 - **Starting a session:** D's `POST /tasks/:taskId/start` creates it (`TaskModel.startTransitSession`). E never creates one directly.
 - **Step types:** `MILESTONE_TYPES` = `departed`, `arrived`, `consultation_done`, `heading_home`, `home`, `custom`. Preset steps send a type (label optional; the server fills a default). Custom steps send `type: 'custom'` and the text the user typed as `label` (required, max 80 characters).

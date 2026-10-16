@@ -13,7 +13,8 @@ import OneMapTiles from '../components/OneMapTiles.vue'
 import TransitMobile from '../components/TransitMobile.vue'
 import { useIsMobile } from '../../my-tasks/utils/useIsMobile.js'
 import PersonAvatar from '../../my-tasks/components/PersonAvatar.vue'
-import { getTask, getTransitSession, postMilestone, endTransit } from '../services/transitApi.js'
+import { getTask, getTransitSession, postMilestone, endTransit, updateLocation } from '../services/transitApi.js'
+import { useLiveLocation } from '../utils/useLiveLocation.js'
 import { startTask, getErrorMessage } from '../../my-tasks/services/myTasksApi.js'
 import { formatTime, recipientName } from '../../my-tasks/utils/formatters.js'
 import { useActiveFamily } from '../../../composables/useActiveFamily.js'
@@ -56,6 +57,24 @@ const familyName = computed(() => families.value.find((f) => f.id === props.fami
 const destination = computed(() => task.value?.location || null)
 const placeName = computed(() => destination.value?.name || destination.value?.address || '')
 
+// Live location: the companion's own browser shares it; everyone else gets it from the server
+const live = useLiveLocation({
+    enabled: computed(() => isActive.value && isCompanion.value),
+    send: (position) => updateLocation(props.familyId, props.taskId, position)
+})
+const liveSpot = computed(() => {
+    if (!isActive.value) return null
+    if (isCompanion.value && live.position.value) return live.position.value
+    const last = session.value?.lastLocation
+    return Number.isFinite(last?.lat) && Number.isFinite(last?.lng) ? last : null
+})
+const locationNote = computed(() => ({
+    waiting: 'Finding your location…',
+    sharing: '📍 Sharing your location with the family until the trip ends.',
+    denied: 'Location is blocked. Allow it in your browser (the icon left of the address bar) so the family can see you on the map.',
+    unsupported: 'This browser can’t share location here.'
+}[live.status.value] || ''))
+
 const milestones = computed(() => session.value?.milestones || [])
 const latest = computed(() => milestones.value[milestones.value.length - 1] || null)
 const postedLabels = computed(() => new Set(milestones.value.map((m) => m.label.toLowerCase())))
@@ -90,6 +109,7 @@ const subtitle = computed(() => {
 
 const mapCaption = computed(() => {
     const at = placeName.value ? ` at ${placeName.value}` : ''
+    if (liveSpot.value) return `Live · ${companionFirst.value || 'Companion'} · updated ${formatTime(liveSpot.value.at)}`
     if (!latest.value) return placeName.value ? `Live map · ${placeName.value}` : 'No location on this task'
     return `Live map · last ping ${formatTime(latest.value.at)}${at}`
 })
@@ -151,6 +171,10 @@ async function run(action) {
 function post(milestone, { confirmed = false } = {}) {
     if (milestone.type === 'home' && !confirmed &&
         !window.confirm('Is everyone safely back home? This ends the trip and marks the task as done.')) return
+
+    // Attach where the companion is, so the step is pinned on the map too
+    const here = live.position.value
+    if (here) milestone = { ...milestone, lat: here.lat, lng: here.lng }
 
     run(async () => {
         session.value = await postMilestone(props.familyId, props.taskId, milestone)
@@ -230,6 +254,8 @@ onUnmounted(stopPolling)
             :is-posting="isPosting"
             :action-error="actionError"
             :notice="notice"
+            :live-spot="liveSpot"
+            :location-note="locationNote"
             @back="router.push({ name: 'task-detail', params: { familyId, taskId } })"
             @post="(m) => post(m, { confirmed: true })"
             @start="startTrip"
@@ -281,8 +307,12 @@ onUnmounted(stopPolling)
                         <OneMapTiles
                             :lat="destination?.lat ?? null"
                             :lng="destination?.lng ?? null"
+                            :live-lat="liveSpot?.lat ?? null"
+                            :live-lng="liveSpot?.lng ?? null"
+                            :live-label="companionFirst"
                             :label="mapCaption"
                             :height="520"
+                            :fit-width="560"
                         />
                         <a v-if="directionsUrl(destination)" :href="directionsUrl(destination)" target="_blank" rel="noopener" class="directions">
                             Directions
@@ -382,6 +412,9 @@ onUnmounted(stopPolling)
                         <p class="post-note">
                             Each update is time-stamped and sent to the family. “Safely back home” marks the task completed.
                         </p>
+                        <p v-if="locationNote" class="post-note location-note" :class="{ 'is-warning': ['denied', 'unsupported'].includes(live.status.value) }">
+                            {{ locationNote }}
+                        </p>
                     </section>
 
                     <p v-else-if="isActive" class="viewer-note">
@@ -398,6 +431,15 @@ onUnmounted(stopPolling)
 </template>
 
 <style scoped>
+.post-note.location-note {
+    margin-top: 6px;
+    color: #2f7a3f;
+}
+
+.post-note.location-note.is-warning {
+    color: #7a5a00;
+}
+
 /* Values from Figma file "CareCircle Wireframe", frame 06 · Transit mode */
 .transit-page {
     display: flex;

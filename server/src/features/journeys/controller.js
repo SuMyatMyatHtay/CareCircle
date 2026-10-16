@@ -206,3 +206,40 @@ export async function endTransit(req, res, next) {
         return handleError(error, res, next)
     }
 }
+
+// PATCH /api/families/:familyId/tasks/:taskId/transit/location   (companion only)
+// Body: { lat, lng }. The companion's browser sends this every ~20 s while the trip is
+// active, so the family's map shows where they are. Only the latest position is kept.
+export async function updateLocation(req, res, next) {
+    try {
+        const taskId = getTaskId(req)
+        const { lat, lng } = req.body || {}
+        const errors = []
+        if (typeof lat !== 'number' || !Number.isFinite(lat) || lat < -90 || lat > 90) {
+            errors.push('lat must be a number between -90 and 90')
+        }
+        if (typeof lng !== 'number' || !Number.isFinite(lng) || lng < -180 || lng > 180) {
+            errors.push('lng must be a number between -180 and 180')
+        }
+        if (errors.length) throw httpError(400, 'Validation failed', errors)
+
+        const session = await TransitSession.findOne({ task: taskId, family: req.family._id })
+        if (!session) throw httpError(404, 'Transit session not found')
+
+        if (session.companion.toString() !== req.user.userId) {
+            throw httpError(403, 'Only the person on this trip can share their location')
+        }
+
+        // Only while active, so a late update can't land after the trip ended
+        const updated = await TransitSession.findOneAndUpdate(
+            { _id: session._id, status: TRANSIT_STATUS.ACTIVE },
+            { $set: { lastLocation: { lat, lng, at: new Date() } } },
+            { new: true }
+        )
+        if (!updated) throw httpError(409, 'This trip has already ended')
+
+        return res.json({ lastLocation: updated.lastLocation })
+    } catch (error) {
+        return handleError(error, res, next)
+    }
+}
