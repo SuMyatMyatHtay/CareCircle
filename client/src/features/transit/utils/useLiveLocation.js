@@ -5,6 +5,8 @@
 //   live.status    -> 'off' | 'waiting' | 'sharing' | 'denied' | 'unsupported'
 // The browser asks "Allow location?" the first time. Positions are sent to the server
 // at most every SEND_MS; the map on everyone else's screen picks them up on its next poll.
+// Browsers can't share location in the background: it pauses when this page is closed or
+// the phone locks. To help, the screen is kept awake while sharing (where supported).
 import { ref, watch, onUnmounted } from 'vue'
 
 const SEND_MS = 20 * 1000
@@ -14,10 +16,29 @@ export function useLiveLocation({ enabled, send }) {
     const status = ref('off')
     let watchId = null
     let lastSent = 0
+    let wakeLock = null
+
+    // Keep the screen on while sharing; the browser drops this when the tab is hidden
+    async function keepAwake() {
+        try {
+            if ('wakeLock' in navigator && !wakeLock && document.visibilityState === 'visible') {
+                wakeLock = await navigator.wakeLock.request('screen')
+                wakeLock.addEventListener('release', () => { wakeLock = null })
+            }
+        } catch {
+            wakeLock = null // not supported or not allowed: sharing still works
+        }
+    }
+    function onVisible() {
+        if (watchId !== null && document.visibilityState === 'visible') keepAwake()
+    }
 
     function stop() {
         if (watchId !== null) navigator.geolocation.clearWatch(watchId)
         watchId = null
+        wakeLock?.release().catch(() => {})
+        wakeLock = null
+        document.removeEventListener('visibilitychange', onVisible)
         if (status.value !== 'denied' && status.value !== 'unsupported') status.value = 'off'
     }
 
@@ -53,6 +74,8 @@ export function useLiveLocation({ enabled, send }) {
             maximumAge: 10 * 1000,
             timeout: 30 * 1000
         })
+        keepAwake()
+        document.addEventListener('visibilitychange', onVisible)
     }
 
     watch(enabled, (on) => (on ? start() : stop()), { immediate: true })

@@ -97,7 +97,7 @@ export async function getTransitSession(req, res, next) {
 }
 
 // POST /api/families/:familyId/tasks/:taskId/transit/milestones   (companion only)
-// A "home" milestone ends the session and completes the task.
+// A "home" milestone completes the task and ends the session (see the comments inside).
 export async function addMilestone(req, res, next) {
     try {
         const taskId = getTaskId(req)
@@ -115,37 +115,42 @@ export async function addMilestone(req, res, next) {
         }
 
         const milestone = parseMilestone(req.body)
-
-        const update = { $push: { milestones: milestone } }
-        if (milestone.lat !== undefined) {
-            update.$set = { lastLocation: { lat: milestone.lat, lng: milestone.lng, at: milestone.at } }
-        }
-
-        // Only matches while still active, so a double tap after "home" can't post twice
-        const updated = await TransitSession.findOneAndUpdate(
-            { _id: session._id, status: TRANSIT_STATUS.ACTIVE },
-            update,
-            { new: true, runValidators: true }
-        )
-        if (!updated) throw httpError(409, 'This trip has already ended')
+        const location = milestone.lat !== undefined
+            ? { lastLocation: { lat: milestone.lat, lng: milestone.lng, at: milestone.at } }
+            : {}
 
         if (milestone.type === 'home') {
-            try {
-                // D's shared function: same rules as POST /tasks/:taskId/complete.
-                // It also sets the session status to ended.
-                await completeTask({ familyId, taskId, userId, memberRole: req.memberRole })
-            } catch (error) {
-                // Task couldn't be completed (e.g. cancelled meanwhile): undo the milestone
-                await TransitSession.updateOne(
-                    { _id: session._id },
-                    { $pull: { milestones: { type: 'home', at: milestone.at } } }
-                )
-                throw error
+            // "Safely back home" changes two things: the task (completed) and the session
+            // (home step + ended). Order matters so a failure never leaves them disagreeing:
+            //  1. Complete the task with D's shared function. It checks the same rules as
+            //     POST /tasks/:taskId/complete and ends the session. If it fails, nothing
+            //     has been written yet, so the error is returned and the trip carries on.
+            //  2. Add the home step and set endedAt in ONE atomic update. If that fails, it is
+            //     retried once. Even if it still fails, the task is completed and the session
+            //     is ended, which is consistent; only the "home" line is missing.
+            await completeTask({ familyId, taskId, userId, memberRole: req.memberRole })
+
+            const finish = {
+                $push: { milestones: milestone },
+                $set: { status: TRANSIT_STATUS.ENDED, endedAt: milestone.at, ...location }
             }
-            await TransitSession.updateOne(
-                { _id: session._id },
-                { $set: { status: TRANSIT_STATUS.ENDED, endedAt: milestone.at } }
+            try {
+                await TransitSession.updateOne({ _id: session._id }, finish, { runValidators: true })
+            } catch (error) {
+                console.error('Retrying home milestone:', error.message)
+                await TransitSession.updateOne({ _id: session._id }, finish, { runValidators: true })
+            }
+        } else {
+            const update = { $push: { milestones: milestone } }
+            if (location.lastLocation) update.$set = location
+
+            // Only matches while still active, so a step can't land after the trip ended
+            const updated = await TransitSession.findOneAndUpdate(
+                { _id: session._id, status: TRANSIT_STATUS.ACTIVE },
+                update,
+                { new: true, runValidators: true }
             )
+            if (!updated) throw httpError(409, 'This trip has already ended')
         }
 
         const transitSession = await populateSession(TransitSession.findById(session._id))
@@ -239,6 +244,39 @@ export async function updateLocation(req, res, next) {
         if (!updated) throw httpError(409, 'This trip has already ended')
 
         return res.json({ lastLocation: updated.lastLocation })
+    } catch (error) {
+        return handleError(error, res, next)
+    }
+}
+
+// POST /api/families/:familyId/tasks/:taskId/transit/resume   (companion only)
+// Undo an accidental "End transit": the same trip carries on with its steps so far.
+// Only while the task is still in progress (a completed or cancelled task can't resume).
+export async function resumeTransit(req, res, next) {
+    try {
+        const taskId = getTaskId(req)
+        const session = await TransitSession.findOne({ task: taskId, family: req.family._id })
+        if (!session) throw httpError(404, 'Transit session not found')
+
+        if (session.companion.toString() !== req.user.userId) {
+            throw httpError(403, 'Only the person on this trip can resume it')
+        }
+
+        const Task = mongoose.models.Task
+        const task = Task ? await Task.findOne({ _id: taskId, family: req.family._id }).select('status claimedBy') : null
+        if (!task || task.status !== 'in_progress' || String(task.claimedBy) !== req.user.userId) {
+            throw httpError(409, 'Only a trip for a task that is still in progress can be resumed')
+        }
+
+        const resumed = await TransitSession.findOneAndUpdate(
+            { _id: session._id, status: TRANSIT_STATUS.ENDED },
+            { $set: { status: TRANSIT_STATUS.ACTIVE, endedAt: null } },
+            { new: true }
+        )
+        if (!resumed) throw httpError(409, 'This trip is already active')
+
+        const transitSession = await populateSession(TransitSession.findById(session._id))
+        return res.json({ transitSession })
     } catch (error) {
         return handleError(error, res, next)
     }

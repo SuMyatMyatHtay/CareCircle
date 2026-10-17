@@ -17,9 +17,11 @@ const props = defineProps({
     actionError: { type: String, default: '' },
     notice: { type: String, default: '' },
     liveSpot: { type: Object, default: null },    // { lat, lng, at } while the trip is live
-    locationNote: { type: String, default: '' }   // companion only: "Sharing your location…"
+    locationNote: { type: String, default: '' },  // companion only: "Sharing your location…"
+    liveCaption: { type: String, default: '' },   // "Live · updated 1:42 PM" or "Location paused · …"
+    canResume: { type: Boolean, default: false }  // companion, after an accidental End transit
 })
-const emit = defineEmits(['back', 'post', 'start', 'dismiss'])
+const emit = defineEmits(['back', 'post', 'start', 'dismiss', 'resume'])
 
 // The fixed steps in order, with the labels used on the phone design
 const PRESETS = [
@@ -122,7 +124,7 @@ function safelyHome() {
                     :live-lat="liveSpot.lat"
                     :live-lng="liveSpot.lng"
                     :live-label="companionFirst"
-                    :label="`Live · updated ${time(liveSpot.at)}`"
+                    :label="liveCaption || `Live · updated ${time(liveSpot.at)}`"
                     :height="200"
                     :fit-width="320"
                 />
@@ -175,6 +177,11 @@ function safelyHome() {
             <p v-else-if="isEnded" class="hint body done-note">
                 {{ task.status === 'completed' ? `${who || 'Everyone'} is safely home. The task is done.` : 'Transit ended. The task is still in progress.' }}
             </p>
+            <div v-if="canResume" class="body">
+                <button type="button" class="btn-resume" :disabled="isPosting" @click="emit('resume')">
+                    <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Resume transit
+                </button>
+            </div>
         </template>
 
         <!-- Bottom: finish the trip -->
@@ -191,6 +198,19 @@ function safelyHome() {
 <style scoped>
 .live-map {
     margin-top: 12px;
+}
+
+.btn-resume {
+    width: 100%;
+    margin-top: 4px;
+    padding: 14px;
+    border: 1.5px solid #2f7a3f;
+    border-radius: 14px;
+    background: white;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 800;
+    color: #2f7a3f;
 }
 
 .location-note {

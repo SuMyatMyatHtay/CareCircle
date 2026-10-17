@@ -13,7 +13,7 @@ import OneMapTiles from '../components/OneMapTiles.vue'
 import TransitMobile from '../components/TransitMobile.vue'
 import { useIsMobile } from '../../my-tasks/utils/useIsMobile.js'
 import PersonAvatar from '../../my-tasks/components/PersonAvatar.vue'
-import { getTask, getTransitSession, postMilestone, endTransit, updateLocation } from '../services/transitApi.js'
+import { getTask, getTransitSession, postMilestone, endTransit, resumeTransit, updateLocation } from '../services/transitApi.js'
 import { useLiveLocation } from '../utils/useLiveLocation.js'
 import { startTask, getErrorMessage } from '../../my-tasks/services/myTasksApi.js'
 import { formatTime, recipientName } from '../../my-tasks/utils/formatters.js'
@@ -49,6 +49,8 @@ const isCompanion = computed(() => Boolean(me.id) && idOf(session.value?.compani
 const isClaimer = computed(() => Boolean(me.id) && idOf(task.value?.claimedBy) === me.id)
 const canStart = computed(() => !session.value && isClaimer.value && task.value?.status === 'claimed')
 const taskDone = computed(() => task.value?.status === 'completed')
+// Undo an accidental "End transit" while the task is still in progress
+const canResume = computed(() => isEnded.value && isCompanion.value && task.value?.status === 'in_progress')
 
 const who = computed(() => recipientName(task.value))
 const companionName = computed(() => session.value?.companion?.name || task.value?.claimedBy?.name || '')
@@ -68,9 +70,15 @@ const liveSpot = computed(() => {
     const last = session.value?.lastLocation
     return Number.isFinite(last?.lat) && Number.isFinite(last?.lng) ? last : null
 })
+// Browsers only share location while this page is open, so a position older than
+// STALE_MS means it is paused (page closed, phone locked or no signal)
+const STALE_MS = 2 * 60 * 1000
+const now = ref(Date.now())
+const isStale = computed(() => Boolean(liveSpot.value?.at) && now.value - new Date(liveSpot.value.at).getTime() > STALE_MS)
+
 const locationNote = computed(() => ({
     waiting: 'Finding your location…',
-    sharing: '📍 Sharing your location with the family until the trip ends.',
+    sharing: '📍 Sharing your location with the family. Keep this page open: sharing pauses if you leave it or lock your phone.',
     denied: 'Location is blocked. Allow it in your browser (the icon left of the address bar) so the family can see you on the map.',
     unsupported: 'This browser can’t share location here.'
 }[live.status.value] || ''))
@@ -109,6 +117,7 @@ const subtitle = computed(() => {
 
 const mapCaption = computed(() => {
     const at = placeName.value ? ` at ${placeName.value}` : ''
+    if (liveSpot.value && isStale.value) return `Location paused · last seen ${formatTime(liveSpot.value.at)}`
     if (liveSpot.value) return `Live · ${companionFirst.value || 'Companion'} · updated ${formatTime(liveSpot.value.at)}`
     if (!latest.value) return placeName.value ? `Live map · ${placeName.value}` : 'No location on this task'
     return `Live map · last ping ${formatTime(latest.value.at)}${at}`
@@ -199,6 +208,13 @@ function endTrip() {
     })
 }
 
+function resumeTrip() {
+    run(async () => {
+        session.value = await resumeTransit(props.familyId, props.taskId)
+        notice.value = 'Transit resumed. The family can follow along again.'
+    })
+}
+
 function startTrip() {
     run(async () => {
         const result = await startTask(props.familyId, props.taskId)
@@ -222,6 +238,7 @@ function stopPolling() {
 function startPolling() {
     stopPolling()
     timer = setInterval(() => {
+        now.value = Date.now()
         if (document.visibilityState === 'visible' && !isPosting.value) load({ quiet: true })
     }, POLL_MS)
 }
@@ -256,9 +273,12 @@ onUnmounted(stopPolling)
             :notice="notice"
             :live-spot="liveSpot"
             :location-note="locationNote"
+            :live-caption="mapCaption"
+            :can-resume="canResume"
             @back="router.push({ name: 'task-detail', params: { familyId, taskId } })"
             @post="(m) => post(m, { confirmed: true })"
             @start="startTrip"
+            @resume="resumeTrip"
             @dismiss="notice = ''"
         />
     </div>
@@ -381,6 +401,9 @@ onUnmounted(stopPolling)
                         <i class="bi" :class="taskDone ? 'bi-house-heart-fill' : 'bi-flag'" aria-hidden="true"></i>
                         {{ taskDone ? 'Safely back home. The task is marked as done.' : 'Transit ended. The task is still in progress.' }}
                     </p>
+                    <button v-if="canResume" type="button" class="btn-secondary wide resume" :disabled="isPosting" @click="resumeTrip">
+                        <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Resume transit
+                    </button>
 
                     <section v-if="isActive && isCompanion" class="post-box" aria-labelledby="post-title">
                         <h3 id="post-title">Post the next update</h3>
@@ -420,6 +443,7 @@ onUnmounted(stopPolling)
                     <p v-else-if="isActive" class="viewer-note">
                         <i class="bi bi-eye" aria-hidden="true"></i>
                         You're following live. Only {{ companionFirst || 'the companion' }} can post updates.
+                        <template v-if="isStale"> Their location is paused, probably because their Transit page is closed.</template>
                     </p>
 
                     <span class="push-down"></span>
@@ -431,6 +455,10 @@ onUnmounted(stopPolling)
 </template>
 
 <style scoped>
+.resume {
+    margin: -4px 0 12px;
+}
+
 .post-note.location-note {
     margin-top: 6px;
     color: #2f7a3f;

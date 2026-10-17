@@ -52,7 +52,14 @@ export async function getActiveTransitSessions(familyId) {
 }
 
 // OneMap search through our backend. Each clinic: { name, address, postal, lat, lng }
+// { clinics, otherPlaces }: medical places first; otherPlaces is for when nothing medical matched
 export async function searchClinics(query) {
     const response = await http.get('/integrations/clinics', { headers: authHeaders(), params: { q: query } })
-    return response.data.clinics
+    return { clinics: response.data.clinics || [], otherPlaces: response.data.otherPlaces || [] }
+}
+
+// Undo an accidental "End transit": the same trip carries on
+export async function resumeTransit(familyId, taskId) {
+    const response = await http.post(`${base(familyId, taskId)}/transit/resume`, null, { headers: authHeaders() })
+    return response.data.transitSession
 }

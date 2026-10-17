@@ -14,6 +14,7 @@ const emit = defineEmits(['select'])
 
 const query = ref('')
 const results = ref([])
+const showingOthers = ref(false) // true when no clinic matched and these are other places
 const isSearching = ref(false)
 const errorMessage = ref('')
 const hasSearched = ref(false)
@@ -27,7 +28,9 @@ async function search() {
     isSearching.value = true
     errorMessage.value = ''
     try {
-        results.value = await searchClinics(q)
+        const found = await searchClinics(q)
+        showingOthers.value = !found.clinics.length && found.otherPlaces.length > 0
+        results.value = found.clinics.length ? found.clinics : found.otherPlaces
         hasSearched.value = true
     } catch (error) {
         errorMessage.value = getErrorMessage(error)
@@ -64,7 +67,8 @@ function choose(place) {
         </form>
 
         <p v-if="errorMessage" class="hint is-error" role="alert">{{ errorMessage }}</p>
-        <p v-else-if="hasSearched && !results.length" class="hint">No places found. Try another name.</p>
+        <p v-else-if="hasSearched && !results.length" class="hint">No clinics or places found. Try another name.</p>
+        <p v-else-if="showingOthers" class="hint">No clinics matched, so these are other places with that name.</p>
 
         <ul v-if="results.length" class="results">
             <li v-for="place in results" :key="`${place.name}-${place.lat}-${place.lng}`">
