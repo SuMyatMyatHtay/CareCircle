@@ -1,6 +1,6 @@
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import '../../styles/components/familySidebar.css'
 import { useRouter, useRoute } from 'vue-router'
 import { useRecipients } from '../../composables/useRecipients.js'
@@ -23,10 +23,9 @@ const props = defineProps({
 
 const emit = defineEmits(['select-family', 'navigate', 'collapse'])
 
-// Care recipients (C): the sidebar loads them, every page shares the list
+// Care recipients (C): cached per family, shared with every page
 const route = useRoute()
-const { recipients, isLoading: recipientsLoading, errorMessage: recipientsError, loadRecipients } = useRecipients()
-watch(() => props.selectedFamilyId, loadRecipients, { immediate: true })
+const { recipients, isLoading: recipientsLoading, errorMessage: recipientsError } = useRecipients()
 
 const showSwitcher = ref(false)
 

@@ -2,7 +2,9 @@
 // Owner: SeungHak (F)
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useQueryClient } from '@tanstack/vue-query'
 import { useActiveFamily } from '../../../composables/useActiveFamily.js'
+import { queryKeys } from '../../../services/queryClient.js'
 import LogForm from '../components/LogForm.vue'
 import LogList from '../components/LogList.vue'
 import LogTypeFilter from '../components/LogTypeFilter.vue'
@@ -15,6 +17,13 @@ const route = useRoute()
 const { selectedFamilyId, selectedFamily } = useActiveFamily()
 
 const recipientId = computed(() => route.params.recipientId)
+
+// Other pages (e.g. the recipient Overview) cache this family's notes. Mark them
+// out of date after any change here so they show it next time.
+const queryClient = useQueryClient()
+function invalidateCachedLogs() {
+    queryClient.invalidateQueries({ queryKey: queryKeys.logs(selectedFamilyId.value) })
+}
 
 function readUser() {
     try {
@@ -130,6 +139,7 @@ async function postUpdate(payload) {
     try {
         const log = await createLog(selectedFamilyId.value, { ...payload, recipient: recipientId.value })
         logs.value = [log, ...logs.value]
+        invalidateCachedLogs()
         selectedType.value = ''
         form.value?.reset()
     } catch (error) {
@@ -154,6 +164,7 @@ async function saveEdit(log, changes) {
     try {
         const updated = await updateLog(selectedFamilyId.value, log._id, changes)
         logs.value = logs.value.map((item) => (item._id === updated._id ? updated : item))
+        invalidateCachedLogs()
         editingId.value = ''
     } catch (error) {
         editError.value = getLogErrorMessage(error)
@@ -171,6 +182,7 @@ async function removeLog(log) {
     try {
         await deleteLog(selectedFamilyId.value, log._id)
         logs.value = logs.value.filter((item) => item._id !== log._id)
+        invalidateCachedLogs()
     } catch (error) {
         if (error.response?.status === 404) {
             logs.value = logs.value.filter((item) => item._id !== log._id)

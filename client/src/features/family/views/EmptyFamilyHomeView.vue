@@ -1,12 +1,12 @@
 <script setup>
 import '../../../styles/emptyFamilyHomeView.css'
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { useActiveFamily } from '../../../composables/useActiveFamily.js'
 import HomeHeader from '../components/HomeHeader.vue'
 import SectionCard from '../../../components/common/SectionCard.vue'
 import NewTaskButton from '../../tasks/components/NewTaskButton.vue'
 import TaskList from '../../tasks/components/TaskList.vue'
-import { getFamilyTasks, getTaskErrorMessage } from '../../tasks/services/tasksApi.js'
+import { useFamilyTasks, taskRecipientId } from '../../../composables/useFamilyTasks.js'
 import TransitBanner from '../components/placeholders/TransitBanner.vue'
 import RecipientCard from '../../recipients/components/RecipientCard.vue'
 import { useRecipients } from '../../../composables/useRecipients.js'
@@ -41,37 +41,8 @@ const greeting = computed(() => {
 })
 
 // ---- Tasks (D): "Today across the family" ----
-const tasks = ref([])
-const tasksLoading = ref(false)
-const tasksError = ref('')
-
-async function loadTasks() {
-  const familyId = selectedFamilyId.value
-  tasksError.value = ''
-
-  if (!familyId) {
-    tasks.value = []
-    return
-  }
-
-  tasksLoading.value = true
-  try {
-    const result = await getFamilyTasks(familyId)
-    // Ignore the reply if the user switched family while it was loading
-    if (familyId === selectedFamilyId.value) tasks.value = result
-  } catch (error) {
-    if (familyId === selectedFamilyId.value) {
-      tasks.value = []
-      tasksError.value = getTaskErrorMessage(error)
-    }
-  } finally {
-    if (familyId === selectedFamilyId.value) tasksLoading.value = false
-  }
-}
-
-onMounted(loadTasks)
-// Reload when the user picks another family in the sidebar
-watch(selectedFamilyId, loadTasks)
+// Cached per family and shared with the recipient pages; follows the selected family
+const { tasks, isLoading: tasksLoading, errorMessage: tasksError, refetch: reloadTasks } = useFamilyTasks()
 
 const openTaskCount = computed(() =>
   tasks.value.filter((task) => task.status === 'open').length
@@ -96,7 +67,7 @@ const { recipients, isLoading: recipientsLoading, errorMessage: recipientsError,
 
 function openTasksFor(recipientId) {
   return tasks.value.filter((task) =>
-    task.status === 'open' && (task.recipient?._id ?? task.recipient) === recipientId
+    task.status === 'open' && taskRecipientId(task) === recipientId
   ).length
 }
 
@@ -176,7 +147,7 @@ function openNewTask() { }
       </div>
       <div v-else-if="recipientsError" class="recipient-list-status is-error" role="alert">
         <span>{{ recipientsError }}</span>
-        <button type="button" class="btn btn-sm btn-outline-secondary" @click="reloadRecipients">
+        <button type="button" class="btn btn-sm btn-outline-secondary" @click="reloadRecipients()">
           Try again
         </button>
       </div>
@@ -192,7 +163,7 @@ function openNewTask() { }
         <!-- D: the family's tasks (live data) -->
         <SectionCard title="Today across the family">
           <TaskList :tasks="tasks" :is-loading="tasksLoading" :error-message="tasksError"
-            max-height="60vh" @retry="loadTasks" />
+            max-height="60vh" @retry="reloadTasks" />
         </SectionCard>
 
         <!-- Placeholder (F): activity feed -->

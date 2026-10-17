@@ -1,12 +1,12 @@
 <script setup>
 // Owner: Jhen (C)
-// Recipient hub shell at /recipients/:recipientId. Loads the recipient once and passes it
-// to the tab views (Overview, Tasks, Profile) so they don't fetch it again.
-import { ref, computed, onMounted, watch } from 'vue'
+// Recipient hub shell at /recipients/:recipientId. Gets the recipient from the query cache
+// and passes it to the tab views (Overview, Tasks, Profile) so they don't fetch it again.
+import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useActiveFamily } from '../../../composables/useActiveFamily.js'
+import { useRecipient } from '../../../composables/useRecipients.js'
 import RecipientHubHeader from '../components/RecipientHubHeader.vue'
-import { getRecipient, getRecipientErrorMessage } from '../services/recipientsApi.js'
 import { displayName } from '../recipientLabels.js'
 
 const route = useRoute()
@@ -22,56 +22,18 @@ const TAB_LABELS = {
     'recipient-profile': 'Profile'
 }
 
-const recipient = ref(null)
-const loading = ref(false)
-const error = ref('')
-const notFound = ref(false)
-
-function isCurrent(familyId, forRecipient) {
-    return familyId === selectedFamilyId.value && forRecipient === recipientId.value
-}
-
-async function loadRecipient() {
-    const familyId = selectedFamilyId.value
-    const forRecipient = recipientId.value
-    error.value = ''
-    notFound.value = false
-
-    // Never keep showing the previous recipient while another one loads
-    if (recipient.value?._id !== forRecipient) recipient.value = null
-
-    // recipientId is gone for a moment while the user leaves the hub
-    if (!familyId || !forRecipient) return
-
-    loading.value = true
-    try {
-        const result = await getRecipient(familyId, forRecipient)
-        if (isCurrent(familyId, forRecipient)) recipient.value = result
-    } catch (err) {
-        if (!isCurrent(familyId, forRecipient)) return
-        recipient.value = null
-        if (err.response?.status === 404) notFound.value = true
-        else error.value = getRecipientErrorMessage(err)
-    } finally {
-        if (isCurrent(familyId, forRecipient)) loading.value = false
-    }
-}
-
-onMounted(loadRecipient)
-watch(recipientId, loadRecipient)
+// Cached per recipient: each recipient has its own cache entry, so the previous
+// one is never shown while another loads
+const { recipient, isLoading: loading, notFound, errorMessage: error, refetch: loadRecipient, setRecipient } =
+    useRecipient(recipientId)
 
 // A recipient belongs to one family, so switching family leaves the hub
 watch(selectedFamilyId, (newId, oldId) => {
-    if (oldId && newId !== oldId) {
-        recipient.value = null
-        router.push('/home')
-    } else {
-        loadRecipient()
-    }
+    if (oldId && newId !== oldId) router.push('/home')
 })
 
 function replaceRecipient(updated) {
-    recipient.value = updated
+    setRecipient(updated)
 }
 
 // TODO: open the task form when it exists
@@ -104,7 +66,7 @@ function openNewTask() { }
 
         <div v-else-if="error" class="hub-status is-error" role="alert">
             <span>{{ error }}</span>
-            <button type="button" class="btn btn-sm btn-outline-secondary" @click="loadRecipient">
+            <button type="button" class="btn btn-sm btn-outline-secondary" @click="loadRecipient()">
                 Try again
             </button>
         </div>

@@ -1,5 +1,6 @@
 
 import axios from 'axios'
+import { queryClient } from '../../../services/queryClient.js'
 
 const authApi = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
@@ -109,6 +110,8 @@ export function clearUserSession() {
   sessionStorage.removeItem('token')
   sessionStorage.removeItem('user')
   sessionStorage.removeItem('activeFamilyId')
+  // Drop all cached family data so the next user never sees it
+  queryClient.clear()
 }
 
 

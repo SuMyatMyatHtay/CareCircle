@@ -1,13 +1,13 @@
 <script setup>
 // Owner: Jhen (C)
 // Hub "Tasks" tab: this recipient's tasks grouped by day, with status filter chips
-// and a "this week" summary. One request; filtering happens here.
-import { ref, computed, onMounted, watch } from 'vue'
+// and a "this week" summary. Reads the family's cached task list (shared with
+// Overview and Family home) and filters it here, so switching tabs doesn't refetch.
+import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { useActiveFamily } from '../../../composables/useActiveFamily.js'
 import SectionCard from '../../../components/common/SectionCard.vue'
 import TaskList from '../../tasks/components/TaskList.vue'
-import { getFamilyTasks, getTaskErrorMessage } from '../../tasks/services/tasksApi.js'
+import { useFamilyTasks, taskRecipientId } from '../../../composables/useFamilyTasks.js'
 import { displayName, dateKey, formatDate } from '../recipientLabels.js'
 
 const props = defineProps({
@@ -17,45 +17,12 @@ const props = defineProps({
 defineEmits(['updated'])
 
 const route = useRoute()
-const { selectedFamilyId } = useActiveFamily()
 
 const recipientId = computed(() => route.params.recipientId)
 const name = computed(() => displayName(props.recipient))
 
-const tasks = ref([])
-const tasksLoading = ref(false)
-const tasksError = ref('')
-
-function isCurrent(familyId, forRecipient) {
-    return familyId === selectedFamilyId.value && forRecipient === recipientId.value
-}
-
-async function loadTasks() {
-    const familyId = selectedFamilyId.value
-    const forRecipient = recipientId.value
-    tasksError.value = ''
-
-    if (!familyId || !forRecipient) {
-        tasks.value = []
-        return
-    }
-
-    tasksLoading.value = true
-    try {
-        const result = await getFamilyTasks(familyId, { recipient: forRecipient })
-        if (isCurrent(familyId, forRecipient)) tasks.value = result
-    } catch (error) {
-        if (isCurrent(familyId, forRecipient)) {
-            tasks.value = []
-            tasksError.value = getTaskErrorMessage(error)
-        }
-    } finally {
-        if (isCurrent(familyId, forRecipient)) tasksLoading.value = false
-    }
-}
-
-onMounted(loadTasks)
-watch([selectedFamilyId, recipientId], loadTasks)
+const { tasks: familyTasks, isLoading: tasksLoading, errorMessage: tasksError, refetch: reloadTasks } = useFamilyTasks()
+const tasks = computed(() => familyTasks.value.filter((t) => taskRecipientId(t) === recipientId.value))
 
 // ---- Filter chips ----
 const FILTERS = [
@@ -135,7 +102,7 @@ const week = computed(() => {
 
             <TaskList v-if="tasksLoading || tasksError || shownTasks.length === 0" :tasks="shownTasks"
                 :is-loading="tasksLoading" :error-message="tasksError" :empty-message="emptyMessage"
-                @retry="loadTasks" />
+                @retry="reloadTasks" />
 
             <div v-else class="task-groups">
                 <section v-for="group in groups" :key="group.key" class="task-group">

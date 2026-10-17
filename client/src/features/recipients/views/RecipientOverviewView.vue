@@ -1,13 +1,16 @@
 <script setup>
 // Owner: Jhen (C)
 // Hub "Overview" tab: next tasks, latest notes, and what to know before taking them out.
-// The hub passes in the loaded recipient; tasks and notes are loaded here.
-import { ref, computed, onMounted, watch } from 'vue'
+// The hub passes in the loaded recipient. Tasks and notes come from the query cache,
+// so coming back to this tab shows them straight away instead of refetching.
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { useQuery } from '@tanstack/vue-query'
 import { useActiveFamily } from '../../../composables/useActiveFamily.js'
+import { useFamilyTasks, taskRecipientId } from '../../../composables/useFamilyTasks.js'
+import { queryKeys } from '../../../services/queryClient.js'
 import SectionCard from '../../../components/common/SectionCard.vue'
 import TaskList from '../../tasks/components/TaskList.vue'
-import { getFamilyTasks, getTaskErrorMessage } from '../../tasks/services/tasksApi.js'
 import { getLogs, getLogErrorMessage } from '../../logs/services/logsApi.js'
 import { logTypeLabel } from '../../logs/logTypes.js'
 import { displayName, initials, mobilityLabel, formatDate } from '../recipientLabels.js'
@@ -24,79 +27,34 @@ const { selectedFamilyId } = useActiveFamily()
 const recipientId = computed(() => route.params.recipientId)
 const name = computed(() => displayName(props.recipient))
 
-function isCurrent(familyId, forRecipient) {
-    return familyId === selectedFamilyId.value && forRecipient === recipientId.value
-}
+// ---- Upcoming tasks (D): next 3 still-active tasks from the family's cached list ----
+const ACTIVE_STATUSES = ['open', 'claimed', 'in_progress']
+const { tasks: familyTasks, isLoading: tasksLoading, errorMessage: tasksError, refetch: reloadTasks } = useFamilyTasks()
 
-// ---- Upcoming tasks (D's API) ----
-const tasks = ref([])
-const tasksLoading = ref(false)
-const tasksError = ref('')
+const tasks = computed(() => {
+    const now = Date.now()
+    return familyTasks.value
+        .filter((t) =>
+            taskRecipientId(t) === recipientId.value &&
+            ACTIVE_STATUSES.includes(t.status) &&
+            new Date(t.startAt).getTime() >= now
+        )
+        .slice(0, 3)
+})
 
-async function loadTasks() {
-    const familyId = selectedFamilyId.value
-    const forRecipient = recipientId.value
-    tasksError.value = ''
+// ---- Latest notes (F's API): the 2 newest, cached per recipient ----
+const LOG_FILTERS = { limit: 2 }
+const logsQuery = useQuery({
+    queryKey: computed(() => queryKeys.recipientLogs(selectedFamilyId.value, recipientId.value, LOG_FILTERS)),
+    queryFn: ({ queryKey }) => getLogs(queryKey[1], { recipient: queryKey[3], ...LOG_FILTERS }),
+    enabled: computed(() => Boolean(selectedFamilyId.value && recipientId.value))
+})
 
-    if (!familyId || !forRecipient) {
-        tasks.value = []
-        return
-    }
-
-    tasksLoading.value = true
-    try {
-        const result = await getFamilyTasks(familyId, {
-            recipient: forRecipient,
-            status: 'open,claimed,in_progress',
-            from: new Date().toISOString()
-        })
-        if (isCurrent(familyId, forRecipient)) tasks.value = result.slice(0, 3)
-    } catch (error) {
-        if (isCurrent(familyId, forRecipient)) {
-            tasks.value = []
-            tasksError.value = getTaskErrorMessage(error)
-        }
-    } finally {
-        if (isCurrent(familyId, forRecipient)) tasksLoading.value = false
-    }
-}
-
-// ---- Latest notes (F's API) ----
-const logs = ref([])
-const logsLoading = ref(false)
-const logsError = ref('')
-
-async function loadLogs() {
-    const familyId = selectedFamilyId.value
-    const forRecipient = recipientId.value
-    logsError.value = ''
-
-    if (!familyId || !forRecipient) {
-        logs.value = []
-        return
-    }
-
-    logsLoading.value = true
-    try {
-        const result = await getLogs(familyId, { recipient: forRecipient, limit: 2 })
-        if (isCurrent(familyId, forRecipient)) logs.value = result
-    } catch (error) {
-        if (isCurrent(familyId, forRecipient)) {
-            logs.value = []
-            logsError.value = getLogErrorMessage(error)
-        }
-    } finally {
-        if (isCurrent(familyId, forRecipient)) logsLoading.value = false
-    }
-}
-
-function loadAll() {
-    loadTasks()
-    loadLogs()
-}
-
-onMounted(loadAll)
-watch([selectedFamilyId, recipientId], loadAll)
+const logs = computed(() => logsQuery.data.value ?? [])
+const logsLoading = logsQuery.isLoading
+const logsError = computed(() =>
+    logsQuery.error.value && !logsQuery.data.value ? getLogErrorMessage(logsQuery.error.value) : ''
+)
 
 // ---- "Before you take them out" ----
 const mobility = computed(() =>
@@ -128,7 +86,7 @@ const hasEssentials = computed(() =>
                     </RouterLink>
                 </template>
                 <TaskList :tasks="tasks" :is-loading="tasksLoading" :error-message="tasksError"
-                    :empty-message="`Nothing coming up for ${name}.`" @retry="loadTasks" />
+                    :empty-message="`Nothing coming up for ${name}.`" @retry="reloadTasks" />
             </SectionCard>
 
             <SectionCard title="Latest notes">
@@ -145,7 +103,7 @@ const hasEssentials = computed(() =>
 
                 <div v-else-if="logsError" class="list-status is-error" role="alert">
                     <span>{{ logsError }}</span>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" @click="loadLogs">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @click="logsQuery.refetch()">
                         Try again
                     </button>
                 </div>
