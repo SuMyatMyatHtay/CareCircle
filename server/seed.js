@@ -112,7 +112,7 @@ async function main() {
   const families = [{
     _id: FAMILY,
     name: 'Tan family',
-    inviteCode: 'TAN123',
+    inviteCode: '7925C4A333',
     createdBy: U.alex,
     members: [
       { userId: U.alex, role: 'admin', relationship: 'Grandson', joinedAt: created },
@@ -120,7 +120,7 @@ async function main() {
       { userId: U.may, role: 'member', relationship: 'Daughter', joinedAt: at(-28, 19) },
       { userId: U.mia, role: 'member', relationship: 'Granddaughter', joinedAt: at(-27, 18) },
     ],
-    // Placeholder: replaced for real when the bot receives /link TAN123
+    // Placeholder: replaced for real when the bot receives /link 7925C4A333
     telegram: { chatId: '-1000000000000', linkedBy: U.alex, linkedAt: at(-27, 21) },
     notifyOn: [
       'task.created', 'task.claimed', 'task.unclaimed', 'task.completed',
