@@ -185,7 +185,8 @@ taskSchema.statics.recipientInFamily = async function (recipientId, familyId) {
     return Boolean(await CareRecipient.exists({ _id: recipientId, family: familyId }))
 }
 
-// One session per task: reused if the task is started again after an unclaim
+// One session per task: reused if the task is started again after an unclaim.
+// Starting again is a new journey, so the old steps and location are cleared.
 taskSchema.statics.startTransitSession = async function (task) {
     const TransitSession = transitModel()
     if (!TransitSession || !task.needsTransit) return null
@@ -193,7 +194,14 @@ taskSchema.statics.startTransitSession = async function (task) {
     return TransitSession.findOneAndUpdate(
         { task: task._id },
         {
-            $set: { companion: task.claimedBy, status: TRANSIT_STATUS.ACTIVE },
+            $set: {
+                companion: task.claimedBy,
+                status: TRANSIT_STATUS.ACTIVE,
+                milestones: [],
+                startedAt: new Date(),
+                endedAt: null
+            },
+            $unset: { lastLocation: '' },
             $setOnInsert: { family: task.family, task: task._id }
         },
         { upsert: true, new: true }
