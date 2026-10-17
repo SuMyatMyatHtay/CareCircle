@@ -149,12 +149,12 @@ Files: `server/src/features/recipients/CareRecipient.model.js`, `controller.js`,
 | POST | `/` | member | `201 { recipient }`; `name` and `careType` required; `isActive` always `true` |
 | GET | `/:recipientId` | member | `{ recipient }` |
 | PATCH | `/:recipientId` | member | `{ recipient }`; any field except `family` and `isActive`; empty body is `400 Nothing to update` |
-| POST | `/:recipientId/archive` | admin (`requireFamilyAdmin`) | `{ recipient }` with `isActive: false`; archiving twice is harmless. There is no DELETE |
+| POST | `/:recipientId/archive` | admin (`requireFamilyAdmin`) | `{ recipient }` with `isActive: false` and `linkedUser` cleared (an archived recipient would otherwise block that account forever); archiving twice is harmless. There is no DELETE |
 
 Rules the implementation follows:
 
 - **Model statics:** `getRecipientsByFamily`, `getRecipientInFamily`, `getPopulatedRecipientById`, `createRecipient`, `updateRecipient` (`runValidators: true`), `archiveRecipient`. `linkedUser` is populated with `name telegramUsername`.
-- **linkedUser:** optional on POST and PATCH; `null` or `''` unlinks. Any value that isn't the id of a current member of `req.family` is a `400` (`Linked user must be a member of this family`). A second recipient linked to the same account hits the unique index (error code `11000`) and returns `409`.
+- **linkedUser:** optional on POST and PATCH; `null` or `''` unlinks, and any member can unlink. A new link must be the logged-in user's own id (`403` otherwise): only the person being cared for links themselves. Re-sending the stored link is allowed, since the edit form sends every field. Infant recipients can never be linked; the check runs on the result of the update, so turning a linked recipient into an infant is a `400` too. Any value that isn't the id of a current member of `req.family` is a `400` (`Linked user must be a member of this family`). A second recipient linked to the same account hits the unique index (error code `11000`) and returns `409`.
 - **Medications:** entries identical to a stored one keep their `updatedBy`/`updatedAt`; new or edited entries get the current user and time. If the list changed, the controller announces `medication.changed` through a no-op `announce()` placeholder until package F's `notify()` exists.
 - **Errors:** `{ error, errors? }`, matching tasks and logs. `400` validation, `403` not an admin, `404` for a recipient outside this family or a malformed id, `409` duplicate link.
 - **Other packages depend on it:** tasks and logs look up `mongoose.models.CareRecipient` by name and populate `name nickname careType`. Now that the model is registered, `Task.recipientInFamily` and the logs controller reject a recipient from another family. Keep the model name and those three field names.

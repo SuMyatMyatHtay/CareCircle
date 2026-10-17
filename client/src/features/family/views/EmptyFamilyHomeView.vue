@@ -8,7 +8,8 @@ import NewTaskButton from '../../tasks/components/NewTaskButton.vue'
 import TaskList from '../../tasks/components/TaskList.vue'
 import { getFamilyTasks, getTaskErrorMessage } from '../../tasks/services/tasksApi.js'
 import TransitBanner from '../components/placeholders/TransitBanner.vue'
-import RecipientCard from '../components/placeholders/RecipientCard.vue'
+import RecipientCard from '../../recipients/components/RecipientCard.vue'
+import { useRecipients } from '../../../composables/useRecipients.js'
 import RecentUpdates from '../components/placeholders/RecentUpdates.vue'
 import LiveUpdateToast from '../components/placeholders/LiveUpdateToast.vue'
 import * as placeholder from '../components/placeholders/placeholderData.js'
@@ -90,6 +91,15 @@ const subtitle = computed(() => {
     : `${todayLabel} · every task has someone ♡`
 })
 
+// ---- Care recipients (C): loaded by the sidebar, shared through useRecipients ----
+const { recipients, isLoading: recipientsLoading, errorMessage: recipientsError, refresh: reloadRecipients } = useRecipients()
+
+function openTasksFor(recipientId) {
+  return tasks.value.filter((task) =>
+    task.status === 'open' && (task.recipient?._id ?? task.recipient) === recipientId
+  ).length
+}
+
 // TODO(D): open the task form once it is built
 function openNewTask() { }
 
@@ -158,10 +168,24 @@ function openNewTask() { }
       <!-- Placeholder (E): live transit -->
       <TransitBanner :session="placeholder.transitSession" />
 
-      <!-- Placeholder (C): care recipients -->
+      <!-- C: care recipients (live data) -->
       <h2 class="section-heading">Who are we caring for?</h2>
-      <div class="recipient-grid">
-        <RecipientCard v-for="recipient in placeholder.recipients" :key="recipient.id" :recipient="recipient" />
+      <div v-if="recipientsLoading" class="recipient-list-status" role="status">
+        <div class="spinner-border spinner-border-sm text-success" aria-hidden="true"></div>
+        Loading care recipients...
+      </div>
+      <div v-else-if="recipientsError" class="recipient-list-status is-error" role="alert">
+        <span>{{ recipientsError }}</span>
+        <button type="button" class="btn btn-sm btn-outline-secondary" @click="reloadRecipients">
+          Try again
+        </button>
+      </div>
+      <p v-else-if="recipients.length === 0" class="recipient-list-status">
+        No care recipients yet. <RouterLink to="/recipients/new">Add the first one</RouterLink>
+      </p>
+      <div v-else class="recipient-grid">
+        <RecipientCard v-for="recipient in recipients" :key="recipient._id" :recipient="recipient"
+          :needs-someone="openTasksFor(recipient._id)" />
       </div>
 
       <div class="dashboard-columns">

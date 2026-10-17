@@ -16,8 +16,10 @@ function formatFamily(family) {
         name: family.name,
         inviteCode: family.inviteCode,
         createdBy: family.createdBy.toString(),
+        // userId is populated with the member's name in getFamiliesForUser only
         members: family.members.map(member => ({
-        userId: member.userId.toString(),
+        userId: (member.userId._id ?? member.userId).toString(),
+        name: member.userId.name ?? '',
         role: member.role,
         joinedAt: member.joinedAt
         })),
@@ -86,7 +88,9 @@ export async function getFamiliesForUser(userId) {
 
     const families = await Family.find({
         'members.userId': userId
-    }).sort({ createdAt: -1 })
+    })
+        .sort({ createdAt: -1 })
+        .populate('members.userId', 'name')
 
     return families.map(formatFamily)
 }

@@ -202,11 +202,13 @@ careRecipientSchema.statics.updateRecipient = function (familyId, recipientId, c
     )
 }
 
-// Archiving twice is harmless: it just sets isActive to false again
+// Archiving twice is harmless: it just sets isActive to false again.
+// The link is cleared too, otherwise the unique index would stop that account
+// from ever being linked to another recipient (archived ones aren't editable).
 careRecipientSchema.statics.archiveRecipient = function (familyId, recipientId) {
     return this.findOneAndUpdate(
         { _id: recipientId, family: familyId },
-        { $set: { isActive: false } },
+        { $set: { isActive: false, linkedUser: null } },
         { new: true }
     )
 }

@@ -9,6 +9,11 @@ import ProfileView from '../features/auth/views/ProfileView.vue'
 import PetDressupView from '../features/auth/views/PetDressupView.vue'
 import AvatarStudioView from '../features/avatar/views/AvatarStudioView.vue'
 import RecipientLogView from '../features/logs/views/RecipientLogView.vue'
+import RecipientHubView from '../features/recipients/views/RecipientHubView.vue'
+import RecipientOverviewView from '../features/recipients/views/RecipientOverviewView.vue'
+import RecipientTasksView from '../features/recipients/views/RecipientTasksView.vue'
+import RecipientProfileView from '../features/recipients/views/RecipientProfileView.vue'
+import RecipientNewView from '../features/recipients/views/RecipientNewView.vue'
 import { verifySession, clearUserSession } from '../features/auth/services/authApi.js'
 const routes = [
   {path:'/login',component:LoginView},
@@ -22,7 +27,13 @@ const routes = [
     {path:'profile',name:'profile',component:ProfileView},
     {path:'dress-up',name:'dress-up',component:PetDressupView},
     {path:'avatar-studio',name:'avatar-studio',component:AvatarStudioView},
-    {path:'recipients/:recipientId/log',name:'recipient-log',component:RecipientLogView}
+    {path:'recipients/new',name:'recipient-new',component:RecipientNewView},
+    {path:'recipients/:recipientId',component:RecipientHubView,children:[
+      {path:'',name:'recipient-overview',component:RecipientOverviewView},
+      {path:'tasks',name:'recipient-tasks',component:RecipientTasksView},
+      {path:'log',name:'recipient-log',component:RecipientLogView},
+      {path:'profile',name:'recipient-profile',component:RecipientProfileView}
+    ]}
   ]},
   {path:'/:pathMatch(.*)*',redirect:'/home'}
 ]

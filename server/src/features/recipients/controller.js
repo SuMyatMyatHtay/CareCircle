@@ -223,6 +223,21 @@ function assertLinkedUserInFamily(linkedUser, family) {
     }
 }
 
+// linkedUser means "this recipient is this person", so only that person can set it.
+// Anyone can unlink, so a mistake can be fixed. Re-sending the current link is fine,
+// because the edit form sends every field back.
+function assertLinkAllowed({ linkedUser, careType, storedLinkedUser = null, userId }) {
+    if (!linkedUser) return
+
+    const isChange = linkedUser.toString() !== storedLinkedUser?.toString()
+    if (isChange && linkedUser.toString() !== userId) {
+        throw httpError(403, 'You can only link your own account')
+    }
+    if (careType === 'infant') {
+        throw httpError(400, 'Validation failed', ['An infant profile cannot be linked to an account'])
+    }
+}
+
 // Compared after trimming, the same way the schema stores them
 function medicationKey(medication) {
     const text = (value) => (value ?? '').trim()
@@ -283,6 +298,7 @@ export async function createRecipient(req, res, next) {
     try {
         const data = parseRecipientInput(req.body, { partial: false })
         assertLinkedUserInFamily(data.linkedUser, req.family)
+        assertLinkAllowed({ linkedUser: data.linkedUser, careType: data.careType, userId: req.user.userId })
 
         if (data.medications) {
             data.medications = stampMedications(data.medications, [], req.user.userId).medications
@@ -313,6 +329,14 @@ export async function updateRecipient(req, res, next) {
         }
 
         assertLinkedUserInFamily(changes.linkedUser, req.family)
+        // Check the result of the update, so changing an already-linked recipient
+        // to infant is caught too
+        assertLinkAllowed({
+            linkedUser: changes.linkedUser !== undefined ? changes.linkedUser : recipient.linkedUser,
+            careType: changes.careType ?? recipient.careType,
+            storedLinkedUser: recipient.linkedUser,
+            userId: req.user.userId
+        })
 
         let medicationsChanged = false
         if (changes.medications) {
