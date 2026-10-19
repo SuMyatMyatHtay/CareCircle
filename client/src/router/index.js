@@ -37,7 +37,7 @@ const routes = [
     {path:'recipients/:recipientId/log',name:'recipient-log',component:RecipientLogView},
     {path:'my-tasks',name:'my-tasks',component:MyTasksView},
     {path:'transit/:familyId/:taskId',name:'transit',component:TransitView,props:true},
-    {path:'families/:familyId/tasks/:taskId',name:'task-detail',component:TaskDetailView,props:true}
+    {path:'families/:familyId/tasks/:taskId',name:'task-detail',component:TaskDetailView,props:true},
     {path:'recipients/new',name:'recipient-new',component:RecipientNewView},
     {path:'recipients/:recipientId',component:RecipientHubView,children:[
       {path:'',name:'recipient-overview',component:RecipientOverviewView},
