@@ -6,12 +6,12 @@ All endpoints, by package. **Implemented** means the endpoint is merged and test
 |---|---|---|---|
 | A | Sera | `/api/auth`, `/api/families` | Planned (middleware and models done) |
 | B | SangYoon | `/api/families/:familyId` (members, settings), `/api/users/me` | Planned |
-| C | Jhen | `/api/families/:familyId/recipients` | Planned |
+| C | Jhen | `/api/families/:familyId/recipients` | Implemented |
 | D | Marcus | `/api/families/:familyId/tasks` | Planned (model and routes done; controller stubs return 501) |
 | E | Chaithra | `/api/me/tasks`, `/api/families/:familyId/tasks/:taskId/transit`, `/api/families/:familyId/transit`, `/api/integrations/clinics` | Implemented |
 | F | SeungHak | `/api/families/:familyId/logs`, `/api/families/:familyId/notifications`, `/api/integrations` | Logs implemented; notifications and integrations planned |
 
-Only the tasks router is mounted so far. Any other path returns `404` until its package adds a router to `server/src/routes/index.js`, at the path listed in this file.
+Every package router is mounted in `server/src/routes/index.js` at the path listed in this file. Endpoints that are still placeholders return `501`.
 
 ---
 
@@ -81,7 +81,7 @@ Always filter queries by `family: req.family._id`. Never take a family ID, user 
   - Middleware: `requireAuth`, `requireFamilyMember`, `requireFamilyAdmin` in `server/src/middleware/authMiddleware.js`.
   - Models: `UserModel.js`, `FamilyModel.js` in `server/src/models/`.
   - Remaining work: the routes above, and hashing passwords with bcrypt on register.
-- **Seed users:** `alex@`, `jasmine@`, `may@` and `mia@carecircle.test`, password `password123`. Family invite code: `TAN123`.
+- **Seed users:** `alex@`, `jasmine@`, `may@` and `mia@carecircle.test`, password `password123`. Family invite code: `7925C4A333`.
 
 ---
 
@@ -108,13 +108,15 @@ Base: `/api/families/:familyId/recipients`
 
 | Method | Path | Who | Body | Response | Status |
 |---|---|---|---|---|---|
-| GET | `/` | member | Query: `includeArchived=true` (optional) | `{ recipients }`. Active only by default. | Planned |
-| POST | `/` | member | `{ name, nickname?, careType, dateOfBirth?, mobility?, allergies?, conditions?, dietaryRestrictions?, medications?, emergencyContacts?, preferredClinic?, careNotes? }` | `201 { recipient }` | Planned |
-| GET | `/:recipientId` | member | none | `{ recipient }` | Planned |
-| PATCH | `/:recipientId` | member | any of the fields above | `{ recipient }`. If `medications` changed, call `notify(..., 'medication.changed')`. | Planned |
-| POST | `/:recipientId/archive` | admin | none | `{ recipient }` with `isActive: false`. Recipients are archived, never deleted. | Planned |
+| GET | `/` | member | Query: `includeArchived=true` (optional) | `{ recipients }`, sorted by `name`, `linkedUser` populated. Active only by default. | Implemented |
+| POST | `/` | member | `{ name, nickname?, careType, dateOfBirth?, mobility?, allergies?, conditions?, dietaryRestrictions?, medications?, emergencyContacts?, preferredClinic?, careNotes?, linkedUser? }` | `201 { recipient }`. Always `isActive: true`; `family` and `isActive` in the body are ignored. | Implemented |
+| GET | `/:recipientId` | member | none | `{ recipient }`, `linkedUser` populated | Implemented |
+| PATCH | `/:recipientId` | member | any of the POST fields, including `linkedUser?` | `{ recipient }`. `family`, `isActive` and timestamps can't change; an empty body is `400 Nothing to update`. New or edited `medications` entries get `updatedBy` and `updatedAt`. Will send `medication.changed` if the list changed, once `notify()` exists. | Implemented |
+| POST | `/:recipientId/archive` | admin | none | `{ recipient }` with `isActive: false` and `linkedUser: null`, so the account can be linked again. Archiving twice just returns it. Recipients are archived, never deleted. | Implemented |
 
-- **Model:** `server/src/models/CareRecipientModel.js` already matches the design doc. C owns it from now on.
+- **Model:** `server/src/features/recipients/CareRecipient.model.js`, registered as `CareRecipient` in the `carerecipients` collection. C owns it.
+- **`linkedUser`:** optional user id for a recipient who also has an account (e.g. a pregnant member). `null` or `''` unlinks, and anyone can do that. You can only link your own account (`403` otherwise); re-sending the current link unchanged is fine. Infant recipients can't be linked, including changing a linked recipient's `careType` to `infant` (`400`). It must be a member of this family, otherwise `400`. One account links to at most one recipient per family; a second link returns `409`.
+- **Sub-documents:** `mobility: { level, notes }`, `allergies: [{ name, severity }]`, `medications: [{ name, dosage, frequency, startDate, notes }]`, `emergencyContacts: [{ name, relationship, phone }]`, `preferredClinic: { name, address, postal, lat, lng }`. Sending `null` for a list clears it. `updatedBy`/`updatedAt` on medications are set by the server.
 - **Overview tab:** combines D's `GET /tasks?recipient=<id>&from=<now>`, F's `GET /logs?recipient=<id>&limit=1`, and this profile.
 - **Tasks tab:** "Add task" goes to D's form with the recipient filled in. C doesn't need a task endpoint.
 
@@ -297,7 +299,7 @@ Each event is sent through `notify()` (Telegram) and over Socket.IO to room `fam
 
 Each has a recommendation. Confirm in the group chat, then delete the line.
 
-1. **Who creates care recipients, C or A?** Recommendation: **C**. C owns the `careRecipients` collection and the form. A only provides the membership check. The "Add recipient" button on Family Home (B) links to C's form.
+1. **Who creates care recipients, C or A?** Recommendation: **C**. C owns the `carerecipients` collection and the form. A only provides the membership check. The "Add recipient" button on Family Home (B) links to C's form.
 2. **Can C create tasks?** Recommendation: **no**. C's "Add task" opens D's form with the recipient filled in, so tasks are created in one place only.
 3. **Live updates: add to the list, or reload?** Recommendation: **add or replace in place** from socket payloads (see D), with one refetch on reconnect. Reloading the page loses scroll position and form input.
 4. **"Translation feature" in B's settings vs F's log translation.** Recommendation: B owns the preference (`preferredLang` via `PATCH /api/users/me`); F owns translating log text. If B also means translating the UI labels, that's vue-i18n on the frontend only and needs no API.

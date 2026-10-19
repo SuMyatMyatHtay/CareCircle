@@ -175,3 +175,19 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Care recipient list states, same look as TaskList's */
+.recipient-list-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 24px;
+  padding: 18px 4px;
+  color: #7B8391;
+  font-size: 14px;
+}
+
+.recipient-list-status.is-error {
+  color: #C0564B;
+}

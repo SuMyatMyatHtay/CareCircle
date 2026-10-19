@@ -201,6 +201,55 @@
 
 .nav-heading { margin-top: 17px; }
 
+/* Care recipients */
+.recipient-item {
+    padding-top: 8px;
+    padding-bottom: 8px;
+    gap: 11px;
+}
+
+.recipient-initials {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #FDF3E4;
+    color: #A0703A;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.recipient-text {
+    min-width: 0;
+    line-height: 1.25;
+}
+
+.recipient-text strong,
+.recipient-text small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.recipient-text strong {
+    font-weight: 700;
+}
+
+.recipient-text small {
+    font-size: 11px;
+    font-weight: 400;
+    color: #7A8391;
+}
+
+.add-recipient {
+    color: #2E7D43;
+    font-weight: 700;
+}
+
 .empty-recipients {
     padding: 8px 13px;
     color: #98A09B;

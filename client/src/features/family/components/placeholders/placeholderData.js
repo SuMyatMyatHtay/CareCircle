@@ -11,13 +11,6 @@ export const transitSession = {
     detail: ''
 }
 
-// C (Jhen): replace with GET /families/:familyId/recipients
-export const recipients = [
-    { id: 'r1', avatar: '👴', name: '', summary: '', next: '', needsSomeone: 0 },
-    { id: 'r2', avatar: '👵', name: '', summary: '', next: '', needsSomeone: 0 },
-    { id: 'r3', avatar: '👶', name: '', summary: '', next: '', needsSomeone: 0 }
-]
-
 // F (SeungHak): replace with the family's notifications / activity feed
 export const recentUpdates = [
     { id: 'u1', avatar: '👩', text: '', time: '' },

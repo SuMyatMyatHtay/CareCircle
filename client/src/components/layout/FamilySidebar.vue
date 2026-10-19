@@ -2,7 +2,9 @@
 <script setup>
 import { ref, computed } from 'vue'
 import '../../styles/components/familySidebar.css'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
+import { useRecipients } from '../../composables/useRecipients.js'
+import { displayName, initials, careTypeLabel } from '../../features/recipients/recipientLabels.js'
 import {
   logoutUser,
   clearUserSession
@@ -20,6 +22,10 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['select-family', 'navigate', 'collapse'])
+
+// Care recipients (C): cached per family, shared with every page
+const route = useRoute()
+const { recipients, isLoading: recipientsLoading, errorMessage: recipientsError } = useRecipients()
 
 const showSwitcher = ref(false)
 
@@ -195,15 +201,35 @@ async function handleLogout(){
             </div>
 
             <div class="nav-heading">CARE RECIPIENTS</div>
-            <p class="empty-recipients">
+            <p v-if="recipientsLoading && !recipients.length" class="empty-recipients">
+            Loading...
+            </p>
+            <p v-else-if="recipientsError" class="empty-recipients">
+            {{ recipientsError }}
+            </p>
+            <p v-else-if="!recipients.length" class="empty-recipients">
             No care recipients yet.
             </p>
 
-            <div class="nav-item unavailable">
+            <RouterLink
+            v-for="recipient in recipients"
+            :key="recipient._id"
+            :to="{ name: 'recipient-overview', params: { recipientId: recipient._id } }"
+            class="nav-item recipient-item"
+            :class="{ active: route.params.recipientId === recipient._id }"
+            @click="emit('navigate')"
+            >
+            <span class="recipient-initials">{{ initials(displayName(recipient)) }}</span>
+            <span class="recipient-text">
+                <strong>{{ displayName(recipient) }}</strong>
+                <small>{{ careTypeLabel(recipient.careType) }}</small>
+            </span>
+            </RouterLink>
+
+            <RouterLink to="/recipients/new" class="nav-item add-recipient" @click="emit('navigate')">
             <i class="bi bi-plus-lg"></i>
             Add care recipient
-            <span class="coming-tag">Soon</span>
-            </div>
+            </RouterLink>
         </template>
         </nav>
 

@@ -1,14 +1,15 @@
 <script setup>
 import '../../../styles/emptyFamilyHomeView.css'
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { useActiveFamily } from '../../../composables/useActiveFamily.js'
 import HomeHeader from '../components/HomeHeader.vue'
 import SectionCard from '../../../components/common/SectionCard.vue'
 import NewTaskButton from '../../tasks/components/NewTaskButton.vue'
 import TaskList from '../../tasks/components/TaskList.vue'
-import { getFamilyTasks, getTaskErrorMessage } from '../../tasks/services/tasksApi.js'
+import { useFamilyTasks, taskRecipientId } from '../../../composables/useFamilyTasks.js'
 import TransitBanner from '../components/placeholders/TransitBanner.vue'
-import RecipientCard from '../components/placeholders/RecipientCard.vue'
+import RecipientCard from '../../recipients/components/RecipientCard.vue'
+import { useRecipients } from '../../../composables/useRecipients.js'
 import RecentUpdates from '../components/placeholders/RecentUpdates.vue'
 import LiveUpdateToast from '../components/placeholders/LiveUpdateToast.vue'
 import * as placeholder from '../components/placeholders/placeholderData.js'
@@ -40,37 +41,8 @@ const greeting = computed(() => {
 })
 
 // ---- Tasks (D): "Today across the family" ----
-const tasks = ref([])
-const tasksLoading = ref(false)
-const tasksError = ref('')
-
-async function loadTasks() {
-  const familyId = selectedFamilyId.value
-  tasksError.value = ''
-
-  if (!familyId) {
-    tasks.value = []
-    return
-  }
-
-  tasksLoading.value = true
-  try {
-    const result = await getFamilyTasks(familyId)
-    // Ignore the reply if the user switched family while it was loading
-    if (familyId === selectedFamilyId.value) tasks.value = result
-  } catch (error) {
-    if (familyId === selectedFamilyId.value) {
-      tasks.value = []
-      tasksError.value = getTaskErrorMessage(error)
-    }
-  } finally {
-    if (familyId === selectedFamilyId.value) tasksLoading.value = false
-  }
-}
-
-onMounted(loadTasks)
-// Reload when the user picks another family in the sidebar
-watch(selectedFamilyId, loadTasks)
+// Cached per family and shared with the recipient pages; follows the selected family
+const { tasks, isLoading: tasksLoading, errorMessage: tasksError, refetch: reloadTasks } = useFamilyTasks()
 
 const openTaskCount = computed(() =>
   tasks.value.filter((task) => task.status === 'open').length
@@ -89,6 +61,15 @@ const subtitle = computed(() => {
     ? `${todayLabel} · ${count} ${count === 1 ? 'task still needs' : 'tasks still need'} someone`
     : `${todayLabel} · every task has someone ♡`
 })
+
+// ---- Care recipients (C): loaded by the sidebar, shared through useRecipients ----
+const { recipients, isLoading: recipientsLoading, errorMessage: recipientsError, refresh: reloadRecipients } = useRecipients()
+
+function openTasksFor(recipientId) {
+  return tasks.value.filter((task) =>
+    task.status === 'open' && taskRecipientId(task) === recipientId
+  ).length
+}
 
 // TODO(D): open the task form once it is built
 function openNewTask() { }
@@ -158,17 +139,31 @@ function openNewTask() { }
       <!-- Placeholder (E): live transit -->
       <TransitBanner :session="placeholder.transitSession" />
 
-      <!-- Placeholder (C): care recipients -->
+      <!-- C: care recipients (live data) -->
       <h2 class="section-heading">Who are we caring for?</h2>
-      <div class="recipient-grid">
-        <RecipientCard v-for="recipient in placeholder.recipients" :key="recipient.id" :recipient="recipient" />
+      <div v-if="recipientsLoading" class="recipient-list-status" role="status">
+        <div class="spinner-border spinner-border-sm text-success" aria-hidden="true"></div>
+        Loading care recipients...
+      </div>
+      <div v-else-if="recipientsError" class="recipient-list-status is-error" role="alert">
+        <span>{{ recipientsError }}</span>
+        <button type="button" class="btn btn-sm btn-outline-secondary" @click="reloadRecipients()">
+          Try again
+        </button>
+      </div>
+      <p v-else-if="recipients.length === 0" class="recipient-list-status">
+        No care recipients yet. <RouterLink to="/recipients/new">Add the first one</RouterLink>
+      </p>
+      <div v-else class="recipient-grid">
+        <RecipientCard v-for="recipient in recipients" :key="recipient._id" :recipient="recipient"
+          :needs-someone="openTasksFor(recipient._id)" />
       </div>
 
       <div class="dashboard-columns">
         <!-- D: the family's tasks (live data) -->
         <SectionCard title="Today across the family">
           <TaskList :tasks="tasks" :is-loading="tasksLoading" :error-message="tasksError"
-            max-height="60vh" @retry="loadTasks" />
+            max-height="60vh" @retry="reloadTasks" />
         </SectionCard>
 
         <!-- Placeholder (F): activity feed -->

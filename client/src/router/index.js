@@ -10,9 +10,17 @@ import ProfileView from '../features/auth/views/ProfileView.vue'
 import PetDressupView from '../features/auth/views/PetDressupView.vue'
 import AvatarStudioView from '../features/avatar/views/AvatarStudioView.vue'
 import RecipientLogView from '../features/logs/views/RecipientLogView.vue'
+
 import MyTasksView from '../features/my-tasks/views/MyTasksView.vue'
 import TransitView from '../features/transit/views/TransitView.vue'
 import TaskDetailView from '../features/transit/views/TaskDetailView.vue'
+
+import RecipientHubView from '../features/recipients/views/RecipientHubView.vue'
+import RecipientOverviewView from '../features/recipients/views/RecipientOverviewView.vue'
+import RecipientTasksView from '../features/recipients/views/RecipientTasksView.vue'
+import RecipientProfileView from '../features/recipients/views/RecipientProfileView.vue'
+import RecipientNewView from '../features/recipients/views/RecipientNewView.vue'
+
 import { verifySession, clearUserSession } from '../features/auth/services/authApi.js'
 const routes = [
   {path:'/login',component:LoginView},
@@ -30,6 +38,13 @@ const routes = [
     {path:'my-tasks',name:'my-tasks',component:MyTasksView},
     {path:'transit/:familyId/:taskId',name:'transit',component:TransitView,props:true},
     {path:'families/:familyId/tasks/:taskId',name:'task-detail',component:TaskDetailView,props:true}
+    {path:'recipients/new',name:'recipient-new',component:RecipientNewView},
+    {path:'recipients/:recipientId',component:RecipientHubView,children:[
+      {path:'',name:'recipient-overview',component:RecipientOverviewView},
+      {path:'tasks',name:'recipient-tasks',component:RecipientTasksView},
+      {path:'log',name:'recipient-log',component:RecipientLogView},
+      {path:'profile',name:'recipient-profile',component:RecipientProfileView}
+    ]}
   ]},
   {path:'/:pathMatch(.*)*',redirect:'/home'}
 ]
