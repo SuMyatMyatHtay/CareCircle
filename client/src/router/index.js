@@ -14,6 +14,7 @@ import RecipientOverviewView from '../features/recipients/views/RecipientOvervie
 import RecipientTasksView from '../features/recipients/views/RecipientTasksView.vue'
 import RecipientProfileView from '../features/recipients/views/RecipientProfileView.vue'
 import RecipientNewView from '../features/recipients/views/RecipientNewView.vue'
+import NewTaskView from '../features/tasks/views/NewTaskView.vue'
 import { verifySession, clearUserSession } from '../features/auth/services/authApi.js'
 const routes = [
   {path:'/login',component:LoginView},
@@ -27,6 +28,7 @@ const routes = [
     {path:'profile',name:'profile',component:ProfileView},
     {path:'dress-up',name:'dress-up',component:PetDressupView},
     {path:'avatar-studio',name:'avatar-studio',component:AvatarStudioView},
+    {path:'tasks/new',name:'task-new',component:NewTaskView},
     {path:'recipients/new',name:'recipient-new',component:RecipientNewView},
     {path:'recipients/:recipientId',component:RecipientHubView,children:[
       {path:'',name:'recipient-overview',component:RecipientOverviewView},

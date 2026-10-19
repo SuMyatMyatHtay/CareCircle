@@ -167,14 +167,15 @@ async function archive() {
                         <button type="button" class="edit-link" @click="editing = true">Edit</button>
                     </template>
                     <div v-if="recipient.dietaryRestrictions?.length" class="chip-row">
-                        <span v-for="diet in recipient.dietaryRestrictions" :key="diet" class="chip chip-muted">{{ diet }}</span>
+                        <span v-for="diet in recipient.dietaryRestrictions" :key="diet" class="chip chip-muted">{{ diet
+                            }}</span>
                     </div>
                     <p v-else class="empty-text">No dietary restrictions.</p>
                 </SectionCard>
             </div>
 
             <div class="col-lg-4 d-flex flex-column gap-4">
-                <SectionCard title="Preferred clinic" class="profile-card">
+                <SectionCard title="Usual clinic" class="profile-card">
                     <template #actions>
                         <button type="button" class="edit-link" @click="editing = true">Change</button>
                     </template>
@@ -199,7 +200,8 @@ async function archive() {
                         <li v-for="(contact, index) in recipient.emergencyContacts" :key="index">
                             <span class="contact-avatar" aria-hidden="true">{{ initials(contact.name) }}</span>
                             <span class="contact-text">
-                                <strong>{{ contact.name }}<template v-if="contact.relationship"> · {{ contact.relationship }}</template></strong>
+                                <strong>{{ contact.name }}<template v-if="contact.relationship"> · {{
+                                        contact.relationship }}</template></strong>
                                 <a :href="`tel:${contact.phone}`">{{ contact.phone }}</a>
                             </span>
                         </li>
@@ -313,7 +315,7 @@ async function archive() {
     gap: 8px;
 }
 
-.chip-row + .chip-row {
+.chip-row+.chip-row {
     margin-top: 10px;
 }
 

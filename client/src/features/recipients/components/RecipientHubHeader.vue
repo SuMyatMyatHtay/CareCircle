@@ -1,7 +1,7 @@
 <script setup>
 // Owner: Jhen (C)
 // Top of the recipient hub: initials, name and age, key care chips, Edit / New task, and the four tabs.
-//   <RecipientHubHeader :recipient="recipient" @updated="replace" @create="openNewTask" />
+//   <RecipientHubHeader :recipient="recipient" @updated="replace" />
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import NewTaskButton from '../../tasks/components/NewTaskButton.vue'
@@ -12,7 +12,7 @@ const props = defineProps({
     recipient: { type: Object, required: true }
 })
 
-const emit = defineEmits(['updated', 'create'])
+const emit = defineEmits(['updated'])
 
 const route = useRoute()
 
@@ -62,8 +62,7 @@ const editing = ref(false)
 
             <div class="hub-actions">
                 <button type="button" class="edit-button" @click="editing = true">Edit profile</button>
-                <!-- TODO: open the task form when it exists -->
-                <NewTaskButton @create="emit('create')" />
+                <NewTaskButton :recipient="recipient" />
             </div>
         </div>
 

@@ -21,6 +21,7 @@ defineProps({
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
+    align-items: center;
     flex-wrap: wrap;
     gap: 16px;
     margin-bottom: 24px;

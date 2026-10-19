@@ -71,9 +71,6 @@ function openTasksFor(recipientId) {
   ).length
 }
 
-// TODO(D): open the task form once it is built
-function openNewTask() { }
-
 // ---- Placeholder sections (owners noted in placeholderData.js) ----
 // const showToast = ref(true)
 </script>
@@ -82,7 +79,7 @@ function openNewTask() { }
   <div class="home-page">
     <HomeHeader :title="`${greeting}, ${firstName}`" :subtitle="subtitle">
       <template #actions>
-        <NewTaskButton v-if="selectedFamily" @create="openNewTask" />
+        <NewTaskButton v-if="selectedFamily" />
       </template>
     </HomeHeader>
 

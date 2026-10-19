@@ -35,9 +35,6 @@ watch(selectedFamilyId, (newId, oldId) => {
 function replaceRecipient(updated) {
     setRecipient(updated)
 }
-
-// TODO: open the task form when it exists
-function openNewTask() { }
 </script>
 
 <template>
@@ -72,7 +69,7 @@ function openNewTask() { }
         </div>
 
         <template v-else-if="recipient">
-            <RecipientHubHeader :recipient="recipient" @updated="replaceRecipient" @create="openNewTask" />
+            <RecipientHubHeader :recipient="recipient" @updated="replaceRecipient" />
 
             <div class="hub-tab-content">
                 <RouterView v-slot="{ Component }">
