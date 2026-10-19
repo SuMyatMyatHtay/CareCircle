@@ -5,7 +5,8 @@
     import families from '../features/families/routes.js'
     import recipients from '../features/recipients/routes.js'
     import tasks from '../features/tasks/routes.js'
-    import transit from '../features/journeys/routes.js' // folder still named journeys
+    import transit, { familyTransit } from '../features/journeys/routes.js' // folder still named journeys
+    import me from '../features/my-tasks/routes.js'
     import logs from '../features/logs/routes.js'
     import integrations from '../features/integrations/routes.js'
 
@@ -15,7 +16,7 @@
     router.use('/auth', auth)
     router.use('/integrations', integrations) // Telegram webhook
     // router.use('/users', users)            // B: PATCH /users/me (add when built)
-    // router.use('/me', me)                  // E: GET /me/tasks (add when built)
+    router.use('/me', me)                     // E: GET /me/tasks
 
     // Families, members and settings. Guards are set per route inside this router.
     // Must come BEFORE the family guard below, otherwise /families/join
@@ -29,6 +30,7 @@
     router.use('/families/:familyId/recipients', recipients)
     router.use('/families/:familyId/tasks/:taskId/transit', transit) // must come before /tasks
     router.use('/families/:familyId/tasks', tasks)
+    router.use('/families/:familyId/transit', familyTransit) // E: live banner
     router.use('/families/:familyId/logs', logs)
     // router.use('/families/:familyId/notifications', notifications) // F (add when built)
 

@@ -184,16 +184,16 @@ async function handleLogout(){
 
         <!-- NAVIGATION -->
         <nav class="sidebar-nav overflow-y-auto" aria-label="Family navigation">
-        <RouterLink to="/home" class="nav-item active" active-class="active" @click="emit('navigate')">
+        <RouterLink to="/home" class="nav-item " active-class="active" @click="emit('navigate')">
             <i class="bi bi-house-door"></i>
             Family home
         </RouterLink>
 
         <template v-if="selectedFamily">
-            <div class="nav-item unavailable">
+            <RouterLink to="/my-tasks" class="nav-item" active-class="active" @click="emit('navigate')">
             <i class="bi bi-list-check"></i>
-            My tasks <span class="coming-tag">Soon</span>
-            </div>
+            My tasks
+            </RouterLink>
 
             <div class="nav-item unavailable">
             <i class="bi bi-calendar3"></i>

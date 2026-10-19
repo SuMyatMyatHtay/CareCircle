@@ -1,3 +1,4 @@
+
 import { createRouter, createWebHistory } from 'vue-router'
 import AppLayout from '../components/layout/AppLayout.vue'
 import LoginView from '../features/auth/views/LoginView.vue'
@@ -9,6 +10,11 @@ import ProfileView from '../features/auth/views/ProfileView.vue'
 import PetDressupView from '../features/auth/views/PetDressupView.vue'
 import AvatarStudioView from '../features/avatar/views/AvatarStudioView.vue'
 import RecipientLogView from '../features/logs/views/RecipientLogView.vue'
+
+import MyTasksView from '../features/my-tasks/views/MyTasksView.vue'
+import TransitView from '../features/transit/views/TransitView.vue'
+import TaskDetailView from '../features/transit/views/TaskDetailView.vue'
+
 import RecipientHubView from '../features/recipients/views/RecipientHubView.vue'
 import RecipientOverviewView from '../features/recipients/views/RecipientOverviewView.vue'
 import RecipientTasksView from '../features/recipients/views/RecipientTasksView.vue'
@@ -29,6 +35,9 @@ const routes = [
     {path:'dress-up',name:'dress-up',component:PetDressupView},
     {path:'avatar-studio',name:'avatar-studio',component:AvatarStudioView},
     {path:'tasks/new',name:'task-new',component:NewTaskView},
+    {path:'my-tasks',name:'my-tasks',component:MyTasksView},
+    {path:'transit/:familyId/:taskId',name:'transit',component:TransitView,props:true},
+    {path:'families/:familyId/tasks/:taskId',name:'task-detail',component:TaskDetailView,props:true},
     {path:'recipients/new',name:'recipient-new',component:RecipientNewView},
     {path:'recipients/:recipientId',component:RecipientHubView,children:[
       {path:'',name:'recipient-overview',component:RecipientOverviewView},
