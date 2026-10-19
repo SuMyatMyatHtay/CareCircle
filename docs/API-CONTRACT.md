@@ -8,7 +8,7 @@ All endpoints, by package. **Implemented** means the endpoint is merged and test
 | B | SangYoon | `/api/families/:familyId` (members, settings), `/api/users/me` | Planned |
 | C | Jhen | `/api/families/:familyId/recipients` | Implemented |
 | D | Marcus | `/api/families/:familyId/tasks` | Planned (model and routes done; controller stubs return 501) |
-| E | Chaithra | `/api/me/tasks`, `/api/families/:familyId/tasks/:taskId/transit` | Planned |
+| E | Chaithra | `/api/me/tasks`, `/api/families/:familyId/tasks/:taskId/transit`, `/api/families/:familyId/transit`, `/api/integrations/clinics` | Implemented |
 | F | SeungHak | `/api/families/:familyId/logs`, `/api/families/:familyId/notifications`, `/api/integrations` | Logs implemented; notifications and integrations planned |
 
 Every package router is mounted in `server/src/routes/index.js` at the path listed in this file. Endpoints that are still placeholders return `501`.
@@ -188,29 +188,53 @@ Proposal: the frontend updates the list in place from socket events. It doesn't 
 
 | Method | Path | Who | Query | Response | Status |
 |---|---|---|---|---|---|
-| GET | `/api/me/tasks` | logged in | `status=claimed,in_progress,completed`, `from`, `to` (all optional) | `{ tasks }` (task shape above, plus `family: { _id, name }`) | Planned |
+| GET | `/api/me/tasks` | logged in | `status=claimed,in_progress,completed`, `from`, `to` (all optional) | `{ tasks }` (task shape above, plus `family: { _id, name }`), sorted by `startAt` | Implemented |
 
-- **Scope:** only `requireAuth` (no `familyId`). Filter on `claimedBy = req.user._id` and on `family` being one of the user's families, so a user who left a family stops seeing its tasks.
+- **Scope:** only `requireAuth` (no `familyId`). Filters on `claimedBy = req.user.userId` and on `family` being one of the user's families, so a user who left a family stops seeing its tasks.
 - **Tabs:** Upcoming = `claimed`, In Progress = `in_progress`, Completed = `completed`.
-- **"Due soon" flag:** the client works it out, e.g. `startAt` within the next 24 hours. F's Telegram reminders handle the push side.
-- **Tasks collection:** belongs to D, so get D's review on queries against it.
+- **"Due soon" flag:** worked out in the client (`startAt` within the next 24 hours). F's Telegram reminders handle the push side.
+- **Actions on My Tasks** use D's endpoints: Start task = `POST /start`, Give back = `POST /unclaim`, Mark as done = `POST /complete`.
+- **Code:** `server/src/features/my-tasks/`, mounted at `/api/me` in `routes/index.js`. Reads D's `tasks` collection only.
 
 ### Transit
 
-Base: `/api/families/:familyId/tasks/:taskId/transit`. Mount this before D's tasks router in `routes/index.js`.
+Base: `/api/families/:familyId/tasks/:taskId/transit` (mounted before D's tasks router, `Router({ mergeParams: true })`).
 
 | Method | Path | Who | Body | Response | Status |
 |---|---|---|---|---|---|
-| GET | `/api/families/:familyId/transit?status=active` | member | none | `{ transitSessions }` with task and companion populated, for the live banner on Home | Planned |
-| GET | `/` | member | none | `{ transitSession }`; `404` if the task has no session | Planned |
-| POST | `/milestones` | companion | `{ type, label }` | `201 { transitSession }`. The server sets `at`. Sends `transit.milestone`. | Planned |
-| PATCH | `/location` | companion | `{ lat, lng }` | `{ transitSession }` (stretch goal) | Planned |
+| GET | `/api/families/:familyId/transit?status=active` | member | none | `{ transitSessions }` with task and companion populated, newest first. `status` is `active` or `ended` (optional). For the live banner on Home. | Implemented |
+| GET | `/` | member | none | `{ transitSession }`; `404` if the task has no session | Implemented |
+| POST | `/milestones` | companion | `{ type, label?, lat?, lng? }` | `201 { transitSession }`. The server sets `at`. `403` if not the companion, `409` if the trip has ended. | Implemented |
+| POST | `/end` | companion | none | `{ transitSession }` with `status: 'ended'`. "End transit": stops the trip **without** completing the task (it stays `in_progress`). `409` if already ended. | Implemented |
+| PATCH | `/location` | companion | `{ lat, lng }` | `{ lastLocation }`. Sent every ~20 s by the companion's browser while active. `403` if not the companion, `409` if ended. | Implemented |
 
-- **Starting a session:** D's `POST /tasks/:taskId/start` creates it. E never creates one directly.
-- **Preset vs custom steps:** preset steps send a fixed `type` and its default `label`. Custom steps send `type: 'custom'` and the text the user typed as `label`. **Schema change needed:** add `custom` to `MILESTONE_TYPES` in `constants.js`, and agree on the final list of presets.
-- **Auto-complete:** a `home` ("safely back home") milestone ends the session and completes the task. Call D's shared completion function, not the HTTP endpoint, so the status rules stay in one place.
-- **Live timeline:** emit `transit.milestone` with `{ transitSession }` to room `family:<familyId>`.
-- **Model:** `server/src/models/TransitSessionModel.js` is already done. E owns it from now on.
+- **Starting a session:** D's `POST /tasks/:taskId/start` creates it (`TaskModel.startTransitSession`). E never creates one directly.
+- **Step types:** `MILESTONE_TYPES` = `departed`, `arrived`, `consultation_done`, `heading_home`, `home`, `custom`. Preset steps send a type (label optional; the server fills a default). Custom steps send `type: 'custom'` and the text the user typed as `label` (required, max 80 characters).
+- **UI presets** (Transit mode chips): "On the way to fetch …" (`departed`), "Fetched …" (custom), "Reached hospital" (`arrived`), "Seeing the doctor", "Collecting medicine", "Going for lunch" (custom), "Heading home" (`heading_home`), "Safely back home" (`home`).
+- **Auto-complete:** a `home` milestone completes the task through D's exported `completeTask()` (not the HTTP endpoint), which also ends the session. If completing fails (e.g. the task was cancelled), the milestone is removed again and the error is returned.
+- **Live timeline:** Transit mode polls `GET /` every 10 seconds while the trip is active (Socket.IO isn't set up, and the server runs serverless). When F's `notify()` exists, replace `announce()` in `journeys/controller.js` with `notify(familyId, 'transit.milestone', { transitSession })`.
+- **Model:** `server/src/features/journeys/Journey.model.js`, registered as `TransitSession` (collection `transitsessions`). E owns it.
+
+### Clinic search (OneMap, CC-19)
+
+| Method | Path | Who | Query | Response | Status |
+|---|---|---|---|---|---|
+| GET | `/api/integrations/clinics` | logged in | `q` (at least 2 characters) | `{ clinics: [{ name, address, postal, lat, lng }] }`, up to 10. Same shape as a task's `location`. `502` if OneMap is down. | Implemented |
+
+- Calls OneMap's public search API from the server. `lat`/`lng` are numbers and `postal` is 6 digits or `''`, so a result can be saved as `task.location` directly.
+- Frontend: `client/src/features/transit/components/ClinicSearch.vue` emits `select` with the location. D can use it in the task form: `<ClinicSearch @select="(loc) => (form.location = loc)" />`.
+
+### Shared components and pages
+
+All in `client/src/features/transit/components/`:
+
+- **`TaskLocationCard.vue`** (`:task`): OneMap map, address and Directions button. For D's Task detail page.
+- **`TaskTransitActions.vue`** (`:task`): Start transit / Open transit, live milestone, Add to Google Calendar. Has `#middle` and `#end` slots for D's own buttons. For D's Task detail page.
+- **`LiveTransitBanner.vue`** (`:family-id`): "on the way" banner, polls every 15 s. For B's Family Home, replacing the TransitBanner placeholder.
+
+Pages: `/my-tasks` (My Tasks; "Sync to Google Calendar" downloads an `.ics` file, no server endpoint) and `/transit/:familyId/:taskId` (Transit mode).
+
+**Temporary:** `client/src/features/transit/views/TaskDetailView.vue` at `/families/:familyId/tasks/:taskId` is a stand-in until D's Task detail page is ready. D can delete it and point the route to his own view.
 
 ---
 
