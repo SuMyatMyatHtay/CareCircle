@@ -4,8 +4,9 @@
 // requireAuth + requireFamilyMember run before every handler, so these are always set:
 //   req.user.userId, req.family, req.memberRole
 import mongoose from 'mongoose'
-import TransitSession, { MILESTONE_LABELS } from './Journey.model.js'
+import TransitSession, { MILESTONE_LABELS, PATH_LIMIT } from './Journey.model.js'
 import { completeTask } from '../tasks/controller.js'
+import { syncInBackground } from '../calendar-sync/sync.js'
 import { MILESTONE_TYPES, TRANSIT_STATUS, EVENTS } from '../../constants.js'
 
 // ---------- Helpers ----------
@@ -115,9 +116,9 @@ export async function addMilestone(req, res, next) {
         }
 
         const milestone = parseMilestone(req.body)
-        const location = milestone.lat !== undefined
-            ? { lastLocation: { lat: milestone.lat, lng: milestone.lng, at: milestone.at } }
-            : {}
+        const point = milestone.lat !== undefined ? { lat: milestone.lat, lng: milestone.lng, at: milestone.at } : null
+        const location = point ? { lastLocation: point } : {}
+        const trail = point ? { path: { $each: [point], $slice: -PATH_LIMIT } } : {}
 
         if (milestone.type === 'home') {
             // "Safely back home" changes two things: the task (completed) and the session
@@ -129,9 +130,10 @@ export async function addMilestone(req, res, next) {
             //     retried once. Even if it still fails, the task is completed and the session
             //     is ended, which is consistent; only the "home" line is missing.
             await completeTask({ familyId, taskId, userId, memberRole: req.memberRole })
+            syncInBackground(userId) // shows as done (✓) in their Google Calendar
 
             const finish = {
-                $push: { milestones: milestone },
+                $push: { milestones: milestone, ...trail },
                 $set: { status: TRANSIT_STATUS.ENDED, endedAt: milestone.at, ...location }
             }
             try {
@@ -141,7 +143,7 @@ export async function addMilestone(req, res, next) {
                 await TransitSession.updateOne({ _id: session._id }, finish, { runValidators: true })
             }
         } else {
-            const update = { $push: { milestones: milestone } }
+            const update = { $push: { milestones: milestone, ...trail } }
             if (location.lastLocation) update.$set = location
 
             // Only matches while still active, so a step can't land after the trip ended
@@ -212,9 +214,57 @@ export async function endTransit(req, res, next) {
     }
 }
 
+// ---------- Trail helpers ----------
+
+// Straight-line distance in metres between two { lat, lng }
+function metres(a, b) {
+    const R = 6371000
+    const rad = (d) => (d * Math.PI) / 180
+    const dLat = rad(b.lat - a.lat)
+    const dLng = rad(b.lng - a.lng)
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2
+    return 2 * R * Math.asin(Math.sqrt(h))
+}
+
+// Road points between two places (without the two ends), or [] if the lookup fails
+async function roadBetween(a, b) {
+    try {
+        const url = `${OSRM_URL}/${a.lng},${a.lat};${b.lng},${b.lat}?overview=full&geometries=geojson`
+        const response = await fetch(url, { signal: AbortSignal.timeout(4000) })
+        const data = await response.json()
+        const coords = data.routes?.[0]?.geometry?.coordinates || []
+        return thinLine(coords, 60).slice(1, -1).map(([lng, lat]) => ({ lat, lng, at: b.at }))
+    } catch {
+        return []
+    }
+}
+
+// How a new position is added to the trail (and saved as lastLocation):
+//  - an impossible jump (over 2 km at more than 120 km/h, e.g. a phone that had no GPS fix,
+//    or switching devices) starts the trail again from here instead of drawing a straight
+//    line across Singapore
+//  - a gap of over 150 m (e.g. the page was closed for a while) is filled in along the roads
+//  - otherwise the point is simply added
+// Returns the whole MongoDB update, including the new lastLocation.
+async function trailUpdate(path, point) {
+    const last = path?.length ? path[path.length - 1] : null
+    const add = (points) => ({
+        $set: { lastLocation: point },
+        $push: { path: { $each: points, $slice: -PATH_LIMIT } }
+    })
+    if (!last) return add([point])
+
+    const gap = metres(last, point)
+    const seconds = Math.max(1, (point.at - new Date(last.at)) / 1000)
+    if (gap > 2000 && gap / seconds > 33) return { $set: { lastLocation: point, path: [point] } }
+
+    const between = gap > 150 ? await roadBetween(last, point) : []
+    return add([...between, point])
+}
+
 // PATCH /api/families/:familyId/tasks/:taskId/transit/location   (companion only)
 // Body: { lat, lng }. The companion's browser sends this every ~20 s while the trip is
-// active, so the family's map shows where they are. Only the latest position is kept.
+// active, so the family's map shows where they are and the trail they've travelled.
 export async function updateLocation(req, res, next) {
     try {
         const taskId = getTaskId(req)
@@ -235,10 +285,13 @@ export async function updateLocation(req, res, next) {
             throw httpError(403, 'Only the person on this trip can share their location')
         }
 
-        // Only while active, so a late update can't land after the trip ended
+        // Only while active, so a late update can't land after the trip ended.
+        // The point also goes on the trail (oldest points drop off after PATH_LIMIT),
+        // following the roads from the previous point (see trailUpdate).
+        const point = { lat, lng, at: new Date() }
         const updated = await TransitSession.findOneAndUpdate(
             { _id: session._id, status: TRANSIT_STATUS.ACTIVE },
-            { $set: { lastLocation: { lat, lng, at: new Date() } } },
+            await trailUpdate(session.path, point),
             { new: true }
         )
         if (!updated) throw httpError(409, 'This trip has already ended')
@@ -280,4 +333,17 @@ export async function resumeTransit(req, res, next) {
     } catch (error) {
         return handleError(error, res, next)
     }
+}
+
+// ---------- Road helpers (OSRM) ----------
+// OSRM is the free routing service on OpenStreetMap data (no API key). Only used to
+// fill a gap in the trail along the roads (see trailUpdate).
+const OSRM_URL = 'https://router.project-osrm.org/route/v1/driving'
+
+function thinLine(coords, max = 300) {
+    if (coords.length <= max) return coords
+    const step = Math.ceil(coords.length / max)
+    const kept = coords.filter((_, i) => i % step === 0)
+    kept.push(coords[coords.length - 1])
+    return kept
 }

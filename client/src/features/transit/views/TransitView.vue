@@ -119,6 +119,7 @@ const mapCaption = computed(() => {
     const at = placeName.value ? ` at ${placeName.value}` : ''
     if (liveSpot.value && isStale.value) return `Location paused · last seen ${formatTime(liveSpot.value.at)}`
     if (liveSpot.value) return `Live · ${companionFirst.value || 'Companion'} · updated ${formatTime(liveSpot.value.at)}`
+    if (isEnded.value && session.value?.path?.length > 1) return `Route travelled${at}`
     if (!latest.value) return placeName.value ? `Live map · ${placeName.value}` : 'No location on this task'
     return `Live map · last ping ${formatTime(latest.value.at)}${at}`
 })
@@ -148,6 +149,20 @@ function directionsUrl(place) {
         : [place.name, place.address].filter(Boolean).join(' ')
     return target ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(target)}` : ''
 }
+
+// Friend-tracker bubble on the photo pin: when, and what they're doing
+const liveBubbleTime = computed(() => {
+    if (!liveSpot.value?.at) return ''
+    const at = new Date(liveSpot.value.at)
+    const day = at.toLocaleDateString('en-SG', { weekday: 'short', timeZone: 'Asia/Singapore' })
+    return `${formatTime(at)} ${day}`
+})
+const liveBubbleNote = computed(() => {
+    if (isStale.value) return 'Location paused'
+    if (latest.value?.type === 'arrived') return `At ${placeName.value || 'the clinic'}`
+    if (latest.value) return latest.value.label
+    return placeName.value ? `On the way to ${placeName.value}` : 'On the way'
+})
 
 async function load({ quiet = false } = {}) {
     if (!quiet) isLoading.value = true
@@ -274,6 +289,8 @@ onUnmounted(stopPolling)
             :live-spot="liveSpot"
             :location-note="locationNote"
             :live-caption="mapCaption"
+            :live-time="liveBubbleTime"
+            :live-note="liveBubbleNote"
             :can-resume="canResume"
             @back="router.push({ name: 'task-detail', params: { familyId, taskId } })"
             @post="(m) => post(m, { confirmed: true })"
@@ -330,10 +347,32 @@ onUnmounted(stopPolling)
                             :live-lat="liveSpot?.lat ?? null"
                             :live-lng="liveSpot?.lng ?? null"
                             :live-label="companionFirst"
+                            :live-time="liveBubbleTime"
+                            :live-note="liveBubbleNote"
+                            :trail="session?.path || []"
                             :label="mapCaption"
                             :height="520"
                             :fit-width="560"
-                        />
+                            :bottom-space="liveSpot ? 100 : 0"
+                        >
+                            <!-- People on this trip (like a friend-tracker) -->
+                            <div v-if="liveSpot" class="people-bar">
+                                <span class="person">
+                                    <PersonAvatar :name="companionFirst" :size="40" tone="peach" />
+                                    <span>
+                                        <strong>{{ companionFirst || 'Companion' }}</strong>
+                                        <small :class="{ paused: isStale }">{{ isStale ? 'Location paused' : 'Sharing live' }}</small>
+                                    </span>
+                                </span>
+                                <span v-if="who" class="person">
+                                    <PersonAvatar :name="who" :size="40" tone="yellow" />
+                                    <span>
+                                        <strong>{{ who }}</strong>
+                                        <small>With {{ companionFirst || 'companion' }}</small>
+                                    </span>
+                                </span>
+                            </div>
+                        </OneMapTiles>
                         <a v-if="directionsUrl(destination)" :href="directionsUrl(destination)" target="_blank" rel="noopener" class="directions">
                             Directions
                         </a>
@@ -455,6 +494,47 @@ onUnmounted(stopPolling)
 </template>
 
 <style scoped>
+.people-bar {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 26px;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 10px 16px;
+    border-radius: 14px;
+    background: white;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.people-bar .person {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.people-bar .person > span {
+    display: flex;
+    flex-direction: column;
+}
+
+.people-bar strong {
+    font-size: 15px;
+    color: #2e2e2e;
+}
+
+.people-bar small {
+    font-size: 13px;
+    color: #2f7a3f;
+}
+
+.people-bar small.paused {
+    color: #7a5a00;
+}
+
+
 .resume {
     margin: -4px 0 12px;
 }

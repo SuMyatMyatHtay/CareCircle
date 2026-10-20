@@ -4,6 +4,9 @@
 import mongoose from 'mongoose'
 import { MILESTONE_TYPES, TRANSIT_STATUS, TRANSIT_STATUSES } from '../../constants.js'
 
+// Most points kept in `path`: one every ~20 s is about 3 hours of travel
+export const PATH_LIMIT = 500
+
 // Default label for each preset step. Custom steps use the text the user typed.
 export const MILESTONE_LABELS = {
     departed: 'Departed home',
@@ -36,6 +39,17 @@ const transitSessionSchema = new mongoose.Schema({
         lat: { type: Number, min: -90, max: 90 },
         lng: { type: Number, min: -180, max: 180 },
         at: Date
+    },
+    // The trail drawn on the map (like Grab): every shared position, oldest first.
+    // Capped at PATH_LIMIT points so the document stays small.
+    path: {
+        type: [{
+            lat: { type: Number, min: -90, max: 90, required: true },
+            lng: { type: Number, min: -180, max: 180, required: true },
+            at: { type: Date, default: Date.now },
+            _id: false
+        }],
+        default: []
     },
     startedAt: { type: Date, default: Date.now },
     endedAt: { type: Date, default: null }

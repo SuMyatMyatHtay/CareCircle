@@ -5,6 +5,16 @@ import mongoose from 'mongoose'
 import Task from '../tasks/TaskModel.js'
 import Family from '../families/Family.model.js'
 import { TASK_STATUSES } from '../../constants.js'
+import { syncInBackground } from '../calendar-sync/sync.js'
+
+// Opening My Tasks also refreshes Google Calendar (at most once a minute per person)
+const lastCalendarSync = new Map()
+function refreshCalendar(userId) {
+    const last = lastCalendarSync.get(userId) || 0
+    if (Date.now() - last < 60 * 1000) return
+    lastCalendarSync.set(userId, Date.now())
+    syncInBackground(userId)
+}
 
 const USER_FIELDS = 'name telegramUsername'
 
@@ -18,6 +28,7 @@ export async function getMyTasks(req, res, next) {
     try {
         const userId = req.user.userId
         const { status, from, to } = req.query
+        refreshCalendar(userId)
         const errors = []
 
         // Only families the user still belongs to, so leaving a family hides its tasks

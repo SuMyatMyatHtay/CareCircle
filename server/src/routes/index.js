@@ -9,6 +9,8 @@
     import me from '../features/my-tasks/routes.js'
     import logs from '../features/logs/routes.js'
     import integrations from '../features/integrations/routes.js'
+    import googleCalendar, { googleCallback } from '../features/calendar-sync/routes.js'
+    import { calendarAutoSync } from '../features/calendar-sync/autoSync.js'
 
     const router = Router()
 
@@ -17,6 +19,8 @@
     router.use('/integrations', integrations) // Telegram webhook
     // router.use('/users', users)            // B: PATCH /users/me (add when built)
     router.use('/me', me)                     // E: GET /me/tasks
+    router.use('/me/google', googleCalendar)  // E: Google Calendar sync (connect, status, sync)
+    router.use('/google', googleCallback)     // E: Google sends people back here after "Allow"
 
     // Families, members and settings. Guards are set per route inside this router.
     // Must come BEFORE the family guard below, otherwise /families/join
@@ -29,6 +33,7 @@
     // ---- Family features ----
     router.use('/families/:familyId/recipients', recipients)
     router.use('/families/:familyId/tasks/:taskId/transit', transit) // must come before /tasks
+    router.use('/families/:familyId/tasks', calendarAutoSync) // E: update Google Calendars after task changes
     router.use('/families/:familyId/tasks', tasks)
     router.use('/families/:familyId/transit', familyTransit) // E: live banner
     router.use('/families/:familyId/logs', logs)

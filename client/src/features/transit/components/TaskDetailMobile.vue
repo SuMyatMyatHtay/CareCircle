@@ -1,12 +1,12 @@
 <script setup>
 // Matches Figma "Mobile prototype" → "09 · Task detail" (D · Task Management + E).
 // Phone layout of the Task detail page. TaskDetailView loads the task and runs the actions.
-// E parts here: Start the trip / Open the trip, live trip status, Open in Maps, Add to Google Calendar.
+// E parts here: Start the trip / Open the trip, live trip status, Open in Maps, Add to calendar.
 import { ref, computed, watch } from 'vue'
 import PersonAvatar from '../../my-tasks/components/PersonAvatar.vue'
 import { getTransitSession } from '../services/transitApi.js'
 import { formatTime, recipientName, TIME_ZONE } from '../../my-tasks/utils/formatters.js'
-import { googleCalendarUrl } from '../utils/googleCalendar.js'
+import AddToCalendar from './AddToCalendar.vue'
 
 const props = defineProps({
     task: { type: Object, required: true },
@@ -25,6 +25,7 @@ const CATEGORY_LABELS = {
 
 const session = ref(null)
 const menuOpen = ref(false)
+const calendarOpen = ref(false)
 
 const who = computed(() => recipientName(props.task))
 const status = computed(() => props.task.status)
@@ -110,7 +111,7 @@ watch(() => [props.task._id, props.task.status], loadSession, { immediate: true 
                     <i class="bi bi-three-dots" aria-hidden="true"></i>
                 </button>
                 <div v-if="menuOpen" class="menu" @click="menuOpen = false">
-                    <a :href="googleCalendarUrl(task)" target="_blank" rel="noopener">Add to Google Calendar</a>
+                    <button type="button" @click="calendarOpen = true">Add to calendar</button>
                     <button type="button" @click="emit('edit')">Edit</button>
                     <button type="button" class="danger" @click="emit('delete')">Delete</button>
                 </div>
@@ -151,7 +152,7 @@ watch(() => [props.task._id, props.task.status], loadSession, { immediate: true 
                 <div>
                     <strong>{{ whenText }}</strong>
                     <small v-if="leaveBy">{{ leaveBy }}</small>
-                    <a :href="googleCalendarUrl(task)" target="_blank" rel="noopener" class="link">Add to Google Calendar</a>
+                    <button type="button" class="link" @click="calendarOpen = true">Add to calendar</button>
                 </div>
             </div>
             <div v-if="task.location" class="info-row">
@@ -187,6 +188,8 @@ watch(() => [props.task._id, props.task.status], loadSession, { immediate: true 
                 </button>
             </div>
         </footer>
+
+        <AddToCalendar v-model="calendarOpen" :tasks="[task]" />
     </div>
 </template>
 
@@ -391,6 +394,11 @@ h1 {
 }
 
 .link {
+    align-self: flex-start;
+    padding: 0;
+    border: none;
+    background: none;
+    font-family: inherit;
     margin-top: 4px;
     font-size: 14px;
     font-weight: 800;

@@ -2,7 +2,7 @@
 // Owner: Chaithra (E). The E part of Figma "05 · Task detail" (D · Task Management + E).
 // - Live strip: latest milestone of the trip + "Update milestone" (while in transit)
 // - "Start transit mode" (claimer, claimed, needs transport) / "Open transit mode" / "View journey"
-// - "Add to Google Calendar"
+// - "Add to calendar" (pop-up: Google / Apple / Outlook)
 // D's own buttons (Mark as done, Give back task) go in the slots so the row keeps the Figma order:
 //   <TaskTransitActions :task="task" :family-id="familyId" @changed="reload">
 //     <template #middle>  ✓ Mark as done  </template>
@@ -13,7 +13,7 @@ import { useRouter } from 'vue-router'
 import { getTransitSession } from '../services/transitApi.js'
 import { startTask, getErrorMessage } from '../../my-tasks/services/myTasksApi.js'
 import { formatTime } from '../../my-tasks/utils/formatters.js'
-import { googleCalendarUrl } from '../utils/googleCalendar.js'
+import AddToCalendar from './AddToCalendar.vue'
 
 const props = defineProps({
     task: { type: Object, required: true },
@@ -23,6 +23,7 @@ const emit = defineEmits(['changed', 'error'])
 
 const router = useRouter()
 const session = ref(null)
+const calendarOpen = ref(false)
 const isBusy = ref(false)
 
 let me = {}
@@ -104,9 +105,9 @@ watch(() => [props.task?._id, props.task?.status], loadSession, { immediate: tru
 
             <slot name="middle"></slot>
 
-            <a :href="googleCalendarUrl(task)" target="_blank" rel="noopener" class="btn-secondary">
-                Add to Google Calendar
-            </a>
+            <button type="button" class="btn-secondary" @click="calendarOpen = true">
+                <i class="bi bi-calendar-plus" aria-hidden="true"></i> Add to calendar
+            </button>
 
             <button v-if="transitButton === 'view'" type="button" class="btn-secondary" @click="openTransit">
                 View journey
@@ -114,6 +115,8 @@ watch(() => [props.task?._id, props.task?.status], loadSession, { immediate: tru
 
             <slot name="end"></slot>
         </div>
+
+        <AddToCalendar v-model="calendarOpen" :tasks="[task]" />
     </div>
 </template>
 

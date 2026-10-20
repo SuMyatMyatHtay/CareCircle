@@ -19,7 +19,9 @@ const props = defineProps({
     liveSpot: { type: Object, default: null },    // { lat, lng, at } while the trip is live
     locationNote: { type: String, default: '' },  // companion only: "Sharing your location…"
     liveCaption: { type: String, default: '' },   // "Live · updated 1:42 PM" or "Location paused · …"
-    canResume: { type: Boolean, default: false }  // companion, after an accidental End transit
+    canResume: { type: Boolean, default: false }, // companion, after an accidental End transit
+    liveTime: { type: String, default: '' },       // photo-pin bubble: "12:25 AM Tue"
+    liveNote: { type: String, default: '' }        // photo-pin bubble: "Heading home"
 })
 const emit = defineEmits(['back', 'post', 'start', 'dismiss', 'resume'])
 
@@ -38,6 +40,7 @@ const customText = ref('')
 const milestones = computed(() => props.session?.milestones || [])
 const isActive = computed(() => props.session?.status === 'active')
 const isEnded = computed(() => props.session?.status === 'ended')
+const trail = computed(() => props.session?.path || [])
 const placeName = computed(() => props.task.location?.name || 'the clinic')
 
 // Done steps (as posted) followed by the preset steps still to come
@@ -116,16 +119,19 @@ function safelyHome() {
         </div>
 
         <template v-else>
-            <!-- Live map: only once there's a live position to show -->
-            <section v-if="liveSpot" class="live-map body" aria-label="Live map">
+            <!-- Live map: once there's a live position or a trail to show -->
+            <section v-if="liveSpot || trail.length > 1" class="live-map body" aria-label="Live map">
                 <OneMapTiles
                     :lat="task.location?.lat ?? null"
                     :lng="task.location?.lng ?? null"
-                    :live-lat="liveSpot.lat"
-                    :live-lng="liveSpot.lng"
+                    :live-lat="liveSpot?.lat ?? null"
+                    :live-lng="liveSpot?.lng ?? null"
                     :live-label="companionFirst"
-                    :label="liveCaption || `Live · updated ${time(liveSpot.at)}`"
-                    :height="200"
+                    :trail="trail"
+                    :live-time="liveTime"
+                    :live-note="liveNote"
+                    :label="liveSpot ? (liveCaption || `Live · updated ${time(liveSpot.at)}`) : 'Route travelled'"
+                    :height="260"
                     :fit-width="320"
                 />
             </section>
