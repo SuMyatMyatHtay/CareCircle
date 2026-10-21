@@ -77,7 +77,7 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="dressup-page container-fluid pt-3 pt-md-4 pb-4">
+  <div class="dressup-page container-fluid pb-4">
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
       <div>
         <RouterLink to="/profile" class="text-decoration-none text-success fw-bold small"><i class="bi bi-arrow-left me-1"></i> Back to my profile</RouterLink>

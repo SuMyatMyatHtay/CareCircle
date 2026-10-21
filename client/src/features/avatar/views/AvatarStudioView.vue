@@ -76,7 +76,7 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="avatar-studio container-fluid pt-4 pb-5">
+  <div class="avatar-studio container-fluid pb-5">
     <div class="d-flex justify-content-between flex-wrap align-items-start gap-3 mb-4">
       <div>
         <RouterLink to="/profile" class="text-success text-decoration-none fw-bold small"><i class="bi bi-arrow-left me-1"></i>Back to profile</RouterLink>

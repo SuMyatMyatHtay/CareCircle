@@ -37,7 +37,7 @@ async function saveProfile(){
 onMounted(loadProfile)
 </script>
 <template>
-<div class="profile-page container-fluid pt-4 pt-md-5">
+<div class="profile-page container-fluid">
   <div class="mb-4"><div class="profile-eyebrow mb-2">♡ YOUR LITTLE CORNER ♡</div>
     <h1 class="fw-bold mb-2">My Profile</h1><p class="text-secondary mb-0">A little space for you and your avatar.</p></div>
   <div v-if="loading" class="text-center py-5" role="status"><div class="spinner-border text-success"></div><p class="mt-3">Loading profile...</p></div>

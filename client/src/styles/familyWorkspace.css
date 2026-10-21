@@ -1,4 +1,5 @@
-/* Family Home + Settings share the Figma palette. Other feature pages keep their layout. */
+/* The sidebar and app shell use the Figma look on every page, so the sidebar doesn't change
+   between pages. Family Home + Settings also use the palette for their content. */
 .app-layout {
   --care-bg: #fafaf7;
   --care-panel: #fff;
@@ -12,7 +13,8 @@
   --care-coral-soft: #ffebe5;
   --care-danger: #a8402e;
 }
-.family-surface[data-theme='dark'] {
+/* On the layout (Family Home + Settings) or just the sidebar (every other page) */
+[data-theme='dark'] {
   --care-bg: #141a17;
   --care-panel: #1d2520;
   --care-text: #edf1eb;
@@ -30,100 +32,100 @@
   background: var(--care-bg);
   color: var(--care-text);
 }
-.family-surface .sidebar-wrapper {
+.app-layout .sidebar-wrapper {
   width: 240px;
   flex-basis: 240px;
 }
-.family-surface .sidebar-wrapper.sidebar-hidden {
+.app-layout .sidebar-wrapper.sidebar-hidden {
   width: 0;
   flex-basis: 0;
 }
-.family-surface .family-sidebar {
+.app-layout .family-sidebar {
   width: 240px;
   background: var(--care-panel);
   color: var(--care-text);
   border-color: var(--care-border);
   padding: 24px 16px 18px;
 }
-.family-surface .app-main {
+.app-layout .app-main {
   padding: 28px 32px 32px;
 }
-.family-surface .care-hidden-topbar {
+.app-layout .care-hidden-topbar {
   display: none !important;
 }
-.family-surface .app-topbar {
+.app-layout .app-topbar {
   background: var(--care-panel);
   border-color: var(--care-border);
 }
-.family-surface .sidebar-brand {
+.app-layout .sidebar-brand {
   color: var(--care-text);
   font-size: 17px;
   gap: 9px;
   margin-left: 2px;
 }
-.family-surface .brand-icon {
+.app-layout .brand-icon {
   width: 30px;
   height: 30px;
   border-radius: 8px;
   font-size: 16px;
 }
-.family-surface .sidebar-collapse-button {
+.app-layout .sidebar-collapse-button {
   color: var(--care-muted);
   padding: 0 2px;
 }
-.family-surface .family-selector {
+.app-layout .family-selector {
   background: var(--care-bg);
   border-color: var(--care-border);
   color: var(--care-text);
   border-radius: 10px;
 }
-.family-surface .family-selector-meta {
+.app-layout .family-selector-meta {
   gap: 4px;
 }
-.family-surface .family-selector-meta small,
-.family-surface .profile-details small {
+.app-layout .family-selector-meta small,
+.app-layout .profile-details small {
   color: var(--care-muted);
 }
-.family-surface .invite-code-chip {
+.app-layout .invite-code-chip {
   background: var(--care-soft);
   color: var(--care-green);
   font-size: 10px;
 }
-.family-surface .nav-item {
+.app-layout .nav-item {
   font-size: 13px;
   padding: 10px 11px;
   color: var(--care-text);
 }
-.family-surface .nav-item.active {
+.app-layout .nav-item.active {
   background: var(--care-soft);
   color: var(--care-green);
   font-weight: 600;
 }
-.family-surface .nav-item.unavailable {
+.app-layout .nav-item.unavailable {
   color: var(--care-muted);
 }
-.family-surface .nav-heading {
+.app-layout .nav-heading {
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.8px;
   color: var(--care-muted);
 }
-.family-surface .profile-row {
+.app-layout .profile-row {
   border-color: var(--care-border);
 }
-.family-surface .profile-avatar {
+.app-layout .profile-avatar {
   background: var(--care-soft);
   color: var(--care-green);
 }
-.family-surface .switcher-menu {
+.app-layout .switcher-menu {
   background: var(--care-panel);
   border-color: var(--care-border);
 }
-.family-surface .family-option {
+.app-layout .family-option {
   color: var(--care-text);
 }
-.family-surface .family-option.selected,
-.family-surface .family-option:hover {
+.app-layout .family-option.selected,
+.app-layout .family-option:hover {
   background: var(--care-soft);
 }
 .care-sidebar-recipient {
@@ -1041,18 +1043,18 @@
   }
 }
 @media (max-width: 767.98px) {
-  .family-surface .sidebar-wrapper,
-  .family-surface .sidebar-wrapper.sidebar-hidden {
+  .app-layout .sidebar-wrapper,
+  .app-layout .sidebar-wrapper.sidebar-hidden {
     width: 240px;
     flex-basis: 240px;
   }
-  .family-surface .app-main {
+  .app-layout .app-main {
     padding: 22px 18px 28px;
   }
-  .family-surface .family-sidebar {
+  .app-layout .family-sidebar {
     width: 240px;
   }
-  .family-surface .care-hidden-topbar {
+  .app-layout .care-hidden-topbar {
     display: flex !important;
   }
   .care-page .home-header h1,
@@ -1135,11 +1137,11 @@
   font-size: 12px;
   font-weight: 500;
 }
-.family-surface .app-topbar .app-menu-button {
+.app-layout .app-topbar .app-menu-button {
   background: var(--care-soft);
   color: var(--care-green);
   border: 0;
 }
-.family-surface .app-topbar .app-topbar-brand {
+.app-layout .app-topbar .app-topbar-brand {
   color: var(--care-green);
 }

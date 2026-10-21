@@ -37,7 +37,6 @@ function onSaved(recipient) {
 <style scoped>
 .new-recipient-page {
     max-width: 760px;
-    padding-top: 24px;
 }
 
 .breadcrumb-row {

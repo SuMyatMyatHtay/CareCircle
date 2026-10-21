@@ -6,6 +6,9 @@
 //   form.title.value = 'Eye check-up'
 //   const task = await form.submit(familyId)          // null if it failed
 //
+// Pass save to post somewhere other than the API (the /preview page's sample data):
+//   useTaskForm({ save: async (payload) => task })
+//
 // Validation mirrors TaskModel.js so most problems are caught before posting.
 import { ref, computed, watch } from 'vue'
 import { createTask, getTaskErrorMessage } from '../services/tasksApi.js'
@@ -85,7 +88,7 @@ const SERVER_FIELDS = [
     [/needsTransit/i, 'needsTransit']
 ]
 
-export function useTaskForm({ recipientId = null } = {}) {
+export function useTaskForm({ recipientId = null, save = null } = {}) {
     const { upsertTask } = useTaskCache()
 
     // ---- Fields ----
@@ -202,6 +205,7 @@ export function useTaskForm({ recipientId = null } = {}) {
         serverErrors.value = {}
         submitError.value = ''
         try {
+            if (save) return await save(toPayload())
             const task = await createTask(familyId, toPayload())
             upsertTask(familyId, task)
             return task

@@ -202,7 +202,6 @@ watch(selectedFamilyId, (newId, oldId) => {
     gap: 16px;
     max-width: 640px;
     margin: 0 auto;
-    padding-top: 16px;
 }
 
 .page-header {

@@ -3,10 +3,10 @@
 // New task pop-up for md and up (Figma 09 / 09b). Phones get NewTaskView instead.
 // Pass a recipient to open it pre-filled from their hub ("New task for Grandpa").
 //   <NewTaskModal :recipient="recipient" @created="onCreated" @close="open = false" />
+// The /preview page passes save so posting goes to its sample data instead of the API.
 import './new-task/newTask.css'
 import { ref, computed, onMounted, onUnmounted, useId } from 'vue'
-import { useActiveFamily } from '../../../composables/useActiveFamily.js'
-import { useRecipients } from '../../../composables/useRecipients.js'
+import { useFamilyWorkspace } from '../../family/composables/useFamilyWorkspace.js'
 import { useTaskForm } from '../composables/useTaskForm.js'
 import { displayName, initials } from '../../recipients/recipientLabels.js'
 import TaskPersonPicker from './new-task/TaskPersonPicker.vue'
@@ -18,15 +18,16 @@ import TaskCareFacts from './new-task/TaskCareFacts.vue'
 import { careFacts } from './new-task/careFacts.js'
 
 const props = defineProps({
-    recipient: { type: Object, default: null }
+    recipient: { type: Object, default: null },
+    save: { type: Function, default: null }
 })
 
 const emit = defineEmits(['created', 'close'])
 
 const id = useId()
-const { selectedFamilyId, selectedFamily } = useActiveFamily()
-const { recipients } = useRecipients()
-const form = useTaskForm({ recipientId: props.recipient?._id ?? null })
+// The workspace gives the real family, or the sample one on /preview
+const { selectedFamilyId, selectedFamily, recipients } = useFamilyWorkspace()
+const form = useTaskForm({ recipientId: props.recipient?._id ?? null, save: props.save })
 
 // "Tan family" stays as it is; "Tan" becomes "Tan family"
 const familyLabel = computed(() => {

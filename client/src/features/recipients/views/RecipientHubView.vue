@@ -85,7 +85,6 @@ function replaceRecipient(updated) {
 <style scoped>
 .hub-page {
     max-width: 1180px;
-    padding-top: 24px;
 }
 
 .breadcrumb-row {

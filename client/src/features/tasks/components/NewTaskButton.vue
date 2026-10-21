@@ -2,12 +2,14 @@
 // "+ New task" button. At md and up it opens NewTaskModal; on phones it goes to the
 // full-page form (/tasks/new). Pass a recipient to pre-fill "who is it for".
 //   <NewTaskButton :recipient="recipient" />
+// With save (the /preview page) it always opens the modal, since there is no API to post to.
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import NewTaskModal from './NewTaskModal.vue'
 
 const props = defineProps({
-    recipient: { type: Object, default: null }
+    recipient: { type: Object, default: null },
+    save: { type: Function, default: null }
 })
 
 const emit = defineEmits(['created'])
@@ -19,7 +21,7 @@ const modalOpen = ref(false)
 const MD_UP = '(min-width: 768px)'
 
 function create() {
-    if (window.matchMedia(MD_UP).matches) {
+    if (props.save || window.matchMedia(MD_UP).matches) {
         modalOpen.value = true
         return
     }
@@ -33,7 +35,7 @@ function create() {
         New task
     </button>
 
-    <NewTaskModal v-if="modalOpen" :recipient="recipient" @created="emit('created', $event)"
+    <NewTaskModal v-if="modalOpen" :recipient="recipient" :save="save" @created="emit('created', $event)"
         @close="modalOpen = false" />
 </template>
 

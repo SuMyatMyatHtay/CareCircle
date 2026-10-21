@@ -9,12 +9,11 @@ import RecipientOverview from '../components/RecipientOverview.vue'
 import TodayTasks from '../components/TodayTasks.vue'
 import RecentUpdates from '../components/RecentUpdates.vue'
 import LiveUpdateToast from '../components/LiveUpdateToast.vue'
-import NewTaskModal from '../components/NewTaskModal.vue'
+import NewTaskModal from '../../tasks/components/NewTaskModal.vue'
 import CareModal from '../../../components/common/CareModal.vue'
 import { useFamilyWorkspace } from '../composables/useFamilyWorkspace.js'
 import { useFamilyDashboard } from '../composables/useFamilyDashboard.js'
 import { previewState } from '../data/previewFamily.js'
-import { apiError } from '../services/dashboardApi.js'
 import MobileHomeHeader from '../components/MobileHomeHeader.vue'
 import MobileTransitCard from '../components/MobileTransitCard.vue'
 import MobileTodayTasks from '../components/MobileTodayTasks.vue'
@@ -115,8 +114,6 @@ const subtitle = computed(() =>
 )
 const filterRecipient = ref(null),
   showNewTask = ref(false),
-  savingTask = ref(false),
-  taskFormError = ref(''),
   showTransit = ref(false)
 const displayTasks = computed(() =>
   filterRecipient.value
@@ -140,25 +137,19 @@ function openRecipient(recipient) {
 }
 function openNewTask() {
   showNewTask.value = true
-  taskFormError.value = ''
 }
-async function saveTask(input) {
-  savingTask.value = true
-  taskFormError.value = ''
-  try {
-    if (await createTask(input)) showNewTask.value = false
-  } catch (err) {
-    taskFormError.value = apiError(err, 'Creating tasks')
-  } finally {
-    savingTask.value = false
-  }
-}
+// The preview has no API: the real New task form posts into the sample data instead
+const savePreviewTask = isPreview
+  ? async (input) => {
+      await createTask(input)
+      return input
+    }
+  : null
 watch(selectedFamilyId, () => {
   mobilePanel.value = ''
   filterRecipient.value = null
   showNewTask.value = false
   showTransit.value = false
-  taskFormError.value = ''
 })
 </script>
 
@@ -167,12 +158,12 @@ watch(selectedFamilyId, () => {
     <div class="care-home-desktop">
       <HomeHeader :title="`${greeting}, ${firstName}`" :subtitle="subtitle">
         <template #actions>
-          <template v-if="selectedFamily">
-            <button v-if="isPreview" class="care-button care-button--primary" @click="openNewTask">
-              <i class="bi bi-plus-lg" aria-hidden="true"></i> New task
-            </button>
-            <NewTaskButton v-else :key="selectedFamilyId" @created="onTaskCreated" />
-          </template>
+          <NewTaskButton
+            v-if="selectedFamily"
+            :key="selectedFamilyId"
+            :save="savePreviewTask"
+            @created="onTaskCreated"
+          />
         </template>
       </HomeHeader>
       <FamilyEmptyState
@@ -339,11 +330,8 @@ watch(selectedFamilyId, () => {
     </CareModal>
     <NewTaskModal
       v-if="showNewTask"
-      :recipients="recipients"
-      :busy="savingTask"
-      :error="taskFormError"
+      :save="savePreviewTask"
       @close="showNewTask = false"
-      @save="saveTask"
     />
     <CareModal
       v-if="showTransit"

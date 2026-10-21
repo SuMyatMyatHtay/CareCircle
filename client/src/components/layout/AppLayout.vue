@@ -69,10 +69,12 @@ onUnmounted(() => {
       @click="closeMobileSidebar"
     ></div>
 
-    <!-- Collapsible sidebar -->
+    <!-- Collapsible sidebar. It follows the appearance setting on every page, so it looks
+         the same everywhere; only Family Home + Settings theme their content too. -->
     <div
       class="sidebar-wrapper"
       id="family-navigation"
+      :data-theme="theme"
       :inert="!sidebarOpen"
       :class="{ 'sidebar-hidden': !sidebarOpen }"
     >
@@ -96,7 +98,7 @@ onUnmounted(() => {
     <!-- Main content -->
     <div class="app-content flex-grow-1" :inert="isMobile && sidebarOpen">
 
-      <header class="app-topbar d-flex align-items-center justify-content-between px-3 px-md-4" :class="{ 'care-hidden-topbar': isFamilyPage && sidebarOpen }">
+      <header class="app-topbar d-flex align-items-center justify-content-between px-3 px-md-4" :class="{ 'care-hidden-topbar': sidebarOpen }">
         <div class="d-flex align-items-center gap-3">
           <button
             v-if="!sidebarOpen"
