@@ -54,16 +54,22 @@
     color: var(--theme-green, #2E7D43);
 }
 
-.profile-primary {
-    background: #6DBF7C;
-    border: 1px solid var(--theme-accent-border, #6DBF7C);
+.profile-page .btn.profile-primary {
+    background: #2E7D43;
+    border: 1px solid #2E7D43;
+    color: white;
+    box-shadow: 0 3px 8px #2E7D4326;
+}
+
+.profile-page .btn.profile-primary:hover:not(:disabled) {
+    background: #246536;
+    border-color: #246536;
     color: white;
 }
 
-.profile-primary:hover:not(:disabled) {
-    background: #5AA96D;
-    border-color: var(--theme-accent-border, #5AA96D);
-    color: white;
+.profile-page .btn.profile-primary:focus-visible {
+    outline: 3px solid #85C898;
+    outline-offset: 3px;
 }
 
 .profile-primary:disabled {

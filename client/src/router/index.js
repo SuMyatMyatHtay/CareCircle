@@ -8,6 +8,7 @@ import CreateFamilyView from '../features/family/views/CreateFamilyView.vue'
 import FamilyHomeView from '../features/family/views/FamilyHomeView.vue'
 import FamilySettingsView from '../features/settings/views/FamilySettingsView.vue'
 import ProfileView from '../features/auth/views/ProfileView.vue'
+import PublicProfileView from '../features/auth/views/PublicProfileView.vue'
 import PetDressupView from '../features/auth/views/PetDressupView.vue'
 import AvatarStudioView from '../features/avatar/views/AvatarStudioView.vue'
 import RecipientLogView from '../features/logs/views/RecipientLogView.vue'
@@ -35,6 +36,7 @@ const routes = [
     {path:'family/settings',redirect:'/settings'},
     {path:'family',redirect:'/home'},
     {path:'profile',name:'profile',component:ProfileView},
+    {path:'profile/:userId',name:'public-profile',component:PublicProfileView},
     {path:'dress-up',name:'dress-up',component:PetDressupView},
     {path:'avatar-studio',name:'avatar-studio',component:AvatarStudioView},
     {path:'tasks/new',name:'task-new',component:NewTaskView},

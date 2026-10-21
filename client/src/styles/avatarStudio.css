@@ -8,6 +8,12 @@
 .avatar-save-btn:disabled{background:var(--theme-soft, #b2dcbc);border-color:var(--theme-accent-border, #b2dcbc);color:#fff}
 .avatar-studio .btn-outline-success{color:var(--theme-green, #398a51);border-color:var(--theme-accent-border, #b5ddc0)}
 .avatar-studio .btn-outline-success:hover{color:var(--theme-green, #398a51);background:var(--theme-soft, #e8f5e9)}
+.avatar-studio .btn.avatar-save-btn{background:#2e7d43;border-color:#2e7d43;color:#fff;box-shadow:0 3px 8px #2e7d4326}
+.avatar-studio .btn.avatar-save-btn:hover:not(:disabled){background:#246536;border-color:#246536;color:#fff}
+.avatar-studio .btn.avatar-save-btn:disabled{background:#729c7c;border-color:#729c7c;color:#fff;opacity:1;box-shadow:none}
+.avatar-studio .btn.avatar-return-btn{background:#e2efe5;border:1px solid #b1cfb9;color:#245b34}
+.avatar-studio .btn.avatar-return-btn:hover{background:#cfe5d5;border-color:#8eb99b;color:#1d4c2a}
+.avatar-studio .btn:is(.avatar-save-btn,.avatar-return-btn):focus-visible{outline:3px solid #85c898;outline-offset:3px}
 .avatar-item{border:2px solid var(--theme-border, #f0eae7);border-radius:17px;padding:10px;background:var(--theme-page, #fffcfa);cursor:pointer;color:var(--theme-text, #423f3d);transition:.18s}
 .avatar-item:hover{border-color:var(--theme-accent-border, #b5ddc0);background:var(--theme-soft, #f6fcf7)}
 .avatar-item.selected{border-color:var(--theme-accent-border, #6dbf7c);background:var(--theme-soft, #e8f5e9)}

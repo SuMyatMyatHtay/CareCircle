@@ -99,7 +99,7 @@ onMounted(load)
           <button type="button" class="btn avatar-save-btn w-100 fw-bold rounded-4 py-3 mt-3" :disabled="saving || !modified" @click="save">
             <span v-if="saving" class="spinner-border spinner-border-sm me-2"></span>{{ saving ? 'Saving...' : modified ? 'Save my look ♡' : 'Look saved ✓' }}
           </button>
-          <button type="button" class="btn btn-link text-success text-decoration-none w-100 mt-2" @click="router.push('/profile')">Return to profile</button>
+          <button type="button" class="btn avatar-return-btn w-100 fw-bold rounded-4 py-3 mt-2" @click="router.push('/profile')"><i class="bi bi-arrow-left me-2" aria-hidden="true"></i>Return to profile</button>
         </section>
       </div>
       <div class="col-12 col-lg-7 col-xxl-8">

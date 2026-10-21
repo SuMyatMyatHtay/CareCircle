@@ -124,6 +124,7 @@ async function archive() {
                         <i class="bi bi-person-check text-success" aria-hidden="true"></i>
                         Has a CareCircle account: <strong>{{ recipient.linkedUser.name }}</strong>
                     </p>
+                    <RouterLink :to="{ name: 'public-profile', params: { userId: recipient.linkedUser._id || recipient.linkedUser.id } }">View account profile</RouterLink>
                 </SectionCard>
             </div>
 

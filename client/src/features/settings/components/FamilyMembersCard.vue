@@ -64,7 +64,7 @@ function removeMember(member) {
         <CareAvatar :person="member.user" size="small" />
         <div class="care-member-info">
           <strong>
-            {{ member.user.name }}
+            <RouterLink :to="{ name: 'public-profile', params: { userId: member.user._id } }">{{ member.user.name }}</RouterLink>
             <span v-if="member.user._id === userId">(you)</span>
           </strong>
           <p>
