@@ -197,7 +197,7 @@
   width: 38px;
   min-width: 38px;
   padding: 8px;
-  border-color: #b8d5bc;
+  border-color: var(--theme-accent-border, #b8d5bc);
   font-size: 20px;
 }
 .care-mobile-invite-feedback {
@@ -278,7 +278,7 @@
   width: 100%;
   min-height: 46px;
   margin-top: 16px;
-  border: 1px solid #efd4cd;
+  border: 1px solid var(--theme-danger-border, #efd4cd);
   border-radius: 13px;
   background: var(--care-panel);
   color: var(--care-danger);

@@ -270,21 +270,21 @@ async function removeLog(log) {
     gap: 6px;
     margin-bottom: 10px;
     font-size: 13px;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
 }
 
 .breadcrumb-row a {
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
     text-decoration: none;
 }
 
 .breadcrumb-row a:hover {
-    color: #3B7A4F;
+    color: var(--theme-green, #3B7A4F);
     text-decoration: underline;
 }
 
 .breadcrumb-row .current {
-    color: #2F2F2F;
+    color: var(--theme-text, #2F2F2F);
     font-weight: 700;
 }
 
@@ -300,16 +300,16 @@ async function removeLog(log) {
 
 .log-header p {
     margin: 0;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
     font-size: 15px;
 }
 
 .no-family {
     padding: 28px;
-    background: white;
-    border: 1px dashed #D5E2D8;
+    background: var(--theme-panel, white);
+    border: 1px dashed var(--theme-border, #D5E2D8);
     border-radius: 14px;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
 }
 
 .no-family p {
@@ -323,8 +323,8 @@ async function removeLog(log) {
     margin: 0;
     padding: 10px 14px;
     border-radius: 10px;
-    background: #FFF0EB;
-    color: #C0564B;
+    background: var(--theme-danger-soft, #FFF0EB);
+    color: var(--theme-danger, #C0564B);
     font-size: 14px;
 }
 

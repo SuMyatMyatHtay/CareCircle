@@ -56,11 +56,11 @@ const emit = defineEmits(['retry'])
     gap: 10px;
     margin: 0;
     padding: 18px 4px;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
     font-size: 14px;
 }
 
 .task-list-status.is-error {
-    color: #C0564B;
+    color: var(--theme-danger, #C0564B);
 }
 </style>

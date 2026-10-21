@@ -3,29 +3,29 @@
 
 .join-family-page {
   background:
-    radial-gradient(circle at 12% 28%, #E5F4E9, transparent 35%),
-    radial-gradient(circle at 88% 78%, #FFE4DC, transparent 34%),
-    #FBF8F7;
+    radial-gradient(circle at 12% 28%, var(--theme-soft, #E5F4E9), transparent 35%),
+    radial-gradient(circle at 88% 78%, var(--theme-danger-soft, #FFE4DC), transparent 34%),
+    var(--theme-page, #FBF8F7);
 
   font-family: 'Nunito', system-ui, sans-serif;
-  color: #2F2F2F;
+  color: var(--theme-text, #2F2F2F);
 }
 
 /* Card */
 
 .join-family-card {
-  border: 2px solid #F1EAE5;
+  border: 2px solid var(--theme-danger-border, #F1EAE5);
 }
 
 /* Back link */
 
 .join-back-link {
-  color: #579C72;
+  color: var(--theme-green, #579C72);
   font-size: 15px;
 }
 
 .join-back-link:hover {
-  color: #347650;
+  color: var(--theme-green, #347650);
 }
 
 /* Family illustration */
@@ -39,7 +39,7 @@
 /* Floating hearts */
 
 .floating-heart {
-  color: #FF9E95;
+  color: var(--theme-danger, #FF9E95);
   font-size: 25px;
   animation: heartFloat 3s ease-in-out infinite;
 }
@@ -52,40 +52,40 @@
 /* Text */
 
 .join-eyebrow {
-  background: #E8F5E9;
-  color: #589B72;
+  background: var(--theme-soft, #E8F5E9);
+  color: var(--theme-green, #589B72);
   font-size: 12px;
   font-weight: 900;
   letter-spacing: 1px;
 }
 
 .join-family-card h1 {
-  color: #3D3938;
+  color: var(--theme-text, #3D3938);
   font-size: clamp(27px, 3vw, 36px);
   font-weight: 900 !important;
 }
 
 .join-subtitle {
   max-width: 490px;
-  color: #85817E;
+  color: var(--theme-muted, #85817E);
   font-size: 16px;
   line-height: 1.7;
 }
 
 .join-subtitle strong {
-  color: #4E9267;
+  color: var(--theme-green, #4E9267);
 }
 
 /* Input */
 
 .join-family-card .form-control {
   padding: 15px 18px;
-  border: 2px solid #E7EDE7;
-  background: #FFFCFA;
+  border: 2px solid var(--theme-border, #E7EDE7);
+  background: var(--theme-page, #FFFCFA);
 }
 
 .join-family-card .form-control:focus {
-  border-color: #6DBF7C;
+  border-color: var(--theme-accent-border, #6DBF7C);
   box-shadow: 0 0 0 4px rgba(109, 191, 124, 0.14);
 }
 
@@ -113,15 +113,15 @@
 /* Success card */
 
 .join-success-card {
-  background: #EAF6EC;
-  border: 2px dashed #A9D8B4;
-  color: #42865C;
+  background: var(--theme-soft, #EAF6EC);
+  border: 2px dashed var(--theme-accent-border, #A9D8B4);
+  color: var(--theme-green, #42865C);
 }
 
 /* Footer */
 
 .join-footer {
-  color: #97A79B;
+  color: var(--theme-muted, #97A79B);
 }
 
 /* Mobile */

@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import SectionCard from '../../../components/common/SectionCard.vue'
 import CareAvatar from '../../../components/common/CareAvatar.vue'
+import { useDismissibleMenu } from '../../../composables/useDismissibleMenu.js'
 const props = defineProps({
   members: { type: Array, default: () => [] },
   userId: { type: String, default: '' },
@@ -12,6 +13,11 @@ const props = defineProps({
 })
 const emit = defineEmits(['invite', 'change-role', 'remove', 'retry'])
 const openMenu = ref('')
+const menuNodes = ref([])
+useDismissibleMenu(
+  () => menuNodes.value.find(node => node.dataset.memberId === openMenu.value),
+  () => { openMenu.value = '' },
+)
 const adminCount = computed(
   () => props.members.filter((member) => member.role === 'admin').length,
 )
@@ -79,7 +85,7 @@ function removeMember(member) {
         >
           {{ member.role === 'admin' ? 'Admin' : 'Member' }}
         </span>
-        <div v-if="isAdmin" class="care-member-menu">
+        <div v-if="isAdmin" ref="menuNodes" :data-member-id="member.user._id" class="care-member-menu">
           <button
             class="care-icon-button"
             :aria-label="`Manage ${member.user.name}`"

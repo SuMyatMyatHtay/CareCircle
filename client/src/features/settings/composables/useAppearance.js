@@ -1,4 +1,4 @@
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const choice = ref(readChoice())
 function readChoice() {
@@ -34,4 +34,21 @@ export function useAppearance() {
     }
   }
   return { appearance: choice, theme, setAppearance }
+}
+
+// The app root owns the theme, so routes and dialogs teleported to <body>
+// inherit the same palette. Page-level callers only read/change the preference.
+export function useAppAppearance() {
+  const appearance = useAppearance()
+  watch(appearance.theme, theme => {
+    document.documentElement.dataset.theme = theme
+    document.documentElement.dataset.bsTheme = theme
+  }, { immediate: true, flush: 'sync' })
+  function syncStorage(event) {
+    if (event.key === 'carecircle:appearance' || event.key === null)
+      choice.value = readChoice()
+  }
+  onMounted(() => window.addEventListener('storage', syncStorage))
+  onUnmounted(() => window.removeEventListener('storage', syncStorage))
+  return appearance
 }

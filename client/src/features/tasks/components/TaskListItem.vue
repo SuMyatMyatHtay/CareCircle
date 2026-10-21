@@ -85,13 +85,13 @@ function initials(name = '') {
     align-items: center;
     gap: 16px;
     padding: 14px 16px;
-    background: white;
-    border: 1px solid #E4ECE5;
+    background: var(--theme-panel, white);
+    border: 1px solid var(--theme-border, #E4ECE5);
     border-radius: 14px;
 }
 
 .task-item.is-open {
-    border-color: #FFDAD0;
+    border-color: var(--theme-danger-border, #FFDAD0);
 }
 
 .task-item.is-closed {
@@ -107,14 +107,14 @@ function initials(name = '') {
     width: 50px;
     height: 50px;
     border-radius: 10px;
-    background: #E8F5E9;
-    color: #2E7D43;
+    background: var(--theme-soft, #E8F5E9);
+    color: var(--theme-green, #2E7D43);
     line-height: 1.1;
 }
 
 .is-open .date-badge {
-    background: #FFF0EB;
-    color: #C0564B;
+    background: var(--theme-danger-soft, #FFF0EB);
+    color: var(--theme-danger, #C0564B);
 }
 
 .date-weekday {
@@ -134,8 +134,8 @@ function initials(name = '') {
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background: #FDF3E4;
-    color: #A0703A;
+    background: var(--theme-warning-soft, #FDF3E4);
+    color: var(--theme-danger, #A0703A);
     font-weight: 800;
 }
 
@@ -158,13 +158,13 @@ function initials(name = '') {
     margin: 0 0 3px;
     font-size: 16px;
     font-weight: 700;
-    color: #2F2F2F;
+    color: var(--theme-text, #2F2F2F);
 }
 
 .task-meta {
     margin: 0;
     font-size: 14px;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
 }
 
 .task-side {
@@ -180,15 +180,15 @@ function initials(name = '') {
     align-items: center;
     gap: 7px;
     font-size: 14px;
-    color: #2F2F2F;
+    color: var(--theme-text, #2F2F2F);
 }
 
 .claimer-avatar {
     width: 24px;
     height: 24px;
     font-size: 10px;
-    background: #E8F5E9;
-    color: #2E7D43;
+    background: var(--theme-soft, #E8F5E9);
+    color: var(--theme-green, #2E7D43);
 }
 
 @media (max-width: 575px) {

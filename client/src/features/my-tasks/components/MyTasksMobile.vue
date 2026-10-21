@@ -133,14 +133,14 @@ function open(task) {
     flex-direction: column;
     gap: 14px;
     font-family: Nunito, Inter, system-ui, sans-serif;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 h1 {
     margin: 0 0 2px;
     font-size: 26px;
     font-weight: 900;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .segmented {
@@ -149,7 +149,7 @@ h1 {
     gap: 4px;
     padding: 4px;
     border-radius: 14px;
-    background: #eef1ee;
+    background: var(--theme-neutral, #eef1ee);
 }
 
 .segment {
@@ -160,15 +160,15 @@ h1 {
     border-radius: 10px;
     font-size: 16px;
     font-weight: 700;
-    color: #4b5563;
+    color: var(--theme-muted, #4b5563);
     text-decoration: none;
 }
 
 .segment.active {
-    background: white;
+    background: var(--theme-panel, white);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
     font-weight: 800;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .week {
@@ -177,7 +177,7 @@ h1 {
     gap: 8px;
     padding: 14px 16px;
     border-radius: 18px;
-    background: #e8f5e9;
+    background: var(--theme-soft, #e8f5e9);
 }
 
 .week-row {
@@ -190,14 +190,14 @@ h1 {
 .week-row strong {
     font-size: 14px;
     font-weight: 700;
-    color: #1f5a2c;
+    color: var(--theme-green, #1f5a2c);
 }
 
 .bar {
     height: 10px;
     overflow: hidden;
     border-radius: 5px;
-    background: white;
+    background: var(--theme-panel, white);
 }
 
 .bar span {
@@ -212,7 +212,7 @@ h1 {
     display: flex;
     gap: 20px;
     margin-top: 8px;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--theme-border, #e5e7eb);
     overflow-x: auto;
 }
 
@@ -225,14 +225,14 @@ h1 {
     font-family: inherit;
     font-size: 15px;
     font-weight: 700;
-    color: #5b6470;
+    color: var(--theme-muted, #5b6470);
     white-space: nowrap;
 }
 
 .tab.active {
-    border-bottom-color: #2f7a3f;
+    border-bottom-color: var(--theme-accent-border, #2f7a3f);
     font-weight: 800;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .cards {
@@ -250,16 +250,16 @@ h1 {
     gap: 10px;
     width: 100%;
     padding: 15px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--theme-border, #e5e7eb);
     border-radius: 18px;
-    background: white;
+    background: var(--theme-panel, white);
     font-family: inherit;
     text-align: left;
 }
 
 .m-card.urgent {
     padding: 14px;
-    border: 2px solid #f28b7a;
+    border: 2px solid var(--theme-danger-border, #f28b7a);
 }
 
 .card-top {
@@ -277,19 +277,19 @@ h1 {
 }
 
 .pill-due {
-    background: #ffe9e4;
-    color: #9f3a2b;
+    background: var(--theme-danger-soft, #ffe9e4);
+    color: var(--theme-danger, #9f3a2b);
 }
 
 .pill-date {
-    background: #eef1f4;
-    color: #374151;
+    background: var(--theme-neutral, #eef1f4);
+    color: var(--theme-text, #374151);
 }
 
 .family {
     font-size: 13px;
     font-weight: 700;
-    color: #5b6470;
+    color: var(--theme-muted, #5b6470);
 }
 
 .card-main {
@@ -307,24 +307,24 @@ h1 {
 .text strong {
     font-size: 16px;
     font-weight: 700;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .text small {
     font-size: 13px;
     font-weight: 400;
-    color: #5b6470;
+    color: var(--theme-muted, #5b6470);
 }
 
 .status {
     margin: 0;
     padding: 16px 4px;
     font-size: 14px;
-    color: #5b6470;
+    color: var(--theme-muted, #5b6470);
 }
 
 .status.is-error {
-    color: #9f3a2b;
+    color: var(--theme-danger, #9f3a2b);
 }
 
 .retry {
@@ -332,7 +332,7 @@ h1 {
     border: none;
     background: none;
     font-weight: 700;
-    color: #2f7a3f;
+    color: var(--theme-green, #2f7a3f);
     text-decoration: underline;
 }
 </style>

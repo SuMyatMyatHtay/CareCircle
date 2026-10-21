@@ -46,30 +46,30 @@ function onSaved(recipient) {
     gap: 6px;
     margin-bottom: 20px;
     font-size: 14px;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
 }
 
 .breadcrumb-row a {
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
     text-decoration: none;
 }
 
 .breadcrumb-row .current {
-    color: #2F2F2F;
+    color: var(--theme-text, #2F2F2F);
     font-weight: 700;
 }
 
 .intro {
     margin: -6px 0 18px;
     font-size: 14px;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
 }
 
 .no-family {
     padding: 28px;
-    background: white;
-    border: 1px dashed #D5E2D8;
+    background: var(--theme-panel, white);
+    border: 1px dashed var(--theme-border, #D5E2D8);
     border-radius: 14px;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
 }
 </style>

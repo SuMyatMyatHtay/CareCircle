@@ -148,9 +148,9 @@ function onFocusOut(event) {
     align-items: center;
     gap: 12px;
     padding: 12px 14px;
-    border: 1px solid #C6E3CB;
+    border: 1px solid var(--theme-accent-border, #C6E3CB);
     border-radius: 12px;
-    background: #F4FAF5;
+    background: var(--theme-soft, #F4FAF5);
 }
 
 .place-icon {
@@ -161,8 +161,8 @@ function onFocusOut(event) {
     width: 36px;
     height: 36px;
     border-radius: 10px;
-    background: white;
-    color: #2F7A3F;
+    background: var(--theme-panel, white);
+    color: var(--theme-green, #2F7A3F);
 }
 
 .place-text {
@@ -177,7 +177,7 @@ function onFocusOut(event) {
 .place-text small,
 .place-result small {
     font-size: 12px;
-    color: #6B7280;
+    color: var(--theme-muted, #6B7280);
 }
 
 .place-change {
@@ -185,7 +185,7 @@ function onFocusOut(event) {
     padding: 0 4px;
     border: none;
     background: none;
-    color: #2F7A3F;
+    color: var(--theme-green, #2F7A3F);
     font-size: 13px;
     font-weight: 700;
 }
@@ -199,19 +199,19 @@ function onFocusOut(event) {
     align-items: center;
     gap: 10px;
     padding: 0 14px;
-    border: 1px solid #D9DDD6;
+    border: 1px solid var(--theme-border, #D9DDD6);
     border-radius: 10px;
-    background: white;
-    color: #6B7280;
+    background: var(--theme-panel, white);
+    color: var(--theme-muted, #6B7280);
 }
 
 .search-box:focus-within {
-    border-color: #2F7A3F;
+    border-color: var(--theme-accent-border, #2F7A3F);
     box-shadow: 0 0 0 3px #E8F5E9;
 }
 
 .search-box.is-invalid {
-    border-color: #C0564B;
+    border-color: var(--theme-danger-border, #C0564B);
 }
 
 .search-box input {
@@ -221,7 +221,7 @@ function onFocusOut(event) {
     border: none;
     outline: none;
     background: transparent;
-    color: #2F2F2F;
+    color: var(--theme-text, #2F2F2F);
     font-size: 14px;
 }
 
@@ -235,14 +235,14 @@ function onFocusOut(event) {
     padding: 0;
     overflow: hidden;
     list-style: none;
-    background: white;
-    border: 1px solid #E5E7EB;
+    background: var(--theme-panel, white);
+    border: 1px solid var(--theme-border, #E5E7EB);
     border-radius: 12px;
     box-shadow: 0 8px 24px rgba(20, 31, 23, 0.08);
 }
 
 .place-results li + li {
-    border-top: 1px solid #EEF0EC;
+    border-top: 1px solid var(--theme-border, #EEF0EC);
 }
 
 .place-result {
@@ -253,10 +253,10 @@ function onFocusOut(event) {
     min-height: 44px;
     padding: 10px 14px;
     border: none;
-    background: white;
+    background: var(--theme-panel, white);
     text-align: left;
     font-size: 14px;
-    color: #2F2F2F;
+    color: var(--theme-text, #2F2F2F);
 }
 
 .place-result span {
@@ -267,16 +267,16 @@ function onFocusOut(event) {
 
 .place-result:hover,
 .place-result:focus-visible {
-    background: #F4FAF5;
+    background: var(--theme-soft, #F4FAF5);
     outline: none;
 }
 
 .place-result .bi {
-    color: #6B7280;
+    color: var(--theme-muted, #6B7280);
 }
 
 .place-result .bi-star {
-    color: #2F7A3F;
+    color: var(--theme-green, #2F7A3F);
 }
 
 .place-status {
@@ -285,10 +285,10 @@ function onFocusOut(event) {
     gap: 8px;
     padding: 12px 14px;
     font-size: 13px;
-    color: #6B7280;
+    color: var(--theme-muted, #6B7280);
 }
 
 .place-status.is-error {
-    color: #9A3A2A;
+    color: var(--theme-danger, #9A3A2A);
 }
 </style>

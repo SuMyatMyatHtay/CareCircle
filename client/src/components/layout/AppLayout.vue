@@ -5,14 +5,12 @@ import { useRoute } from 'vue-router'
 import FamilySidebar from './FamilySidebar.vue'
 import RecipientSummaryModal from '../../features/family/components/RecipientSummaryModal.vue'
 import { provideFamilyWorkspace } from '../../features/family/composables/useFamilyWorkspace.js'
-import { useAppearance } from '../../features/settings/composables/useAppearance.js'
 import { resetPreview } from '../../features/family/data/previewFamily.js'
 import '../../styles/appLayout.css'
 import '../../styles/familyWorkspace.css'
 
 const route = useRoute()
 const { families, selectedFamilyId, loadFamilies, selectFamily, recipients, recipientsLoading, recipientsError, user, refreshUser, isPreview, homePath, settingsPath } = provideFamilyWorkspace(route.meta.preview === true)
-const { theme } = useAppearance()
 const isFamilyPage = computed(() => ['home', 'family-settings', 'preview-home', 'preview-settings'].includes(route.name))
 const isHomePage = computed(() => ['home', 'preview-home'].includes(route.name))
 const isSettingsPage = computed(() => ['family-settings', 'preview-settings'].includes(route.name))
@@ -60,7 +58,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="app-layout d-flex" :class="{ 'family-surface': isFamilyPage, 'family-home-surface': isHomePage, 'family-settings-surface': isSettingsPage }" :data-theme="isFamilyPage ? theme : 'light'">
+  <div class="app-layout d-flex" :class="{ 'family-surface': isFamilyPage, 'family-home-surface': isHomePage, 'family-settings-surface': isSettingsPage }">
 
     <!-- Overlay on mobile -->
     <div

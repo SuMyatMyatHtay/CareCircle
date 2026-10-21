@@ -4,7 +4,7 @@
     margin: 0 auto;
     padding-bottom: 40px;
     font-family: 'Nunito', system-ui, sans-serif;
-    color: #2F2F2F;
+    color: var(--theme-text, #2F2F2F);
 }
 
 .profile-page h1 {
@@ -12,14 +12,14 @@
 }
 
 .profile-eyebrow {
-    color: #589B72;
+    color: var(--theme-green, #589B72);
     font-size: 12px;
     font-weight: 900;
     letter-spacing: 1px;
 }
 
 .profile-card {
-    border: 1px solid #F0EAE7;
+    border: 1px solid var(--theme-border, #F0EAE7);
     box-shadow: 0 10px 28px rgba(93, 132, 106, 0.06);
 }
 
@@ -28,82 +28,82 @@
     height: 70px;
     display: grid;
     place-items: center;
-    background: #E8F5E9;
-    color: #3A9254;
+    background: var(--theme-soft, #E8F5E9);
+    color: var(--theme-green, #3A9254);
     font-size: 29px;
     font-weight: 900;
 }
 
 .profile-pill {
-    background: #E8F5E9;
-    color: #398A51;
+    background: var(--theme-soft, #E8F5E9);
+    color: var(--theme-green, #398A51);
 }
 
 .profile-green {
-    color: #6DBF7C;
+    color: var(--theme-green, #6DBF7C);
 }
 
 .profile-outline {
-    border: 1px solid #B5DDC0;
-    color: #398A51;
-    background: white;
+    border: 1px solid var(--theme-accent-border, #B5DDC0);
+    color: var(--theme-green, #398A51);
+    background: var(--theme-panel, white);
 }
 
 .profile-outline:hover {
-    background: #E8F5E9;
-    color: #2E7D43;
+    background: var(--theme-soft, #E8F5E9);
+    color: var(--theme-green, #2E7D43);
 }
 
 .profile-primary {
     background: #6DBF7C;
-    border: 1px solid #6DBF7C;
+    border: 1px solid var(--theme-accent-border, #6DBF7C);
     color: white;
 }
 
 .profile-primary:hover:not(:disabled) {
     background: #5AA96D;
-    border-color: #5AA96D;
+    border-color: var(--theme-accent-border, #5AA96D);
     color: white;
 }
 
 .profile-primary:disabled {
-    background: #B5DDBE;
-    border-color: #B5DDBE;
+    background: var(--theme-soft, #B5DDBE);
+    border-color: var(--theme-accent-border, #B5DDBE);
     color: white;
 }
 
 .profile-page .form-control:focus,
 .profile-page .form-select:focus {
-    border-color: #6DBF7C;
+    border-color: var(--theme-accent-border, #6DBF7C);
     box-shadow: 0 0 0 3px rgba(109, 191, 124, .15);
 }
 
 .profile-page .form-control:disabled,
 .profile-page .form-select:disabled {
-    background: #FAFAF8;
-    color: #626A65;
+    background: var(--theme-page, #FAFAF8);
+    color: var(--theme-muted, #626A65);
     opacity: 1;
 }
 
 .btn-success {
     background-color: #6DBF7C;
-    border-color: #6DBF7C;
+    border-color: var(--theme-accent-border, #6DBF7C);
 }
 
 .btn-success:hover:not(:disabled),
 .btn-success:focus:not(:disabled) {
     background-color: #5AA96D;
-    border-color: #5AA96D;
+    border-color: var(--theme-accent-border, #5AA96D);
 }
 
 .btn-success:disabled {
-    background-color: #B5DDBE;
-    border-color: #B5DDBE;
+    background-color: var(--theme-soft, #B5DDBE);
+    border-color: var(--theme-accent-border, #B5DDBE);
 }
 
 .pet-display {
-    background: linear-gradient(160deg, #E8F5E9, #FFF0EA);
-    border: 1px solid #E5EFE6;
+    background: linear-gradient(160deg, var(--theme-soft, #E8F5E9), var(--theme-danger-soft, #FFF0EA));
+    border: 1px solid var(--theme-border, #E5EFE6);
 }
 
 .pet-stage {
@@ -113,25 +113,25 @@
 }
 
 .pet-placeholder {
-    background: rgba(255,255,255,.7);
-    border: 2px dashed #B6DAC1;
+    background: var(--theme-translucent-panel, rgba(255,255,255,.7));
+    border: 2px dashed var(--theme-accent-border, #B6DAC1);
     border-radius: 35px;
-    color: #75A985;
+    color: var(--theme-muted, #75A985);
 }
 
 .pet-placeholder-icon {
     font-size: 60px;
-    color: #E7AFA8;
+    color: var(--theme-danger, #E7AFA8);
 }
 
 .caretaker-option {
-  background: #F1F8F1;
-  border: 1px solid #DCECDD;
+  background: var(--theme-soft, #F1F8F1);
+  border: 1px solid var(--theme-accent-border, #DCECDD);
 }
 
 .caretaker-option .form-check-input:checked {
   background-color: #6DBF7C;
-  border-color: #6DBF7C;
+  border-color: var(--theme-accent-border, #6DBF7C);
 }
 
 .caretaker-option .form-check-input:focus {

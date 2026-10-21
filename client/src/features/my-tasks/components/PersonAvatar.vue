@@ -48,24 +48,24 @@ watch(src, () => { failed.value = false })
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    border: 2px solid white;
+    border: 2px solid var(--theme-border, white);
     border-radius: 50%;
     font-weight: 700;
 }
 
 .tone-green {
-    background: #e8f5e9;
-    color: #2f7a3f;
+    background: var(--theme-soft, #e8f5e9);
+    color: var(--theme-green, #2f7a3f);
 }
 
 .tone-peach {
-    background: #ffe9e4;
-    color: #b5583f;
+    background: var(--theme-danger-soft, #ffe9e4);
+    color: var(--theme-danger, #b5583f);
 }
 
 .tone-yellow {
-    background: #fff6e0;
-    color: #7a4b00;
+    background: var(--theme-warning-soft, #fff6e0);
+    color: var(--theme-warning, #7a4b00);
     font-weight: 900;
 }
 

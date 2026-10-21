@@ -1,8 +1,8 @@
 .home-layout {
   display: flex;
   min-height: 100vh;
-  background: #FCFBF8;
-  color: #2F2F2F;
+  background: var(--theme-page, #FCFBF8);
+  color: var(--theme-text, #2F2F2F);
   font-family: 'Nunito', system-ui, sans-serif;
 }
 
@@ -19,7 +19,7 @@
 }
 
 .main-header p {
-  color: #7B8391;
+  color: var(--theme-muted, #7B8391);
   font-size: 15px;
 }
 
@@ -30,7 +30,7 @@
   justify-content: center;
   flex-direction: column;
   gap: 15px;
-  color: #7D887E;
+  color: var(--theme-muted, #7D887E);
 }
 
 .empty-state {
@@ -38,8 +38,8 @@
   margin: 75px auto 0;
   padding: 45px 25px;
   text-align: center;
-  background: white;
-  border: 1px solid #E4ECE5;
+  background: var(--theme-panel, white);
+  border: 1px solid var(--theme-border, #E4ECE5);
   border-radius: 25px;
   box-shadow: 0 12px 32px #476F5010;
 }
@@ -52,8 +52,8 @@
 .small-tag {
   display: inline-block;
   padding: 8px 18px;
-  background: #E8F5E9;
-  color: #52966C;
+  background: var(--theme-soft, #E8F5E9);
+  color: var(--theme-green, #52966C);
   border-radius: 20px;
   font-size: 11px;
   font-weight: 900;
@@ -67,7 +67,7 @@
 }
 
 .empty-state p {
-  color: #7D847F;
+  color: var(--theme-muted, #7D847F);
   max-width: 465px;
   line-height: 1.8;
   margin: auto;
@@ -107,20 +107,20 @@
 }
 
 .secondary-action {
-  background: #FFF0EB;
-  color: #B66C61;
-  border-color: #FFDAD0;
+  background: var(--theme-danger-soft, #FFF0EB);
+  color: var(--theme-danger, #B66C61);
+  border-color: var(--theme-danger-border, #FFDAD0);
 }
 
 .secondary-action:hover {
-  background: #FFE4DB;
-  color: #A95D52;
+  background: var(--theme-danger-soft, #FFE4DB);
+  color: var(--theme-danger, #A95D52);
 }
 
 .bottom-message {
   margin-top: 35px;
   font-size: 13px;
-  color: #91A095;
+  color: var(--theme-muted, #91A095);
 }
 
 .family-workspace {
@@ -184,10 +184,10 @@
   gap: 10px;
   margin: 0 0 24px;
   padding: 18px 4px;
-  color: #7B8391;
+  color: var(--theme-muted, #7B8391);
   font-size: 14px;
 }
 
 .recipient-list-status.is-error {
-  color: #C0564B;
+  color: var(--theme-danger, #C0564B);
 }

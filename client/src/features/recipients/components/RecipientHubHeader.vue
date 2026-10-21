@@ -103,8 +103,8 @@ const editing = ref(false)
     width: 80px;
     height: 80px;
     border-radius: 50%;
-    background: #FDF3E4;
-    color: #A0703A;
+    background: var(--theme-warning-soft, #FDF3E4);
+    color: var(--theme-danger, #A0703A);
     font-size: 28px;
     font-weight: 800;
 }
@@ -128,13 +128,13 @@ const editing = ref(false)
     margin: 0;
     font-size: 30px;
     font-weight: 800;
-    color: #2F2F2F;
+    color: var(--theme-text, #2F2F2F);
     overflow-wrap: anywhere;
 }
 
 .hub-subtitle {
     font-size: 16px;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
 }
 
 .hub-chips {
@@ -152,18 +152,18 @@ const editing = ref(false)
 }
 
 .chip-care {
-    background: #EEE8FD;
-    color: #4B3B8F;
+    background: var(--theme-purple-soft, #EEE8FD);
+    color: var(--theme-purple, #4B3B8F);
 }
 
 .chip-muted {
-    background: #F3F4F1;
-    color: #2F2F2F;
+    background: var(--theme-page, #F3F4F1);
+    color: var(--theme-text, #2F2F2F);
 }
 
 .chip-coral {
-    background: #FFF0EB;
-    color: #C0564B;
+    background: var(--theme-danger-soft, #FFF0EB);
+    color: var(--theme-danger, #C0564B);
 }
 
 .hub-actions {
@@ -173,23 +173,23 @@ const editing = ref(false)
 
 .edit-button {
     padding: 11px 16px;
-    border: 1px solid #E4ECE5;
+    border: 1px solid var(--theme-border, #E4ECE5);
     border-radius: 10px;
-    background: white;
-    color: #2F2F2F;
+    background: var(--theme-panel, white);
+    color: var(--theme-text, #2F2F2F);
     font-size: 14px;
     font-weight: 700;
     white-space: nowrap;
 }
 
 .edit-button:hover {
-    background: #F7FAF7;
+    background: var(--theme-page, #F7FAF7);
 }
 
 .hub-tabs {
     display: flex;
     gap: 28px;
-    border-bottom: 1px solid #E4ECE5;
+    border-bottom: 1px solid var(--theme-border, #E4ECE5);
     overflow-x: auto;
     scrollbar-width: none;
 }
@@ -198,7 +198,7 @@ const editing = ref(false)
     flex: 0 0 auto;
     padding: 6px 0 12px;
     border-bottom: 2px solid transparent;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
     font-size: 14px;
     font-weight: 600;
     text-decoration: none;
@@ -206,12 +206,12 @@ const editing = ref(false)
 }
 
 .hub-tab:hover {
-    color: #2F2F2F;
+    color: var(--theme-text, #2F2F2F);
 }
 
 .hub-tab.active {
-    border-bottom-color: #2E7D43;
-    color: #2E7D43;
+    border-bottom-color: var(--theme-accent-border, #2E7D43);
+    color: var(--theme-green, #2E7D43);
     font-weight: 700;
 }
 

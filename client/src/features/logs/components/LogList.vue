@@ -85,26 +85,26 @@ const emit = defineEmits(['retry', 'edit', 'delete', 'load-more', 'save-edit', '
     gap: 10px;
     margin: 0;
     padding: 18px 4px;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
     font-size: 14px;
 }
 
 .log-list-status.is-error {
-    color: #C0564B;
+    color: var(--theme-danger, #C0564B);
 }
 
 .log-list-empty {
     padding: 36px 16px;
     text-align: center;
-    color: #7B8391;
-    background: white;
-    border: 1px dashed #D5E2D8;
+    color: var(--theme-muted, #7B8391);
+    background: var(--theme-panel, white);
+    border: 1px dashed var(--theme-border, #D5E2D8);
     border-radius: 14px;
 }
 
 .log-list-empty .bi {
     font-size: 28px;
-    color: #9DBFA6;
+    color: var(--theme-muted, #9DBFA6);
 }
 
 .log-list-empty p {
@@ -119,15 +119,15 @@ const emit = defineEmits(['retry', 'edit', 'delete', 'load-more', 'save-edit', '
     gap: 8px;
     align-self: center;
     padding: 8px 18px;
-    border: 1px solid #B5DDC0;
+    border: 1px solid var(--theme-accent-border, #B5DDC0);
     border-radius: 999px;
-    background: white;
-    color: #3B7A4F;
+    background: var(--theme-panel, white);
+    color: var(--theme-green, #3B7A4F);
     font-size: 14px;
     font-weight: 700;
 }
 
 .load-more:hover:not(:disabled) {
-    background: #EAF4EC;
+    background: var(--theme-soft, #EAF4EC);
 }
 </style>

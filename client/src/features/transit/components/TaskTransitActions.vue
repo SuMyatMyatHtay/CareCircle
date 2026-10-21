@@ -132,11 +132,11 @@ watch(() => [props.task?._id, props.task?.status], loadSession, { immediate: tru
     gap: 12px;
     padding: 12px 14px;
     border-radius: 12px;
-    background: #e8f5e9;
+    background: var(--theme-soft, #e8f5e9);
 }
 
 .live-strip.ended {
-    background: #f3f4f1;
+    background: var(--theme-page, #f3f4f1);
 }
 
 .live-text {
@@ -150,13 +150,13 @@ watch(() => [props.task?._id, props.task?.status], loadSession, { immediate: tru
     font-size: 14px;
     line-height: 20px;
     font-weight: 600;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .live-text small {
     font-size: 12px;
     line-height: 16px;
-    color: #6b7280;
+    color: var(--theme-muted, #6b7280);
 }
 
 .badge {
@@ -175,8 +175,8 @@ watch(() => [props.task?._id, props.task?.status], loadSession, { immediate: tru
 }
 
 .badge-ended {
-    background: white;
-    color: #6b7280;
+    background: var(--theme-panel, white);
+    color: var(--theme-muted, #6b7280);
 }
 
 .buttons {
@@ -189,7 +189,7 @@ watch(() => [props.task?._id, props.task?.status], loadSession, { immediate: tru
 /* Large button (Buttons page: _button-large, 20px padding) */
 .btn-primary-lg {
     padding: 20px;
-    border: 1px solid #2f7a3f;
+    border: 1px solid var(--theme-accent-border, #2f7a3f);
     border-radius: 8px;
     background: #2f7a3f;
     color: white;
@@ -208,10 +208,10 @@ watch(() => [props.task?._id, props.task?.status], loadSession, { immediate: tru
     display: inline-flex;
     align-items: center;
     padding: 12px 16px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--theme-border, #e5e7eb);
     border-radius: 8px;
-    background: white;
-    color: #1f2937;
+    background: var(--theme-panel, white);
+    color: var(--theme-blue, #1f2937);
     font-size: 14px;
     line-height: 20px;
     letter-spacing: 0.07px;
@@ -221,8 +221,8 @@ watch(() => [props.task?._id, props.task?.status], loadSession, { immediate: tru
 }
 
 .btn-secondary:hover {
-    background: #f9fafb;
-    color: #1f2937;
+    background: var(--theme-page, #f9fafb);
+    color: var(--theme-blue, #1f2937);
 }
 
 button:disabled {

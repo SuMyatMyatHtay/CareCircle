@@ -75,28 +75,28 @@ function pickQuick(value) {
 .date-chip {
     min-height: 44px;
     padding: 0 14px;
-    border: 1px solid #E5E7EB;
+    border: 1px solid var(--theme-border, #E5E7EB);
     border-radius: 999px;
-    background: white;
-    color: #2F2F2F;
+    background: var(--theme-panel, white);
+    color: var(--theme-text, #2F2F2F);
     font-size: 13px;
     font-weight: 500;
     white-space: nowrap;
 }
 
 .date-chip:hover {
-    background: #F7FAF7;
+    background: var(--theme-page, #F7FAF7);
 }
 
 .date-chip.selected {
-    border-color: #2F7A3F;
+    border-color: var(--theme-accent-border, #2F7A3F);
     background: #2F7A3F;
     color: white;
     font-weight: 600;
 }
 
 .date-chip:focus-visible {
-    outline: 3px solid #A8D5B5;
+    outline: 3px solid var(--theme-accent-border, #A8D5B5);
     outline-offset: 2px;
 }
 

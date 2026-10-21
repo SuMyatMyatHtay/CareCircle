@@ -4,6 +4,7 @@ import { ref, computed } from 'vue'
 import '../../styles/components/familySidebar.css'
 import CareAvatar from '../common/CareAvatar.vue'
 import { useRoute } from 'vue-router'
+import { useDismissibleMenu } from '../../composables/useDismissibleMenu.js'
 import { displayName, initials, careTypeLabel } from '../../features/recipients/recipientLabels.js'
 import { useSettingsAccountActions } from '../../features/settings/composables/useSettingsAccountActions.js'
 
@@ -26,6 +27,11 @@ const props = defineProps({
 const emit = defineEmits(['select-family', 'navigate', 'collapse', 'open-recipient'])
 
 const showSwitcher = ref(false)
+const switcherRoot = ref(null)
+useDismissibleMenu(
+    () => showSwitcher.value ? switcherRoot.value : null,
+    () => { showSwitcher.value = false }
+)
 
 const selectedFamily = computed(() =>
     props.families.find(f => f.id === props.selectedFamilyId)
@@ -87,7 +93,7 @@ async function copyInviteCode(inviteCode) {
         </div>
 
         <!-- FAMILY SWITCHER -->
-        <div class="switcher-container">
+        <div ref="switcherRoot" class="switcher-container">
         <button
             class="family-selector"
             type="button"
