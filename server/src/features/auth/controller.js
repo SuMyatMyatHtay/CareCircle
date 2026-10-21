@@ -1,6 +1,7 @@
 // Owner: Su Myat Myat Htay (Sera)
 import { authenticateUser, findCurrentUser, toPublicUser } from './service.js'
 import User from './User.model.js'
+import { validProfilePicture } from '../../utils/profilePicture.js'
 
 export async function login(req, res) {
   try {
@@ -102,7 +103,7 @@ export async function logout(req, res) {
 
 export async function updateProfile(req, res) {
   try {
-    const { name, phone, preferredLang, telegramUsername, isCaretaker } = req.body ?? {}
+    const { name, phone, preferredLang, telegramUsername, isCaretaker, profilePicture } = req.body ?? {}
 
     if (
       typeof name !== 'string' ||
@@ -135,10 +136,15 @@ export async function updateProfile(req, res) {
       })
     }
 
+    if (profilePicture !== undefined && !validProfilePicture(profilePicture)) {
+      return res.status(400).json({ message: 'Choose a valid profile picture.' })
+    }
+
     const user = await User.findByIdAndUpdate(
       req.user.userId,
       {
         $set: {
+          ...(profilePicture !== undefined ? { profilePicture } : {}),
           name: name.trim(),
           phone: phone.trim(),
           preferredLang,

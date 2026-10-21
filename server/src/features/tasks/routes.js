@@ -21,12 +21,12 @@ const router = Router()
 router.get('/', listTasks)                          // ?status=&recipient=&claimedBy=&from=&to=
 router.post('/', createTask)                        // member
 router.get('/:taskId', getTask)                     // member
-router.patch('/:taskId', updateTask)                // creator or admin
-router.delete('/:taskId', deleteTask)               // creator or admin
+router.patch('/:taskId', updateTask)                // creator only
+router.delete('/:taskId', deleteTask)               // creator only
 
 // ---- Status changes ----
 router.post('/:taskId/claim', claimTask)            // member: open -> claimed
-router.post('/:taskId/unclaim', unclaimTask)        // claimer or admin: claimed -> open
+router.post('/:taskId/unclaim', unclaimTask)        // creator or claimer: claimed -> open
 router.post('/:taskId/start', startTask)            // claimer: claimed -> in_progress
 router.post('/:taskId/complete', completeTaskHandler) // claimer: claimed/in_progress -> completed
 router.post('/:taskId/cancel', cancelTask)          // creator or admin: -> cancelled

@@ -248,7 +248,7 @@ watch(() => grid.value?.tiles[0]?.key, () => {
     overflow: hidden;
     width: 100%;
     border-radius: 12px;
-    background: #e8f5e9;
+    background: var(--theme-soft, #e8f5e9);
     /* faint grid, seen only when OneMap's pictures can't load */
     background-image:
         linear-gradient(rgba(47, 122, 63, 0.08) 1px, transparent 1px),
@@ -315,7 +315,7 @@ watch(() => grid.value?.tiles[0]?.key, () => {
     transform: translate(-50%, -100%);
     font-size: 34px;
     line-height: 1;
-    color: #2f7a3f;
+    color: var(--theme-green, #2f7a3f);
     filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.3));
 }
 
@@ -367,16 +367,16 @@ watch(() => grid.value?.tiles[0]?.key, () => {
     margin-bottom: 8px;
     padding: 8px 12px;
     border-radius: 10px;
-    background: white;
+    background: var(--theme-panel, white);
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
     font-size: 13px;
     font-weight: 600;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
     white-space: nowrap;
 }
 
 .bubble .bi {
-    color: #6b7280;
+    color: var(--theme-muted, #6b7280);
 }
 
 .live-dot {
@@ -384,7 +384,7 @@ watch(() => grid.value?.tiles[0]?.key, () => {
     width: 18px;
     height: 18px;
     transform: translate(-50%, -50%);
-    border: 3px solid white;
+    border: 3px solid var(--theme-border, white);
     border-radius: 50%;
     background: #f28b7a;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
@@ -406,10 +406,10 @@ watch(() => grid.value?.tiles[0]?.key, () => {
     transform: translateX(-50%);
     padding: 2px 8px;
     border-radius: 999px;
-    background: white;
+    background: var(--theme-panel, white);
     font-size: 12px;
     font-weight: 700;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
     white-space: nowrap;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
@@ -435,12 +435,12 @@ watch(() => grid.value?.tiles[0]?.key, () => {
     white-space: nowrap;
     padding: 6px 10px;
     border-radius: 999px;
-    background: #e8f5e9;
+    background: var(--theme-soft, #e8f5e9);
     font-size: 14px;
     line-height: 20px;
     letter-spacing: 0.07px;
     font-weight: 500;
-    color: #2f7a3f;
+    color: var(--theme-green, #2f7a3f);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
 }
 
@@ -449,9 +449,9 @@ watch(() => grid.value?.tiles[0]?.key, () => {
     right: 0;
     bottom: 0;
     padding: 2px 6px;
-    background: rgba(255, 255, 255, 0.85);
+    background: var(--theme-translucent-panel, rgba(255, 255, 255, 0.85));
     font-size: 10px;
-    color: #4b5563;
+    color: var(--theme-muted, #4b5563);
 }
 
 .map-placeholder {
@@ -465,7 +465,7 @@ watch(() => grid.value?.tiles[0]?.key, () => {
     line-height: 20px;
     letter-spacing: 0.07px;
     font-weight: 500;
-    color: #2f7a3f;
+    color: var(--theme-green, #2f7a3f);
 }
 
 .map-placeholder .bi {

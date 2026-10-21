@@ -127,6 +127,13 @@ export async function getMyProfile() {
   return response.data.user
 }
 
+export async function getPublicProfile(userId) {
+  const response = await authApi.get(`/auth/users/${encodeURIComponent(userId)}`, {
+    headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
+  })
+  return response.data.user
+}
+
 export async function updateMyProfile(profile) {
   const token = sessionStorage.getItem('token')
 

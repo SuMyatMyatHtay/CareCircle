@@ -44,8 +44,8 @@ const options = computed(() => [
 <style scoped>
 .type-filter {
     padding: 18px 14px;
-    background: white;
-    border: 1px solid #E4ECE5;
+    background: var(--theme-panel, white);
+    border: 1px solid var(--theme-border, #E4ECE5);
     border-radius: 14px;
 }
 
@@ -53,7 +53,7 @@ const options = computed(() => [
     margin: 0 6px 10px;
     font-size: 15px;
     font-weight: 800;
-    color: #2F2F2F;
+    color: var(--theme-text, #2F2F2F);
 }
 
 .type-filter ul {
@@ -70,27 +70,27 @@ const options = computed(() => [
     border: none;
     border-radius: 8px;
     background: transparent;
-    color: #4A4F57;
+    color: var(--theme-text, #4A4F57);
     font-size: 14px;
     text-align: left;
 }
 
 .filter-option:hover {
-    background: #F5F7F5;
+    background: var(--theme-page, #F5F7F5);
 }
 
 .filter-option.is-active {
-    background: #EAF4EC;
-    color: #2E7D43;
+    background: var(--theme-soft, #EAF4EC);
+    color: var(--theme-green, #2E7D43);
     font-weight: 700;
 }
 
 .filter-count {
-    color: #9AA1AB;
+    color: var(--theme-muted, #9AA1AB);
 }
 
 .is-active .filter-count {
-    color: #2E7D43;
+    color: var(--theme-green, #2E7D43);
 }
 
 @media (max-width: 991px) {
@@ -116,9 +116,9 @@ const options = computed(() => [
         gap: 6px;
         white-space: nowrap;
         padding: 6px 12px;
-        border: 1px solid #E4ECE5;
+        border: 1px solid var(--theme-border, #E4ECE5);
         border-radius: 999px;
-        background: white;
+        background: var(--theme-panel, white);
     }
 }
 </style>

@@ -323,14 +323,14 @@ defineExpose({ reset })
 <style scoped>
 .log-form {
     padding: 18px 20px;
-    background: white;
-    border: 1.5px solid #B5DDC0;
+    background: var(--theme-panel, white);
+    border: 1.5px solid var(--theme-accent-border, #B5DDC0);
     border-radius: 16px;
 }
 
 .log-form.is-edit {
-    border-color: #E4ECE5;
-    background: #FBFDFB;
+    border-color: var(--theme-border, #E4ECE5);
+    background: var(--theme-soft, #FBFDFB);
 }
 
 .form-title {
@@ -340,11 +340,11 @@ defineExpose({ reset })
     margin: 0 0 12px;
     font-size: 16px;
     font-weight: 800;
-    color: #2F2F2F;
+    color: var(--theme-text, #2F2F2F);
 }
 
 .form-title .bi {
-    color: #3B7A4F;
+    color: var(--theme-green, #3B7A4F);
 }
 
 .type-chips {
@@ -358,14 +358,14 @@ defineExpose({ reset })
     padding: 5px 12px;
     border: none;
     border-radius: 999px;
-    background: #F1F3F2;
-    color: #4A4F57;
+    background: var(--theme-page, #F1F3F2);
+    color: var(--theme-text, #4A4F57);
     font-size: 13px;
     font-weight: 700;
 }
 
 .type-chip:hover {
-    background: #E6EAE7;
+    background: var(--theme-neutral, #E6EAE7);
 }
 
 .type-chip.is-selected {
@@ -379,10 +379,10 @@ defineExpose({ reset })
 .medication-row select {
     width: 100%;
     padding: 10px 12px;
-    border: 1px solid #DDE5DF;
+    border: 1px solid var(--theme-border, #DDE5DF);
     border-radius: 10px;
-    background: #FAFBFA;
-    color: #2F2F2F;
+    background: var(--theme-page, #FAFBFA);
+    color: var(--theme-text, #2F2F2F);
     font-size: 15px;
 }
 
@@ -396,13 +396,13 @@ defineExpose({ reset })
 .medication-row input:focus,
 .medication-row select:focus {
     outline: none;
-    border-color: #6DBF7C;
-    background: white;
+    border-color: var(--theme-accent-border, #6DBF7C);
+    background: var(--theme-panel, white);
     box-shadow: 0 0 0 3px rgba(109, 191, 124, 0.18);
 }
 
 .content-input.is-invalid {
-    border-color: #E0A49B;
+    border-color: var(--theme-danger-border, #E0A49B);
 }
 
 .content-wrap {
@@ -424,14 +424,14 @@ defineExpose({ reset })
     height: 38px;
     border: none;
     border-radius: 50%;
-    background: #FBE3DE;
-    color: #C0564B;
+    background: var(--theme-danger-soft, #FBE3DE);
+    color: var(--theme-danger, #C0564B);
     font-size: 17px;
     transition: background 0.15s ease, transform 0.15s ease;
 }
 
 .voice-button:hover:not(:disabled) {
-    background: #F7D2CA;
+    background: var(--theme-danger-soft, #F7D2CA);
 }
 
 .voice-button:focus-visible {
@@ -467,11 +467,11 @@ defineExpose({ reset })
     gap: 6px;
     margin: 6px 0 0;
     font-size: 13px;
-    color: #C0564B;
+    color: var(--theme-danger, #C0564B);
 }
 
 .voice-status.is-done {
-    color: #3B7A4F;
+    color: var(--theme-green, #3B7A4F);
 }
 
 .rec-dot {
@@ -485,7 +485,7 @@ defineExpose({ reset })
     margin-left: auto;
     border: none;
     background: transparent;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
     font-size: 13px;
     font-weight: 700;
     text-decoration: underline;
@@ -495,7 +495,7 @@ defineExpose({ reset })
 .form-error {
     margin: 6px 0 0;
     font-size: 13px;
-    color: #C0564B;
+    color: var(--theme-danger, #C0564B);
 }
 
 .form-error {
@@ -504,7 +504,7 @@ defineExpose({ reset })
     margin-top: 12px;
     padding: 8px 12px;
     border-radius: 10px;
-    background: #FFF0EB;
+    background: var(--theme-danger-soft, #FFF0EB);
 }
 
 .extra-fields {
@@ -519,19 +519,19 @@ defineExpose({ reset })
     margin-bottom: 4px;
     font-size: 13px;
     font-weight: 700;
-    color: #4A4F57;
+    color: var(--theme-text, #4A4F57);
 }
 
 .optional {
     font-weight: 400;
-    color: #9AA1AB;
+    color: var(--theme-muted, #9AA1AB);
 }
 
 .medications {
     margin-top: 12px;
     padding: 10px 12px;
     border-radius: 12px;
-    background: #FFF8E6;
+    background: var(--theme-warning-soft, #FFF8E6);
 }
 
 .medication-row {
@@ -543,21 +543,21 @@ defineExpose({ reset })
 }
 
 .medication-row .bi-capsule {
-    color: #93650A;
+    color: var(--theme-warning, #93650A);
 }
 
 .medication-row input,
 .medication-row select {
     padding: 7px 10px;
     font-size: 14px;
-    background: white;
+    background: var(--theme-panel, white);
 }
 
 .remove-med,
 .add-med {
     border: none;
     background: transparent;
-    color: #93650A;
+    color: var(--theme-warning, #93650A);
     font-size: 14px;
     font-weight: 700;
 }
@@ -570,7 +570,7 @@ defineExpose({ reset })
 
 .remove-med:hover,
 .add-med:hover {
-    background: #FFEDBF;
+    background: var(--theme-warning-soft, #FFEDBF);
 }
 
 .add-med {
@@ -584,14 +584,14 @@ defineExpose({ reset })
     gap: 8px;
     margin-right: auto;
     font-size: 14px;
-    color: #4A4F57;
+    color: var(--theme-text, #4A4F57);
     cursor: pointer;
 }
 
 .notify-option input {
     width: 16px;
     height: 16px;
-    accent-color: #3B7A4F;
+    accent-color: var(--theme-green, #3B7A4F);
 }
 
 .form-footer {
@@ -625,9 +625,9 @@ defineExpose({ reset })
 }
 
 .cancel-button {
-    border: 1px solid #DDE5DF;
-    background: white;
-    color: #4A4F57;
+    border: 1px solid var(--theme-border, #DDE5DF);
+    background: var(--theme-panel, white);
+    color: var(--theme-text, #4A4F57);
 }
 
 .submit-button:disabled,
@@ -643,7 +643,7 @@ defineExpose({ reset })
     .medication-row {
         grid-template-columns: auto 1fr auto;
         padding-bottom: 8px;
-        border-bottom: 1px solid #FBE6B5;
+        border-bottom: 1px solid var(--theme-warning-border, #FBE6B5);
     }
 
     .medication-row .med-name,

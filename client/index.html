@@ -1,1 +1,30 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>CareCircle</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet"></head><body><div id="app"></div><script type="module" src="/src/main.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CareCircle</title>
+    <script>
+      // Apply the saved theme before the Vue bundle loads to avoid a light flash.
+      (() => {
+        let choice = 'light'
+        try { choice = localStorage.getItem('carecircle:appearance') || 'light' } catch {}
+        const theme = choice === 'dark' ||
+          (choice === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)
+          ? 'dark' : 'light'
+        document.documentElement.dataset.theme = theme
+        document.documentElement.dataset.bsTheme = theme
+      })()
+    </script>
+    <style>
+      html { background: #fafaf7; color-scheme: light; }
+      html[data-theme='dark'] { background: #141a17; color-scheme: dark; }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

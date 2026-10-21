@@ -177,7 +177,7 @@ const hasEssentials = computed(() =>
 
 <style scoped>
 .card-link {
-    color: #2E7D43;
+    color: var(--theme-green, #2E7D43);
     font-size: 14px;
     font-weight: 700;
     text-decoration: none;
@@ -195,12 +195,12 @@ const hasEssentials = computed(() =>
     gap: 10px;
     margin: 0;
     padding: 18px 4px;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
     font-size: 14px;
 }
 
 .list-status.is-error {
-    color: #C0564B;
+    color: var(--theme-danger, #C0564B);
 }
 
 .note-list {
@@ -226,8 +226,8 @@ const hasEssentials = computed(() =>
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: #E8F5E9;
-    color: #2E7D43;
+    background: var(--theme-soft, #E8F5E9);
+    color: var(--theme-green, #2E7D43);
     font-size: 13px;
     font-weight: 800;
 }
@@ -249,21 +249,21 @@ const hasEssentials = computed(() =>
 .type-chip {
     padding: 3px 10px;
     border-radius: 999px;
-    background: #F3F4F1;
-    color: #5D6B7A;
+    background: var(--theme-page, #F3F4F1);
+    color: var(--theme-muted, #5D6B7A);
     font-size: 12px;
     font-weight: 600;
 }
 
 /* Same colours as F's LogCard */
-.type-consultation { background: #EEE8FA; color: #6A4FA3; }
-.type-medication_change { background: #FFF3D6; color: #93650A; }
-.type-diet { background: #EAF4EC; color: #3B7A4F; }
-.type-symptom { background: #FBE9F2; color: #A3456F; }
+.type-consultation { background: var(--theme-purple-soft, #EEE8FA); color: var(--theme-purple, #6A4FA3); }
+.type-medication_change { background: var(--theme-warning-soft, #FFF3D6); color: var(--theme-warning, #93650A); }
+.type-diet { background: var(--theme-soft, #EAF4EC); color: var(--theme-green, #3B7A4F); }
+.type-symptom { background: var(--theme-pink-soft, #FBE9F2); color: var(--theme-pink, #A3456F); }
 
 .note-date {
     font-size: 12px;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
 }
 
 .note-content {
@@ -273,7 +273,7 @@ const hasEssentials = computed(() =>
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     font-size: 14px;
-    color: #2F2F2F;
+    color: var(--theme-text, #2F2F2F);
 }
 
 .essentials {
@@ -289,18 +289,18 @@ const hasEssentials = computed(() =>
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
 }
 
 .essentials dd {
     margin: 0;
     font-size: 14px;
     font-weight: 500;
-    color: #2F2F2F;
+    color: var(--theme-text, #2F2F2F);
 }
 
 .essentials dd.is-alert {
-    color: #C0564B;
+    color: var(--theme-danger, #C0564B);
 }
 
 .essentials a {
@@ -323,11 +323,11 @@ const hasEssentials = computed(() =>
     gap: 4px 8px;
     padding: 8px 12px;
     border-radius: 10px;
-    background: #FBFBF7;
+    background: var(--theme-page, #FBFBF7);
 }
 
 .medication-list span {
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
     font-weight: 400;
 }
 </style>

@@ -85,13 +85,13 @@ const statusLabel = computed(() => {
     flex-direction: column;
     gap: 12px;
     padding: 16px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--theme-border, #e5e7eb);
     border-radius: 16px;
-    background: white;
+    background: var(--theme-panel, white);
 }
 
 .task-card.is-soon {
-    border-color: #ffe6a3;
+    border-color: var(--theme-warning-border, #ffe6a3);
 }
 
 .task-card.is-done {
@@ -129,14 +129,14 @@ const statusLabel = computed(() => {
     line-height: 24px;
     letter-spacing: 0.08px;
     font-weight: 600;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .meta {
     font-size: 14px;
     line-height: 20px;
     letter-spacing: 0.07px;
-    color: #6b7280;
+    color: var(--theme-muted, #6b7280);
 }
 
 /* Badge component (Badge/Tags page): 6px + 4px inner padding, 12px medium */
@@ -154,12 +154,12 @@ const statusLabel = computed(() => {
 }
 
 .family-green,
-.status-claimed { background: #e8f5e9; color: #2f7a3f; }
-.family-purple { background: #eee8fd; color: #4b3b8f; }
-.family-blue { background: #e3f0fb; color: #1f5a8a; }
-.family-orange { background: #fff8e1; color: #7a5a00; }
+.status-claimed { background: var(--theme-soft, #e8f5e9); color: var(--theme-green, #2f7a3f); }
+.family-purple { background: var(--theme-purple-soft, #eee8fd); color: var(--theme-purple, #4b3b8f); }
+.family-blue { background: var(--theme-blue-soft, #e3f0fb); color: var(--theme-blue, #1f5a8a); }
+.family-orange { background: var(--theme-warning-soft, #fff8e1); color: var(--theme-warning, #7a5a00); }
 .status-in_progress { background: #2f7a3f; color: white; }
-.status-completed { background: #f3f4f6; color: #6b7280; }
+.status-completed { background: var(--theme-page, #f3f4f6); color: var(--theme-muted, #6b7280); }
 
 .due-flag {
     flex: 0 0 auto;
@@ -179,8 +179,8 @@ const statusLabel = computed(() => {
     font-size: 13px;
 }
 
-.due-soon { background: #fff8e1; color: #7a5a00; }
-.due-late { background: #ffe9e4; color: #a33a26; }
+.due-soon { background: var(--theme-warning-soft, #fff8e1); color: var(--theme-warning, #7a5a00); }
+.due-late { background: var(--theme-danger-soft, #ffe9e4); color: var(--theme-danger, #a33a26); }
 
 .progress-box {
     display: flex;
@@ -189,7 +189,7 @@ const statusLabel = computed(() => {
     gap: 8px;
     padding: 10px 12px;
     border-radius: 12px;
-    background: #fbfbf7;
+    background: var(--theme-page, #fbfbf7);
 }
 
 .progress-steps {
@@ -205,7 +205,7 @@ const statusLabel = computed(() => {
     font-size: 14px;
     line-height: 20px;
     font-weight: 600;
-    color: #2f7a3f;
+    color: var(--theme-green, #2f7a3f);
     white-space: nowrap;
 }
 
@@ -222,17 +222,17 @@ const statusLabel = computed(() => {
 }
 
 .btn-secondary {
-    border: 1px solid #e5e7eb;
-    background: white;
-    color: #1f2937;
+    border: 1px solid var(--theme-border, #e5e7eb);
+    background: var(--theme-panel, white);
+    color: var(--theme-blue, #1f2937);
 }
 
 .btn-secondary:hover {
-    background: #f9fafb;
+    background: var(--theme-page, #f9fafb);
 }
 
 .btn-primary-cc {
-    border: 1px solid #2f7a3f;
+    border: 1px solid var(--theme-accent-border, #2f7a3f);
     background: #2f7a3f;
     color: white;
 }

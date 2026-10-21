@@ -197,8 +197,8 @@ function closeMenuOnFocusOut(event) {
 <style scoped>
 .log-card {
     padding: 16px 18px;
-    background: white;
-    border: 1px solid #E4ECE5;
+    background: var(--theme-panel, white);
+    border: 1px solid var(--theme-border, #E4ECE5);
     border-radius: 14px;
 }
 
@@ -217,8 +217,8 @@ function closeMenuOnFocusOut(event) {
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: #FDF3E4;
-    color: #A0703A;
+    background: var(--theme-warning-soft, #FDF3E4);
+    color: var(--theme-danger, #A0703A);
     font-size: 12px;
     font-weight: 800;
 }
@@ -235,7 +235,7 @@ function closeMenuOnFocusOut(event) {
 .author-name {
     font-size: 15px;
     font-weight: 800;
-    color: #2F2F2F;
+    color: var(--theme-text, #2F2F2F);
 }
 
 .type-badge {
@@ -243,18 +243,18 @@ function closeMenuOnFocusOut(event) {
     border-radius: 999px;
     font-size: 12px;
     font-weight: 700;
-    background: #EEF0F2;
-    color: #5F6670;
+    background: var(--theme-neutral, #EEF0F2);
+    color: var(--theme-muted, #5F6670);
 }
 
-.type-consultation { background: #EEE8FA; color: #6A4FA3; }
-.type-medication_change { background: #FFF3D6; color: #93650A; }
-.type-diet { background: #EAF4EC; color: #3B7A4F; }
-.type-symptom { background: #FBE9F2; color: #A3456F; }
+.type-consultation { background: var(--theme-purple-soft, #EEE8FA); color: var(--theme-purple, #6A4FA3); }
+.type-medication_change { background: var(--theme-warning-soft, #FFF3D6); color: var(--theme-warning, #93650A); }
+.type-diet { background: var(--theme-soft, #EAF4EC); color: var(--theme-green, #3B7A4F); }
+.type-symptom { background: var(--theme-pink-soft, #FBE9F2); color: var(--theme-pink, #A3456F); }
 
 .log-when {
     font-size: 13px;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
 }
 
 .log-actions {
@@ -271,14 +271,14 @@ function closeMenuOnFocusOut(event) {
     border: none;
     border-radius: 8px;
     background: transparent;
-    color: #3B7A4F;
+    color: var(--theme-green, #3B7A4F);
     font-size: 13px;
     font-weight: 700;
 }
 
 .translate-toggle:hover:not(:disabled),
 .translate-toggle.is-on {
-    background: #EAF4EC;
+    background: var(--theme-soft, #EAF4EC);
 }
 
 .translate-wrap {
@@ -294,8 +294,8 @@ function closeMenuOnFocusOut(event) {
     margin: 0;
     padding: 6px;
     list-style: none;
-    background: white;
-    border: 1px solid #E4ECE5;
+    background: var(--theme-panel, white);
+    border: 1px solid var(--theme-border, #E4ECE5);
     border-radius: 12px;
     box-shadow: 0 8px 24px rgba(47, 47, 47, 0.12);
 }
@@ -309,24 +309,24 @@ function closeMenuOnFocusOut(event) {
     border: none;
     border-radius: 8px;
     background: transparent;
-    color: #2F2F2F;
+    color: var(--theme-text, #2F2F2F);
     font-size: 14px;
     text-align: left;
 }
 
 .language-menu button:hover,
 .language-menu button:focus-visible {
-    background: #EAF4EC;
+    background: var(--theme-soft, #EAF4EC);
 }
 
 .language-menu .bi-check2 {
-    color: #3B7A4F;
+    color: var(--theme-green, #3B7A4F);
 }
 
 .translate-error {
     margin: 8px 0 0;
     font-size: 13px;
-    color: #C0564B;
+    color: var(--theme-danger, #C0564B);
 }
 
 .icon-button {
@@ -338,24 +338,24 @@ function closeMenuOnFocusOut(event) {
     border: none;
     border-radius: 8px;
     background: transparent;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
 }
 
 .icon-button:hover {
-    background: #F1F4F2;
-    color: #2F2F2F;
+    background: var(--theme-page, #F1F4F2);
+    color: var(--theme-text, #2F2F2F);
 }
 
 .icon-button.is-danger:hover {
-    background: #FFF0EB;
-    color: #C0564B;
+    background: var(--theme-danger-soft, #FFF0EB);
+    color: var(--theme-danger, #C0564B);
 }
 
 .log-content {
     margin: 0;
     font-size: 15px;
     line-height: 1.55;
-    color: #2F2F2F;
+    color: var(--theme-text, #2F2F2F);
     white-space: pre-line;
 }
 
@@ -369,12 +369,12 @@ function closeMenuOnFocusOut(event) {
 
 .consultation dt {
     font-weight: 700;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
 }
 
 .consultation dd {
     margin: 0;
-    color: #2F2F2F;
+    color: var(--theme-text, #2F2F2F);
 }
 
 .medication-changes {
@@ -393,28 +393,28 @@ function closeMenuOnFocusOut(event) {
     gap: 6px 8px;
     padding: 8px 12px;
     border-radius: 10px;
-    background: #FFF8E6;
-    color: #6B5413;
+    background: var(--theme-warning-soft, #FFF8E6);
+    color: var(--theme-warning, #6B5413);
     font-size: 14px;
 }
 
 .change-kind {
     padding: 1px 8px;
     border-radius: 999px;
-    background: #FFEDBF;
+    background: var(--theme-warning-soft, #FFEDBF);
     font-size: 12px;
     font-weight: 700;
 }
 
 .change-details {
-    color: #7B6A3A;
+    color: var(--theme-warning, #7B6A3A);
 }
 
 .translation {
     margin-top: 12px;
     padding: 10px 14px;
     border-radius: 10px;
-    background: #F5F7F5;
+    background: var(--theme-page, #F5F7F5);
 }
 
 .translation-label {
@@ -422,13 +422,13 @@ function closeMenuOnFocusOut(event) {
     margin-bottom: 4px;
     font-size: 12px;
     font-weight: 700;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
 }
 
 .translation p {
     margin: 0;
     font-size: 15px;
-    color: #2F2F2F;
+    color: var(--theme-text, #2F2F2F);
 }
 
 @media (max-width: 575px) {

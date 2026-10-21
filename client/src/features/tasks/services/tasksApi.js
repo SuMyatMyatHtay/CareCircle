@@ -23,6 +23,18 @@ export async function getFamilyTasks(familyId, filters = {}) {
     return response.data.tasks
 }
 
+// Post a new task. It always starts as "open"; the server ignores status and claimedBy.
+// task: { title, startAt, endAt?, description?, category?, recipient?, location?, needsTransit? }
+export async function createTask(familyId, task) {
+    const response = await http.post(
+        `/families/${familyId}/tasks`,
+        task,
+        { headers: authHeaders() }
+    )
+
+    return response.data.task
+}
+
 // Task errors come back as { error, errors? }, unlike family/auth's { message }
 export function getTaskErrorMessage(error) {
     if (error.response?.status === 401) {

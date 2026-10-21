@@ -5,11 +5,11 @@ All endpoints, by package. **Implemented** means the endpoint is merged and test
 | Pkg | Owner | Base path | Status |
 |---|---|---|---|
 | A | Sera | `/api/auth`, `/api/families` | Planned (middleware and models done) |
-| B | SangYoon | `/api/families/:familyId` (members, settings), `/api/users/me` | Planned |
+| B | SangYoon | `/api/families/:familyId` (members, invitations); language via A's `/api/auth/me` | Member/invite code complete with local HTTP tests; MongoDB integration pending |
 | C | Jhen | `/api/families/:familyId/recipients` | Implemented |
 | D | Marcus | `/api/families/:familyId/tasks` | Planned (model and routes done; controller stubs return 501) |
 | E | Chaithra | `/api/me/tasks`, `/api/me/google`, `/api/families/:familyId/tasks/:taskId/transit`, `/api/families/:familyId/transit`, `/api/integrations/clinics` | Implemented |
-| F | SeungHak | `/api/families/:familyId/logs`, `/api/families/:familyId/notifications`, `/api/integrations` | Logs implemented; notifications and integrations planned |
+| F | SeungHak | `/api/families/:familyId/logs`, `/api/families/:familyId/notifications`, `/api/integrations` | Logs and voice transcription implemented; notifications and Telegram planned |
 
 Every package router is mounted in `server/src/routes/index.js` at the path listed in this file. Endpoints that are still placeholders return `501`.
 
@@ -89,16 +89,19 @@ Always filter queries by `family: req.family._id`. Never take a family ID, user 
 
 | Method | Path | Who | Body | Response | Status |
 |---|---|---|---|---|---|
-| GET | `/api/families/:familyId/members` | member | none | `{ members: [{ user: { _id, name, email, telegramUsername }, role, relationship, joinedAt }] }` | Planned |
-| PATCH | `/api/families/:familyId/members/:userId` | admin | `{ role?, relationship? }` | `{ member }`. `409` if it would remove the last admin. | Planned |
-| DELETE | `/api/families/:familyId/members/:userId` | admin, or the user themself (leaving) | none | `204`. `409` if it would remove the last admin. | Planned |
+| GET | `/api/families/:familyId/members` | member | none | `{ members: [{ user: { _id, name, email, preferredLang, telegramUsername }, role, joinedAt }] }` | Code + local HTTP tests; live DB pending |
+| PATCH | `/api/families/:familyId/members/:userId` | admin | `{ role }` | `{ member }`. `409` if it would remove the last admin or access changed during the request. | Code + local HTTP tests; live DB pending |
+| DELETE | `/api/families/:familyId/members/:userId` | admin, or the user themself (leaving) | none | `204`. `409` if it would remove the last admin or access changed during the request. | Code + local HTTP tests; live DB pending |
 | PATCH | `/api/families/:familyId` | admin | `{ name }` | `{ family }` | Planned |
-| POST | `/api/families/:familyId/invite-code` | admin | none | `{ inviteCode }` (a new code; the old one stops working) | Planned |
+| POST | `/api/families/:familyId/invite-code` | admin | none | `{ inviteCode }` (10 hexadecimal characters; the old one stops working) | Code + local HTTP tests; live DB pending |
 | PATCH | `/api/users/me` | logged in | `{ name?, phone?, preferredLang?, telegramUsername? }` | `{ user }` | Planned |
 
-- **Dashboard:** Family Home doesn't need its own endpoint. It combines C's `GET /recipients` with D's `GET /tasks?from=<now>&to=<+7 days>&status=open,claimed,in_progress`.
+- **Dashboard:** Family Home doesn't need its own endpoint. It shares C's `GET /recipients` and D's `GET /tasks` query caches with the recipient pages, then filters the seven-day active-task window locally.
 - **Light and dark mode:** handled in the browser only, saved in `localStorage`. No API.
 - **`preferredLang`:** a LibreTranslate language code, e.g. `en` or `zh`. F's logs use it to decide which translation to show.
+- **Current UI language save:** uses the existing `PATCH /api/auth/me` endpoint. It fetches `/api/auth/me` first and sends the complete profile fields required by A's controller. `/api/users/me` remains planned.
+- **Current membership schema:** contains `userId`, `role`, `joinedAt`; no relationship field. The role endpoint accepts only `role` and rejects additional fields. Relationship editing requires an agreed schema extension with A.
+- **Dashboard implementation:** Home filters active tasks from Singapore midnight to seven days later, shows today's tasks, and polls every 20 seconds while visible. Persistent activity, active transit and Telegram preference delivery remain E/F integration work. See [FAMILY-UI.md](FAMILY-UI.md).
 
 ---
 
@@ -240,6 +243,7 @@ Base: `/api/families/:familyId/tasks/:taskId/transit` (mounted before D's tasks 
 | Method | Path | Who | Query | Response | Status |
 |---|---|---|---|---|---|
 | GET | `/api/integrations/clinics` | logged in | `q` (at least 2 characters) | `{ clinics, otherPlaces }`: each `[{ name, address, postal, lat, lng }]`. `clinics` are medical places (up to 10); `otherPlaces` (up to 5) are shown only when no clinic matched. `502` if OneMap is down. | Implemented |
+| POST | `/api/integrations/transcribe` | logged in | Raw audio body (`Content-Type: audio/webm`, `audio/mp4`, ...), max 4 MB | `{ text }`. Uses Groq Whisper. `429` if Groq's rate limit is hit, `502` if Groq is down, `503` if `GROQ_API_KEY` is not set. | Implemented |
 
 - Calls OneMap's public search API from the server. `lat`/`lng` are numbers and `postal` is 6 digits or `''`, so a result can be saved as `task.location` directly.
 - Frontend: `client/src/features/transit/components/ClinicSearch.vue` emits `select` with the location. D can use it in the task form: `<ClinicSearch @select="(loc) => (form.location = loc)" />`.

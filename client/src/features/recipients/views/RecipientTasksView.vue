@@ -143,27 +143,27 @@ const week = computed(() => {
 
 .filter-chip {
     padding: 6px 12px;
-    border: 1px solid #E4ECE5;
+    border: 1px solid var(--theme-border, #E4ECE5);
     border-radius: 999px;
-    background: white;
-    color: #2F2F2F;
+    background: var(--theme-panel, white);
+    color: var(--theme-text, #2F2F2F);
     font-size: 12px;
     font-weight: 600;
     white-space: nowrap;
 }
 
 .filter-chip:hover {
-    background: #F7FAF7;
+    background: var(--theme-page, #F7FAF7);
 }
 
 .filter-chip.selected {
-    border-color: #2F2F2F;
+    border-color: var(--theme-border, #2F2F2F);
     background: #2F2F2F;
     color: white;
 }
 
 .filter-chip:focus-visible {
-    outline: 3px solid #A8D5B5;
+    outline: 3px solid var(--theme-accent-border, #A8D5B5);
     outline-offset: 2px;
 }
 
@@ -178,7 +178,7 @@ const week = computed(() => {
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.04em;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
 }
 
 .week-stats {
@@ -197,16 +197,16 @@ const week = computed(() => {
 
 .week-stats dt {
     font-weight: 400;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
 }
 
 .week-stats dd {
     margin: 0;
     font-weight: 700;
-    color: #2F2F2F;
+    color: var(--theme-text, #2F2F2F);
 }
 
 .week-stats dd.is-alert {
-    color: #C0564B;
+    color: var(--theme-danger, #C0564B);
 }
 </style>

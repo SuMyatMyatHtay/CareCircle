@@ -55,7 +55,7 @@ const steps = computed(() => [
     line-height: 16px;
     letter-spacing: 0.06px;
     font-weight: 500;
-    color: #6b7280;
+    color: var(--theme-muted, #6b7280);
     white-space: nowrap;
 }
 
@@ -63,24 +63,24 @@ const steps = computed(() => [
     flex: 0 1 40px;
     min-width: 12px;
     height: 2px;
-    background: #e5e7eb;
+    background: var(--theme-neutral, #e5e7eb);
 }
 
 .dot {
     width: 12px;
     height: 12px;
-    border: 1.5px solid #d1d5db;
+    border: 1.5px solid var(--theme-border, #d1d5db);
     border-radius: 50%;
-    background: white;
+    background: var(--theme-panel, white);
 }
 
 .reached .dot {
-    border-color: #2f7a3f;
+    border-color: var(--theme-accent-border, #2f7a3f);
     background: #2f7a3f;
 }
 
 .reached .label {
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .current .label {
@@ -89,6 +89,6 @@ const steps = computed(() => [
 
 .time {
     font-weight: 400;
-    color: #6b7280;
+    color: var(--theme-muted, #6b7280);
 }
 </style>

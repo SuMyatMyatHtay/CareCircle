@@ -20,6 +20,7 @@ function formatFamily(family) {
         members: family.members.map(member => ({
         userId: (member.userId._id ?? member.userId).toString(),
         name: member.userId.name ?? '',
+        profilePicture: member.userId.profilePicture || '',
         role: member.role,
         joinedAt: member.joinedAt
         })),
@@ -90,7 +91,7 @@ export async function getFamiliesForUser(userId) {
         'members.userId': userId
     })
         .sort({ createdAt: -1 })
-        .populate('members.userId', 'name')
+        .populate('members.userId', 'name profilePicture')
 
     return families.map(formatFamily)
 }

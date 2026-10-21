@@ -153,10 +153,12 @@ function onVisible() {
 }
 onMounted(() => {
     loadTasks()
+    window.addEventListener('carecircle:task-updated', loadTasks)
     clock = setInterval(() => { now.value = Date.now() }, 60 * 1000)
     document.addEventListener('visibilitychange', onVisible)
 })
 onUnmounted(() => {
+    window.removeEventListener('carecircle:task-updated', loadTasks)
     clearInterval(clock)
     document.removeEventListener('visibilitychange', onVisible)
 })
@@ -280,7 +282,7 @@ onUnmounted(() => {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .page-header {
@@ -303,7 +305,7 @@ h1 {
     font-size: 30px;
     letter-spacing: 0.15px;
     font-weight: 700;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .title p {
@@ -311,7 +313,7 @@ h1 {
     font-size: 16px;
     line-height: 24px;
     letter-spacing: 0.08px;
-    color: #6b7280;
+    color: var(--theme-muted, #6b7280);
 }
 
 /* "All families ▾" badge */
@@ -322,11 +324,11 @@ h1 {
     gap: 4px;
     padding: 6px 10px;
     border-radius: 999px;
-    background: white;
+    background: var(--theme-panel, white);
     font-size: 12px;
     line-height: 16px;
     font-weight: 500;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .families-pill select {
@@ -339,16 +341,16 @@ h1 {
 }
 
 .families-pill select:focus-visible {
-    outline: 2px solid #2f7a3f;
+    outline: 2px solid var(--theme-accent-border, #2f7a3f);
     outline-offset: 2px;
 }
 
 .btn-secondary {
     padding: 12px 16px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--theme-border, #e5e7eb);
     border-radius: 8px;
-    background: white;
-    color: #1f2937;
+    background: var(--theme-panel, white);
+    color: var(--theme-blue, #1f2937);
     font-size: 14px;
     line-height: 20px;
     letter-spacing: 0.07px;
@@ -357,14 +359,14 @@ h1 {
 }
 
 .btn-secondary:hover {
-    background: #f9fafb;
+    background: var(--theme-page, #f9fafb);
 }
 
 /* Tabs */
 .tabs {
     display: flex;
     gap: 28px;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--theme-border, #e5e7eb);
     overflow-x: auto;
 }
 
@@ -374,7 +376,7 @@ h1 {
     border: none;
     border-bottom: 2px solid transparent;
     background: none;
-    color: #6b7280;
+    color: var(--theme-muted, #6b7280);
     font-size: 14px;
     line-height: 20px;
     letter-spacing: 0.07px;
@@ -383,8 +385,8 @@ h1 {
 }
 
 .tab.active {
-    border-bottom-color: #2f7a3f;
-    color: #2f7a3f;
+    border-bottom-color: var(--theme-accent-border, #2f7a3f);
+    color: var(--theme-green, #2f7a3f);
     font-weight: 600;
 }
 
@@ -414,9 +416,9 @@ h1 {
     flex-direction: column;
     gap: 10px;
     padding: 20px;
-    border: 1px solid #ffe6a3;
+    border: 1px solid var(--theme-warning-border, #ffe6a3);
     border-radius: 16px;
-    background: #fff8e1;
+    background: var(--theme-warning-soft, #fff8e1);
 }
 
 .reminders h2 {
@@ -428,7 +430,7 @@ h1 {
     line-height: 24px;
     letter-spacing: 0.08px;
     font-weight: 600;
-    color: #7a5a00;
+    color: var(--theme-warning, #7a5a00);
 }
 
 .reminders p {
@@ -436,14 +438,14 @@ h1 {
     font-size: 14px;
     line-height: 20px;
     letter-spacing: 0.07px;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .reminders-link {
     font-size: 14px;
     line-height: 20px;
     font-weight: 600;
-    color: #2f7a3f;
+    color: var(--theme-green, #2f7a3f);
 }
 
 /* Messages */
@@ -455,15 +457,15 @@ h1 {
     margin: 0;
     padding: 18px 4px;
     font-size: 14px;
-    color: #6b7280;
+    color: var(--theme-muted, #6b7280);
 }
 
 .status .spinner-border {
-    color: #2f7a3f;
+    color: var(--theme-green, #2f7a3f);
 }
 
 .status.is-error {
-    color: #a33a26;
+    color: var(--theme-danger, #a33a26);
 }
 
 .notice {
@@ -472,17 +474,17 @@ h1 {
     justify-content: space-between;
     gap: 12px;
     padding: 10px 14px;
-    border: 1px solid #ffe6a3;
+    border: 1px solid var(--theme-warning-border, #ffe6a3);
     border-radius: 12px;
-    background: #fff8e1;
+    background: var(--theme-warning-soft, #fff8e1);
     font-size: 14px;
-    color: #7a5a00;
+    color: var(--theme-warning, #7a5a00);
 }
 
 .notice.is-error {
-    border-color: #ffd2c8;
-    background: #ffe9e4;
-    color: #a33a26;
+    border-color: var(--theme-danger-border, #ffd2c8);
+    background: var(--theme-danger-soft, #ffe9e4);
+    color: var(--theme-danger, #a33a26);
 }
 
 .notice-close {

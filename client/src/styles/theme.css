@@ -1,0 +1,110 @@
+/* One palette for every route, including dialogs teleported outside AppLayout.
+   --theme-* overrides are dark-only; component fallbacks keep their light design. */
+:root {
+  color-scheme: light;
+  --care-bg: #fafaf7;
+  --care-panel: #fff;
+  --care-text: #303330;
+  --care-muted: #788194;
+  --care-border: #e5e9ee;
+  --care-green: #2d7d43;
+  --care-soft: #e7f4e9;
+  --care-neutral: #f3f4f2;
+  --care-coral: #ffb4a8;
+  --care-coral-soft: #ffebe5;
+  --care-danger: #a8402e;
+  --care-primary: #2d7d43;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --care-bg: #141a17;
+  --care-panel: #1d2520;
+  --care-text: #edf1eb;
+  --care-muted: #a6b3ac;
+  --care-border: #344039;
+  --care-green: #88d69b;
+  --care-soft: #253e2c;
+  --care-neutral: #303832;
+  --care-coral: #d98b7b;
+  --care-coral-soft: #483027;
+  --care-danger: #ffb7a6;
+
+  --theme-page: var(--care-bg);
+  --theme-panel: var(--care-panel);
+  --theme-translucent-panel: rgba(29, 37, 32, 0.9);
+  --theme-neutral: var(--care-neutral);
+  --theme-text: var(--care-text);
+  --theme-muted: var(--care-muted);
+  --theme-border: var(--care-border);
+  --theme-green: var(--care-green);
+  --theme-soft: var(--care-soft);
+  --theme-accent-border: #4c7156;
+  --theme-danger: var(--care-danger);
+  --theme-danger-soft: var(--care-coral-soft);
+  --theme-danger-border: #795044;
+  --theme-warning: #f4d48a;
+  --theme-warning-soft: #3b3220;
+  --theme-warning-border: #685530;
+  --theme-purple: #d1c0ff;
+  --theme-purple-soft: #352c46;
+  --theme-purple-border: #615278;
+  --theme-blue: #add5fa;
+  --theme-blue-soft: #243747;
+  --theme-blue-border: #4b6882;
+  --theme-pink: #f4bdd6;
+  --theme-pink-soft: #432d39;
+  --theme-pink-border: #765365;
+
+  /* Bootstrap's controls, text utilities and overlays use the same theme. */
+  --bs-body-bg: var(--care-bg);
+  --bs-body-color: var(--care-text);
+  --bs-emphasis-color: var(--care-text);
+  --bs-secondary-color: var(--care-muted);
+  --bs-secondary-bg: var(--care-panel);
+  --bs-tertiary-bg: var(--care-neutral);
+  --bs-border-color: var(--care-border);
+  --bs-link-color: var(--care-green);
+  --bs-link-hover-color: #b2ebbf;
+}
+
+html,
+body {
+  background-color: var(--care-bg);
+}
+
+[data-theme='dark'] .bg-white {
+  background-color: var(--care-panel) !important;
+}
+[data-theme='dark'] .bg-light {
+  background-color: var(--care-neutral) !important;
+}
+[data-theme='dark'] :is(.text-dark, .text-black) {
+  color: var(--care-text) !important;
+}
+[data-theme='dark'] .text-success {
+  color: var(--care-green) !important;
+}
+[data-theme='dark'] .card {
+  --bs-card-bg: var(--care-panel);
+  --bs-card-color: var(--care-text);
+}
+[data-theme='dark'] .btn-light {
+  --bs-btn-color: var(--care-text);
+  --bs-btn-bg: var(--care-panel);
+  --bs-btn-border-color: var(--care-border);
+  --bs-btn-hover-color: var(--care-text);
+  --bs-btn-hover-bg: var(--care-neutral);
+  --bs-btn-hover-border-color: var(--care-muted);
+  --bs-btn-active-color: var(--care-text);
+  --bs-btn-active-bg: var(--care-neutral);
+  --bs-btn-active-border-color: var(--care-muted);
+}
+[data-theme='dark'] :is(.btn-outline-primary, .btn-outline-success) {
+  --bs-btn-color: var(--care-green);
+  --bs-btn-border-color: var(--theme-accent-border);
+  --bs-btn-hover-bg: var(--care-primary);
+  --bs-btn-hover-border-color: var(--care-primary);
+  --bs-btn-active-bg: var(--care-primary);
+  --bs-btn-active-border-color: var(--care-primary);
+}

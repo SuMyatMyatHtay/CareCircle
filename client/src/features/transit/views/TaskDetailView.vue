@@ -6,7 +6,7 @@
 //   <TaskLocationCard :location="task.location" />                    (E: OneMap)
 //   <TaskTransitActions :task="task" :family-id="familyId" ...>        (E: transit + Google Calendar)
 // and this file + its route can be deleted.
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import TaskLocationCard from '../components/TaskLocationCard.vue'
 import TaskTransitActions from '../components/TaskTransitActions.vue'
@@ -38,6 +38,10 @@ try { me = JSON.parse(sessionStorage.getItem('user') || '{}') } catch { me = {} 
 
 const idOf = (value) => (value && typeof value === 'object' ? value._id : value)
 const isClaimer = computed(() => Boolean(me.id) && idOf(task.value?.claimedBy) === me.id)
+const isCreator = computed(() => Boolean(me.id) && idOf(task.value?.createdBy) === me.id)
+const canEdit = computed(() => isCreator.value && !['completed', 'cancelled'].includes(task.value?.status))
+const canUnclaim = computed(() => (isCreator.value || isClaimer.value) && task.value?.status === 'claimed')
+const canDelete = computed(() => Boolean(me.id) && idOf(task.value?.createdBy) === me.id && !['in_progress', 'completed'].includes(task.value?.status))
 const status = computed(() => task.value?.status)
 const who = computed(() => recipientName(task.value))
 const claimerName = computed(() => task.value?.claimedBy?.name || '')
@@ -117,11 +121,13 @@ const markDone = () => {
     if (window.confirm(`Mark "${task.value.title}" as done?`)) run(() => completeTask(props.familyId, props.taskId), 'Marked as done.')
 }
 const giveBack = () => {
+    if (!canUnclaim.value || isBusy.value) return
     if (window.confirm(`Give back "${task.value.title}"? It goes back to the family as available.`)) {
         run(() => unclaimTask(props.familyId, props.taskId), 'Given back to the family.')
     }
 }
 async function remove() {
+    if (!canDelete.value || isBusy.value) return
     if (!window.confirm(`Delete "${task.value.title}"? This can't be undone.`)) return
     isBusy.value = true
     try {
@@ -145,7 +151,18 @@ function startTrip() {
     })
 }
 
-onMounted(load)
+function onAssistantUpdate(event) {
+    if (event.detail?.familyId === props.familyId && event.detail?.deleted && event.detail?.taskId === props.taskId) {
+        router.push('/my-tasks')
+        return
+    }
+    if (event.detail?.familyId === props.familyId && event.detail?.task?._id === props.taskId) load()
+}
+onMounted(() => {
+    load()
+    window.addEventListener('carecircle:task-updated', onAssistantUpdate)
+})
+onUnmounted(() => window.removeEventListener('carecircle:task-updated', onAssistantUpdate))
 watch(() => [props.familyId, props.taskId], load)
 </script>
 
@@ -159,6 +176,9 @@ watch(() => [props.familyId, props.taskId], load)
             :task="task"
             :family-id="familyId"
             :is-claimer="isClaimer"
+            :can-delete="canDelete"
+            :can-edit="canEdit"
+            :can-unclaim="canUnclaim"
             :is-busy="isBusy"
             :notice="notice"
             :action-error="actionError"
@@ -207,8 +227,8 @@ watch(() => [props.familyId, props.taskId], load)
                     </div>
                     <span class="spacer"></span>
                     <!-- D (Marcus) owns editing; the task form isn't built yet -->
-                    <button type="button" class="btn-secondary" @click="notice = 'Editing comes with the task form (Task Management).'">Edit</button>
-                    <button type="button" class="btn-secondary danger" :disabled="isBusy" @click="remove">Delete</button>
+                    <button v-if="canEdit" type="button" class="btn-secondary" @click="notice = 'Editing comes with the task form (Task Management).'">Edit</button>
+                    <button v-if="canDelete" type="button" class="btn-secondary danger" :disabled="isBusy" @click="remove">Delete</button>
                 </div>
 
                 <h1>{{ task.title }}</h1>
@@ -269,7 +289,7 @@ watch(() => [props.familyId, props.taskId], load)
                         </button>
                     </template>
                     <template #end>
-                        <button v-if="isClaimer && status === 'claimed'" type="button" class="btn-secondary" :disabled="isBusy" @click="giveBack">
+                        <button v-if="canUnclaim" type="button" class="btn-secondary" :disabled="isBusy" @click="giveBack">
                             Give back task
                         </button>
                     </template>
@@ -314,7 +334,7 @@ watch(() => [props.familyId, props.taskId], load)
     display: flex;
     flex-direction: column;
     gap: 24px;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .breadcrumb-row {
@@ -324,15 +344,15 @@ watch(() => [props.familyId, props.taskId], load)
     font-size: 14px;
     line-height: 20px;
     font-weight: 500;
-    color: #6b7280;
+    color: var(--theme-muted, #6b7280);
 }
 
 .breadcrumb-row a {
-    color: #6b7280;
+    color: var(--theme-muted, #6b7280);
 }
 
 .breadcrumb-row a:hover {
-    color: #2f7a3f;
+    color: var(--theme-green, #2f7a3f);
 }
 
 .status {
@@ -342,15 +362,15 @@ watch(() => [props.familyId, props.taskId], load)
     gap: 10px;
     padding: 18px 4px;
     font-size: 14px;
-    color: #6b7280;
+    color: var(--theme-muted, #6b7280);
 }
 
 .status .spinner-border {
-    color: #2f7a3f;
+    color: var(--theme-green, #2f7a3f);
 }
 
 .status.is-error {
-    color: #a33a26;
+    color: var(--theme-danger, #a33a26);
 }
 
 .columns {
@@ -365,9 +385,9 @@ watch(() => [props.familyId, props.taskId], load)
     flex-direction: column;
     gap: 12px;
     padding: 20px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--theme-border, #e5e7eb);
     border-radius: 16px;
-    background: white;
+    background: var(--theme-panel, white);
 }
 
 .task-card {
@@ -404,20 +424,20 @@ watch(() => [props.familyId, props.taskId], load)
     white-space: nowrap;
 }
 
-.tag-purple { background: #eee8fd; color: #4b3b8f; }
-.tag-yellow { background: #fff8e1; color: #7a5a00; }
+.tag-purple { background: var(--theme-purple-soft, #eee8fd); color: var(--theme-purple, #4b3b8f); }
+.tag-yellow { background: var(--theme-warning-soft, #fff8e1); color: var(--theme-warning, #7a5a00); }
 .status-open,
-.status-claimed { background: #e8f5e9; color: #2f7a3f; }
+.status-claimed { background: var(--theme-soft, #e8f5e9); color: var(--theme-green, #2f7a3f); }
 .status-in_progress { background: #2f7a3f; color: white; }
 .status-completed,
-.status-cancelled { background: #f3f4f1; color: #6b7280; }
+.status-cancelled { background: var(--theme-page, #f3f4f1); color: var(--theme-muted, #6b7280); }
 
 h1 {
     margin: 0;
     font-size: 30px;
     letter-spacing: 0.15px;
     font-weight: 700;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .flow {
@@ -433,12 +453,12 @@ h1 {
 .arrow {
     font-size: 14px;
     font-weight: 500;
-    color: #6b7280;
+    color: var(--theme-muted, #6b7280);
 }
 
-.flow-done { background: #f3f4f1; color: #6b7280; }
+.flow-done { background: var(--theme-page, #f3f4f1); color: var(--theme-muted, #6b7280); }
 .flow-current { background: #2f7a3f; color: white; }
-.flow-todo { background: white; color: #6b7280; }
+.flow-todo { background: var(--theme-panel, white); color: var(--theme-muted, #6b7280); }
 
 .when {
     display: flex;
@@ -453,7 +473,7 @@ h1 {
 
 .when .bi {
     font-size: 17px;
-    color: #6b7280;
+    color: var(--theme-muted, #6b7280);
 }
 
 .people {
@@ -467,9 +487,9 @@ h1 {
     align-items: center;
     gap: 10px;
     padding: 8px 16px 8px 8px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--theme-border, #e5e7eb);
     border-radius: 999px;
-    background: #fbfbf7;
+    background: var(--theme-page, #fbfbf7);
 }
 
 .person span {
@@ -481,14 +501,14 @@ h1 {
     font-size: 12px;
     line-height: 16px;
     font-weight: 600;
-    color: #6b7280;
+    color: var(--theme-muted, #6b7280);
 }
 
 .person strong {
     font-size: 14px;
     line-height: 20px;
     font-weight: 600;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .description {
@@ -501,10 +521,10 @@ h1 {
 
 .btn-secondary {
     padding: 12px 16px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--theme-border, #e5e7eb);
     border-radius: 8px;
-    background: white;
-    color: #1f2937;
+    background: var(--theme-panel, white);
+    color: var(--theme-blue, #1f2937);
     font-size: 14px;
     line-height: 20px;
     letter-spacing: 0.07px;
@@ -513,11 +533,11 @@ h1 {
 }
 
 .btn-secondary:hover {
-    background: #f9fafb;
+    background: var(--theme-page, #f9fafb);
 }
 
 .btn-secondary.danger {
-    color: #9a3a2a;
+    color: var(--theme-danger, #9a3a2a);
 }
 
 button:disabled {
@@ -530,17 +550,17 @@ button:disabled {
     justify-content: space-between;
     gap: 12px;
     padding: 10px 14px;
-    border: 1px solid #ffe6a3;
+    border: 1px solid var(--theme-warning-border, #ffe6a3);
     border-radius: 12px;
-    background: #fff8e1;
+    background: var(--theme-warning-soft, #fff8e1);
     font-size: 14px;
-    color: #7a5a00;
+    color: var(--theme-warning, #7a5a00);
 }
 
 .notice.is-error {
-    border-color: #ffd2c8;
-    background: #ffe9e4;
-    color: #a33a26;
+    border-color: var(--theme-danger-border, #ffd2c8);
+    background: var(--theme-danger-soft, #ffe9e4);
+    color: var(--theme-danger, #a33a26);
 }
 
 .notice-close {
@@ -567,7 +587,7 @@ button:disabled {
     line-height: 24px;
     letter-spacing: 0.08px;
     font-weight: 600;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .side p {
@@ -582,16 +602,16 @@ button:disabled {
 }
 
 .muted {
-    color: #6b7280;
+    color: var(--theme-muted, #6b7280);
 }
 
 .before-you-go {
-    border-color: #ffe6a3;
-    background: #fff8e1;
+    border-color: var(--theme-warning-border, #ffe6a3);
+    background: var(--theme-warning-soft, #fff8e1);
 }
 
 .before-you-go h2 {
-    color: #7a5a00;
+    color: var(--theme-warning, #7a5a00);
 }
 
 .activity {
@@ -609,7 +629,7 @@ button:disabled {
     gap: 10px;
     font-size: 14px;
     line-height: 20px;
-    color: #6b7280;
+    color: var(--theme-muted, #6b7280);
 }
 
 @media (max-width: 991px) {

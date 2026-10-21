@@ -10,7 +10,7 @@
 //   const { upsertTask, removeTask } = useTaskCache()
 //   upsertTask(familyId, updatedTask)   // claim, edit, create, socket events...
 
-import { computed } from 'vue'
+import { computed, toValue } from 'vue'
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { useActiveFamily } from './useActiveFamily.js'
 import { queryKeys } from '../services/queryClient.js'
@@ -21,13 +21,13 @@ export function taskRecipientId(task) {
     return task.recipient?._id ?? task.recipient ?? null
 }
 
-export function useFamilyTasks() {
+export function useFamilyTasks({ enabled = true } = {}) {
     const { selectedFamilyId } = useActiveFamily()
 
     const query = useQuery({
         queryKey: computed(() => queryKeys.tasks(selectedFamilyId.value)),
         queryFn: ({ queryKey }) => getFamilyTasks(queryKey[1]),
-        enabled: computed(() => Boolean(selectedFamilyId.value))
+        enabled: computed(() => Boolean(toValue(enabled) && selectedFamilyId.value))
     })
 
     const tasks = computed(() => query.data.value ?? [])
@@ -41,6 +41,7 @@ export function useFamilyTasks() {
     return {
         tasks,
         isLoading: query.isLoading,
+        isFetching: query.isFetching,
         errorMessage,
         refetch: query.refetch
     }

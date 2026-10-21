@@ -19,8 +19,8 @@ defineProps({
 <style scoped>
 .home-header {
     display: flex;
-    align-items: flex-start;
     justify-content: space-between;
+    align-items: center;
     flex-wrap: wrap;
     gap: 16px;
     margin-bottom: 24px;
@@ -34,7 +34,7 @@ h1 {
 
 p {
     margin: 0;
-    color: #7B8391;
+    color: var(--care-muted, #7B8391);
     font-size: 15px;
 }
 

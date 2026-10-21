@@ -6,20 +6,20 @@
 //   const { recipients, isLoading, errorMessage, refresh } = useRecipients()
 //   const { recipient, notFound, setRecipient } = useRecipient(recipientIdRef)
 
-import { computed } from 'vue'
+import { computed, toValue } from 'vue'
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { useActiveFamily } from './useActiveFamily.js'
 import { queryKeys } from '../services/queryClient.js'
 import { getRecipients, getRecipient, getRecipientErrorMessage } from '../features/recipients/services/recipientsApi.js'
 
-export function useRecipients() {
+export function useRecipients({ enabled = true } = {}) {
     const { selectedFamilyId } = useActiveFamily()
     const queryClient = useQueryClient()
 
     const query = useQuery({
         queryKey: computed(() => queryKeys.recipientList(selectedFamilyId.value)),
         queryFn: ({ queryKey }) => getRecipients(queryKey[1]),
-        enabled: computed(() => Boolean(selectedFamilyId.value))
+        enabled: computed(() => Boolean(toValue(enabled) && selectedFamilyId.value))
     })
 
     const recipients = computed(() => query.data.value ?? [])

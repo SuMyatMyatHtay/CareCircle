@@ -35,9 +35,6 @@ watch(selectedFamilyId, (newId, oldId) => {
 function replaceRecipient(updated) {
     setRecipient(updated)
 }
-
-// TODO: open the task form when it exists
-function openNewTask() { }
 </script>
 
 <template>
@@ -72,7 +69,7 @@ function openNewTask() { }
         </div>
 
         <template v-else-if="recipient">
-            <RecipientHubHeader :recipient="recipient" @updated="replaceRecipient" @create="openNewTask" />
+            <RecipientHubHeader :recipient="recipient" @updated="replaceRecipient" />
 
             <div class="hub-tab-content">
                 <RouterView v-slot="{ Component }">
@@ -88,7 +85,6 @@ function openNewTask() { }
 <style scoped>
 .hub-page {
     max-width: 1180px;
-    padding-top: 24px;
 }
 
 .breadcrumb-row {
@@ -97,21 +93,21 @@ function openNewTask() { }
     gap: 6px;
     margin-bottom: 20px;
     font-size: 14px;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
 }
 
 .breadcrumb-row a {
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
     text-decoration: none;
 }
 
 .breadcrumb-row a:hover {
-    color: #2E7D43;
+    color: var(--theme-green, #2E7D43);
     text-decoration: underline;
 }
 
 .breadcrumb-row .current {
-    color: #2F2F2F;
+    color: var(--theme-text, #2F2F2F);
     font-weight: 700;
 }
 
@@ -122,12 +118,12 @@ function openNewTask() { }
     gap: 10px;
     margin: 0;
     padding: 18px 4px;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
     font-size: 14px;
 }
 
 .hub-status.is-error {
-    color: #C0564B;
+    color: var(--theme-danger, #C0564B);
 }
 
 .hub-empty {
@@ -135,14 +131,14 @@ function openNewTask() { }
     margin: 40px auto 0;
     padding: 36px 24px;
     text-align: center;
-    background: white;
-    border: 1px solid #E4ECE5;
+    background: var(--theme-panel, white);
+    border: 1px solid var(--theme-border, #E4ECE5);
     border-radius: 20px;
 }
 
 .hub-empty-icon {
     font-size: 40px;
-    color: #A8D5B5;
+    color: var(--theme-green, #A8D5B5);
 }
 
 .hub-empty h2 {
@@ -152,7 +148,7 @@ function openNewTask() { }
 }
 
 .hub-empty p {
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
 }
 
 .back-home {

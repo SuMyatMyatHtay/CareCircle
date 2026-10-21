@@ -3,6 +3,7 @@
 // Add / edit form for a care recipient. Pass a recipient to edit it; leave it out to create one.
 //   <RecipientForm :recipient="recipient" @saved="onSaved" @cancel="close" />
 import { ref, computed } from 'vue'
+import ProfilePicturePicker from '../../../components/common/ProfilePicturePicker.vue'
 import { useActiveFamily } from '../../../composables/useActiveFamily.js'
 import { CARE_TYPES, MOBILITY_LEVELS, ALLERGY_SEVERITIES, dateKey } from '../recipientLabels.js'
 import { createRecipient, updateRecipient, getRecipientErrorMessage } from '../services/recipientsApi.js'
@@ -20,6 +21,7 @@ const isEdit = computed(() => Boolean(props.recipient))
 // ---- Form state, copied from the recipient so Cancel leaves it untouched ----
 const source = props.recipient || {}
 
+const profilePicture = ref(source.profilePicture || '')
 const name = ref(source.name || '')
 const nickname = ref(source.nickname || '')
 const dateOfBirth = ref(source.dateOfBirth ? dateKey(source.dateOfBirth) : '')
@@ -104,6 +106,7 @@ function buildPayload() {
         : null
 
     return {
+        profilePicture: profilePicture.value,
         name: name.value,
         nickname: nickname.value,
         careType: careType.value,
@@ -151,6 +154,7 @@ async function save() {
 
 <template>
     <form class="recipient-form" novalidate @submit.prevent="save">
+        <ProfilePicturePicker v-model="profilePicture" :care-type="careType" :disabled="isSaving" />
         <div class="row g-3">
             <div class="col-md-4">
                 <label class="field-label" for="recipient-name">Full name</label>
@@ -350,25 +354,25 @@ fieldset {
     padding: 0;
     font-size: 14px;
     font-weight: 600;
-    color: #2F2F2F;
+    color: var(--theme-text, #2F2F2F);
 }
 
 .field-hint {
     margin: 6px 0 0;
     font-size: 12px;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
 }
 
 .form-control,
 .form-select {
-    border-color: #E4ECE5;
+    border-color: var(--theme-border, #E4ECE5);
     border-radius: 8px;
     font-size: 14px;
 }
 
 .form-control:focus,
 .form-select:focus {
-    border-color: #A8D5B5;
+    border-color: var(--theme-accent-border, #A8D5B5);
     box-shadow: 0 0 0 3px #E8F5E9;
 }
 
@@ -404,14 +408,14 @@ fieldset {
     padding: 6px 10px;
     border: none;
     border-radius: 999px;
-    background: #F3F4F1;
-    color: #2F2F2F;
+    background: var(--theme-page, #F3F4F1);
+    color: var(--theme-text, #2F2F2F);
     font-size: 12px;
     font-weight: 600;
 }
 
 .chip-option:hover {
-    background: #E8EBE6;
+    background: var(--theme-neutral, #E8EBE6);
 }
 
 .chip-option.selected {
@@ -420,13 +424,13 @@ fieldset {
 }
 
 .chip-option:focus-visible {
-    outline: 3px solid #A8D5B5;
+    outline: 3px solid var(--theme-accent-border, #A8D5B5);
     outline-offset: 2px;
 }
 
 .chip-coral {
-    background: #FFF0EB;
-    color: #C0564B;
+    background: var(--theme-danger-soft, #FFF0EB);
+    color: var(--theme-danger, #C0564B);
 }
 
 .chip button {
@@ -446,17 +450,17 @@ fieldset {
 
 .remove-row {
     padding: 0 10px;
-    border: 1px solid #E4ECE5;
+    border: 1px solid var(--theme-border, #E4ECE5);
     border-radius: 8px;
-    background: white;
-    color: #C0564B;
+    background: var(--theme-panel, white);
+    color: var(--theme-danger, #C0564B);
 }
 
 .add-row {
     padding: 0;
     border: none;
     background: none;
-    color: #2E7D43;
+    color: var(--theme-green, #2E7D43);
     font-size: 14px;
     font-weight: 700;
 }
@@ -468,8 +472,8 @@ fieldset {
     margin: 0;
     padding: 10px 14px;
     border-radius: 10px;
-    background: #FFF0EB;
-    color: #C0564B;
+    background: var(--theme-danger-soft, #FFF0EB);
+    color: var(--theme-danger, #C0564B);
     font-size: 14px;
 }
 
@@ -506,9 +510,9 @@ fieldset {
 }
 
 .btn-secondary-action {
-    border: 1px solid #E4ECE5;
-    background: white;
-    color: #2F2F2F;
+    border: 1px solid var(--theme-border, #E4ECE5);
+    background: var(--theme-panel, white);
+    color: var(--theme-text, #2F2F2F);
 }
 
 .linked-other {
@@ -519,8 +523,8 @@ fieldset {
     gap: 8px;
     padding: 10px 12px;
     border-radius: 10px;
-    background: #E8F5E9;
-    color: #2E7D43;
+    background: var(--theme-soft, #E8F5E9);
+    color: var(--theme-green, #2E7D43);
     font-size: 14px;
     font-weight: 600;
 }
@@ -529,13 +533,13 @@ fieldset {
     padding: 0;
     border: none;
     background: none;
-    color: #C0564B;
+    color: var(--theme-danger, #C0564B);
     font-size: 14px;
     font-weight: 700;
 }
 
 .form-check-input:checked {
-    border-color: #2E7D43;
+    border-color: var(--theme-accent-border, #2E7D43);
     background-color: #2E7D43;
 }
 

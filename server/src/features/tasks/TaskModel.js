@@ -114,8 +114,8 @@ export const LOCKED_STATUSES = [TASK_STATUS.COMPLETED, TASK_STATUS.CANCELLED]
 // Tasks in these statuses can't be deleted (cancel them instead)
 export const UNDELETABLE_STATUSES = [TASK_STATUS.IN_PROGRESS, TASK_STATUS.COMPLETED]
 
-const USER_FIELDS = 'name telegramUsername'
-const RECIPIENT_FIELDS = 'name nickname careType'
+const USER_FIELDS = 'name telegramUsername profilePicture'
+const RECIPIENT_FIELDS = 'name nickname careType profilePicture'
 
 // Models owned by other packages. Looked up by name so this file still works
 // before they exist: no recipient populate / transit session until they are registered.
@@ -151,9 +151,10 @@ taskSchema.statics.createTask = function (taskData) {
 }
 
 // Returns null if the task was completed or cancelled in the meantime
-taskSchema.statics.updateEditableTask = function (familyId, taskId, changes) {
+taskSchema.statics.updateEditableTask = function (familyId, taskId, changes, expectedUpdatedAt) {
     return this.findOneAndUpdate(
-        { _id: taskId, family: familyId, status: { $nin: LOCKED_STATUSES } },
+        { _id: taskId, family: familyId, status: { $nin: LOCKED_STATUSES },
+            ...(expectedUpdatedAt ? { updatedAt: new Date(expectedUpdatedAt) } : {}) },
         { $set: changes },
         { new: true, runValidators: true }
     )

@@ -76,7 +76,7 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="avatar-studio container-fluid pt-4 pb-5">
+  <div class="avatar-studio container-fluid pb-5">
     <div class="d-flex justify-content-between flex-wrap align-items-start gap-3 mb-4">
       <div>
         <RouterLink to="/profile" class="text-success text-decoration-none fw-bold small"><i class="bi bi-arrow-left me-1"></i>Back to profile</RouterLink>
@@ -91,6 +91,7 @@ onMounted(load)
       <div class="col-12 col-lg-5 col-xxl-4">
         <section class="avatar-card p-3 p-md-4">
           <div class="avatar-eyebrow mb-3"><i class="bi bi-stars me-1"></i>LIVE PREVIEW</div>
+
           <div class="avatar-preview-background rounded-4 p-2 p-md-3"><AvatarPreview :appearance="appearance" /></div>
           <p class="small text-secondary text-center mt-3 mb-0">{{ wardrobe.bases.find(x => x.id === appearance.baseId)?.name }} · Outfit preview</p>
           <p v-if="error" class="alert alert-danger rounded-4 mt-3 mb-0" role="alert">{{ error }}</p>
@@ -98,7 +99,7 @@ onMounted(load)
           <button type="button" class="btn avatar-save-btn w-100 fw-bold rounded-4 py-3 mt-3" :disabled="saving || !modified" @click="save">
             <span v-if="saving" class="spinner-border spinner-border-sm me-2"></span>{{ saving ? 'Saving...' : modified ? 'Save my look ♡' : 'Look saved ✓' }}
           </button>
-          <button type="button" class="btn btn-link text-success text-decoration-none w-100 mt-2" @click="router.push('/profile')">Return to profile</button>
+          <button type="button" class="btn avatar-return-btn w-100 fw-bold rounded-4 py-3 mt-2" @click="router.push('/profile')"><i class="bi bi-arrow-left me-2" aria-hidden="true"></i>Return to profile</button>
         </section>
       </div>
       <div class="col-12 col-lg-7 col-xxl-8">

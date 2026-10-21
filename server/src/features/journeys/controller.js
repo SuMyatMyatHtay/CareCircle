@@ -34,14 +34,14 @@ function handleError(error, res, next) {
 // Replace the body with: notify(familyId, eventType, payload)
 function announce(_eventType, _transitSession) {}
 
-const USER_FIELDS = 'name telegramUsername'
+const USER_FIELDS = 'name telegramUsername profilePicture'
 const TASK_FIELDS = 'title startAt endAt location status category recipient claimedBy'
 
 function populateSession(query) {
     const taskPopulate = { path: 'task', select: TASK_FIELDS }
     // Recipient model belongs to C; only populate once it is registered
     if (mongoose.models.CareRecipient) {
-        taskPopulate.populate = { path: 'recipient', select: 'name nickname careType' }
+        taskPopulate.populate = { path: 'recipient', select: 'name nickname careType profilePicture' }
     }
     return query.populate('companion', USER_FIELDS).populate(taskPopulate)
 }
