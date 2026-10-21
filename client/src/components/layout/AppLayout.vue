@@ -2,6 +2,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
+import AssistantLauncher from '../../features/avatar/components/AssistantLauncher.vue'
 import FamilySidebar from './FamilySidebar.vue'
 import RecipientSummaryModal from '../../features/family/components/RecipientSummaryModal.vue'
 import { provideFamilyWorkspace } from '../../features/family/composables/useFamilyWorkspace.js'
@@ -131,6 +132,7 @@ onUnmounted(() => {
         <div v-if="isPreview" class="care-preview-bar"><span><i class="bi bi-eye" aria-hidden="true"></i> Preview · sample family data</span><button @click="resetPreview">Reset sample</button><RouterLink to="/login">Back to login <i class="bi bi-arrow-up-right" aria-hidden="true"></i></RouterLink></div>
         <RouterView />
       </main>
+      <AssistantLauncher v-if="!isPreview" :user="user" :inert="isMobile && sidebarOpen" />
       <RecipientSummaryModal v-if="selectedRecipient" :recipient="selectedRecipient" @close="selectedRecipient = null" />
     </div>
   </div>

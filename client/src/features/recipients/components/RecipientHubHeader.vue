@@ -1,4 +1,5 @@
 <script setup>
+import CareAvatar from '../../../components/common/CareAvatar.vue'
 // Owner: Jhen (C)
 // Top of the recipient hub: initials, name and age, key care chips, Edit / New task, and the four tabs.
 //   <RecipientHubHeader :recipient="recipient" @updated="replace" />
@@ -42,7 +43,7 @@ const editing = ref(false)
 <template>
     <header class="hub-header">
         <div class="hub-identity">
-            <span class="hub-avatar" aria-hidden="true">{{ initials(shownName) }}</span>
+            <CareAvatar :person="recipient" size="profile" />
 
             <div class="hub-name">
                 <div class="hub-title-row">

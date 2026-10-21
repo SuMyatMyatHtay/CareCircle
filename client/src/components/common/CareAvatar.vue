@@ -1,26 +1,23 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { defaultProfilePicture } from './profilePictures.js'
 const props = defineProps({
   person: { type: Object, default: () => ({}) },
   size: { type: String, default: 'normal' },
 })
-const initials = computed(() =>
-  (props.person.nickname || props.person.name || '?')
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join(''),
-)
+const failed = ref(false)
+const picture = computed(() => props.person.profilePicture || defaultProfilePicture(props.person))
+watch(picture, () => { failed.value = false })
 </script>
 
 <template>
   <span class="care-avatar" :class="`care-avatar--${size}`" aria-hidden="true">
-    {{ person.avatar || initials }}
+    <img :src="failed ? defaultProfilePicture(person) : picture" alt="" @error="failed = true" />
   </span>
 </template>
 
 <style scoped>
+.care-avatar img { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
 .care-avatar {
   display: inline-flex;
   align-items: center;
@@ -34,6 +31,8 @@ const initials = computed(() =>
   font-size: 27px;
   font-weight: 700;
 }
+.care-avatar--profile { width: 104px; height: 104px; box-shadow: 0 0 0 5px var(--theme-soft, #eef6ef); }
+.care-avatar--preview { width: 128px; height: 128px; box-shadow: 0 0 0 6px var(--theme-soft, #eef6ef); }
 .care-avatar--small {
   width: 30px;
   height: 30px;

@@ -1,18 +1,19 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { getMyProfile, updateMyProfile } from '../services/authApi.js'
+import ProfilePicturePicker from '../../../components/common/ProfilePicturePicker.vue'
 import AvatarPreview from '../../avatar/components/AvatarPreview.vue'
 import { defaultAppearance } from '../../avatar/data/avatarWardrobe.js'
 import '../../../styles/profileView.css'
 const user=ref(null), editing=ref(false), loading=ref(true), saving=ref(false), error=ref(''), success=ref('')
-const form=reactive({name:'',phone:'',preferredLang:'en',telegramUsername:'',isCaretaker:false})
+const form=reactive({profilePicture:'',name:'',phone:'',preferredLang:'en',telegramUsername:'',isCaretaker:false})
 const languages={en:'English',zh:'Chinese',ms:'Malay',ta:'Tamil'}
-const initials=computed(()=>user.value?.name?.trim()?.charAt(0)?.toUpperCase()||'?')
 const avatarAppearance=computed(()=>({
   baseId:user.value?.avatarAppearance?.baseId||defaultAppearance().baseId,
   equipped:{...defaultAppearance().equipped,...user.value?.avatarAppearance?.equipped}
 }))
 function fillForm(data) {
+  form.profilePicture=data.profilePicture||''
   form.name=data.name||'';form.phone=data.phone||'';form.preferredLang=data.preferredLang||'en'
   form.telegramUsername=data.telegramUsername||'';form.isCaretaker=data.isCaretaker??false
 }
@@ -34,6 +35,20 @@ async function saveProfile(){
   }catch(e){error.value=e.response?.data?.message||'Unable to save changes.'}
   finally{saving.value=false}
 }
+async function savePicture(profilePicture) {
+  if (saving.value) return
+  saving.value = true; error.value = ''; success.value = ''
+  try {
+    const current = await getMyProfile()
+    const updated = await updateMyProfile({ ...current, profilePicture })
+    user.value = updated
+    form.profilePicture = updated.profilePicture || ''
+    sessionStorage.setItem('user', JSON.stringify(updated))
+    window.dispatchEvent(new Event('carecircle:profile-updated'))
+    success.value = 'Your profile picture has been updated.'
+  } catch (e) { error.value = e.response?.data?.message || 'Unable to update your profile picture. Please try again.' }
+  finally { saving.value = false }
+}
 onMounted(loadProfile)
 </script>
 <template>
@@ -47,7 +62,7 @@ onMounted(loadProfile)
       <div class="col-12 col-xl-7">
         <section class="profile-card bg-white rounded-4 p-4 mb-4">
           <div class="d-flex flex-wrap align-items-center gap-3 mb-4">
-            <div class="profile-initial rounded-circle flex-shrink-0">{{ initials }}</div>
+            <ProfilePicturePicker :model-value="user.profilePicture || ''" :disabled="saving" @update:model-value="savePicture" />
             <div class="flex-grow-1"><h2 class="h4 fw-bold mb-1">{{ user.name }}</h2><p class="text-secondary small mb-1">{{ user.email }}</p><span class="profile-pill badge rounded-pill px-3 py-2"><i class="bi bi-heart-fill me-1"></i>CareCircle Member</span></div>
           </div>
           <div class="d-flex justify-content-between align-items-center mb-3">
@@ -70,6 +85,7 @@ onMounted(loadProfile)
       </div>
       <div class="col-12 col-xl-5"><section class="profile-card bg-white rounded-4 p-4">
         <div class="text-center mb-3"><span class="profile-eyebrow">♡ MY LITTLE SELF ♡</span><h2 class="h4 fw-bold mt-3 mb-2">My Avatar</h2><p class="text-secondary small mb-0">A little digital version of you! ♡</p></div>
+
         <div class="pet-display rounded-4 p-3 text-center"><AvatarPreview :appearance="avatarAppearance" /></div>
         <div class="d-grid mt-3"><RouterLink to="/avatar-studio" class="btn profile-primary rounded-pill py-3 fw-bold"><i class="bi bi-stars me-2"></i>Customize avatar</RouterLink></div>
         <p class="small text-secondary text-center mt-3 mb-0">Mix and match outfits to express your style. Your saved look appears here! ♡</p>
