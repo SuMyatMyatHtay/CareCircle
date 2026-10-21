@@ -21,7 +21,7 @@ export function conversationPayload(messages) {
 
 export function useAssistantChat(user) {
   const { selectedFamilyId, selectedFamily } = useFamilyWorkspace()
-  const { upsertTask, invalidateTasks } = useTaskCache()
+  const { upsertTask, removeTask, invalidateTasks } = useTaskCache()
   const messages = ref([]), input = ref(''), busy = ref(false), error = ref(''), retryable = ref(false)
   let version = 0, controller
   const canSend = computed(() => Boolean(selectedFamilyId.value && input.value.trim() && !busy.value))
@@ -72,12 +72,19 @@ export function useAssistantChat(user) {
     try {
       const result = await confirmAssistantProposal(request.familyId, message.proposal.id, request.signal)
       if (!request.current()) return
+      if (result.requiresSecondConfirmation) {
+        message.proposal.deletionAcknowledged = true
+        message.proposal.confirmationWarning = result.message
+        return
+      }
       message.proposalState = 'saved'
-      upsertTask(request.familyId, result.task)
+      if (result.deleted) removeTask(request.familyId, result.taskId)
+      else upsertTask(request.familyId, result.task)
       // Reconcile any in-flight fetch and refresh all visible task boards.
       void invalidateTasks(request.familyId)
-      window.dispatchEvent(new CustomEvent('carecircle:task-updated', { detail: { familyId: request.familyId, task: result.task } }))
-      messages.value.push({ role: 'assistant', content: `${message.proposal.action === 'create' ? 'Created' : 'Updated'}: ${result.task.title}. Your task list is up to date.` })
+      window.dispatchEvent(new CustomEvent('carecircle:task-updated', { detail: { familyId: request.familyId, task: result.task, taskId: result.taskId, deleted: result.deleted, action: message.proposal.action, title: message.proposal.task.title } }))
+      const action = { create: 'Created', update: 'Updated', unclaim: 'Unclaimed', delete: 'Deleted' }[message.proposal.action]
+      messages.value.push({ role: 'assistant', content: `${action}: ${result.task?.title || message.proposal.task.title}. Your task list is up to date.` })
     } catch (e) {
       if (request.current()) {
         error.value = assistantErrorMessage(e)

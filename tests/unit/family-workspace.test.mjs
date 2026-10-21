@@ -146,6 +146,7 @@ test('D task creation appears on Home without losing completed or distant tasks'
   seed([task('today'), completed, distant])
   mounted = harness.mountWorkspace()
   assert.deepEqual(mounted.dashboard.tasks.value.map(t => t._id), ['today'])
+  assert.deepEqual(mounted.dashboard.todayTasks.value.map(t => t._id), ['today'])
   const created = task('new task')
   t.mock.method(http, 'post', async (path, body) => {
     assert.equal(path, '/families/one/tasks')
@@ -160,6 +161,31 @@ test('D task creation appears on Home without losing completed or distant tasks'
   assert.equal(mounted.fullList.tasks.value.length, 4)
   assert.ok(mounted.fullList.tasks.value.some(t => t._id === 'completed'))
   assert.ok(mounted.fullList.tasks.value.some(t => t._id === 'future'))
+})
+
+test('dashboard includes the full tenth day ahead but excludes the eleventh day', () => {
+  const midnight = +new Date(`${day}T00:00:00+08:00`)
+  seed([
+    task('tenth-day', { startAt: new Date(midnight + 11 * 86400000 - 1).toISOString() }),
+    task('eleventh-day', { startAt: new Date(midnight + 11 * 86400000).toISOString() }),
+  ])
+  mounted = harness.mountWorkspace()
+  assert.deepEqual(mounted.dashboard.tasks.value.map(task => task._id), ['tenth-day'])
+  assert.equal(mounted.fullList.tasks.value.length, 2)
+})
+
+test('assistant actions immediately appear in dashboard activity for the active family', t => {
+  const listeners = new Map()
+  t.mock.method(window, 'addEventListener', (name, handler) => listeners.set(name, handler))
+  seed()
+  mounted = harness.mountWorkspace()
+  const update = listeners.get('carecircle:task-updated')
+  update({ detail: { familyId: 'two', action: 'create', task: { title: 'Private task' } } })
+  assert.equal(mounted.dashboard.activity.value.length, 0)
+  update({ detail: { familyId: 'one', action: 'create', task: { title: 'Visit Grandma' } } })
+  assert.equal(mounted.dashboard.activity.value.length, 1)
+  assert.match(mounted.dashboard.activity.value[0].text, /posted.*Visit Grandma/)
+  assert.match(mounted.dashboard.toast.value, /Visit Grandma/)
 })
 
 test('C recipient invalidation refreshes the Home/sidebar workspace', async t => {

@@ -146,6 +146,10 @@ function startTrip() {
 }
 
 function onAssistantUpdate(event) {
+    if (event.detail?.familyId === props.familyId && event.detail?.deleted && event.detail?.taskId === props.taskId) {
+        router.push('/my-tasks')
+        return
+    }
     if (event.detail?.familyId === props.familyId && event.detail?.task?._id === props.taskId) load()
 }
 onMounted(() => {

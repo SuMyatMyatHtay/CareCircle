@@ -11,7 +11,7 @@ import { requireAuth } from '../../server/src/middleware/requireAuth.js'
 import { requireFamilyMember } from '../../server/src/middleware/requireFamilyMember.js'
 import assistantRoutes from '../../server/src/features/assistant/routes.js'
 import { isoDate, searchFilter, validateDraft } from '../../server/src/features/assistant/service.js'
-import { generateReply, validateConversation, buildPrompt } from '../../server/src/features/assistant/gemini.js'
+import { generateReply, validateConversation, buildPrompt, responseSchema } from '../../server/src/features/assistant/gemini.js'
 
 const familyId = '000000000000000000000001', otherFamily = '000000000000000000000002'
 let admin = '000000000000000000000101'
@@ -26,6 +26,7 @@ function matches(record, filter) {
   return Object.entries(filter).every(([key, value]) => {
     const actual = record[key]
     if (value && typeof value === 'object' && !(value instanceof Date)) {
+      if ('$ne' in value) return actual !== value.$ne
       if ('$gt' in value) return new Date(actual) > value.$gt
       if ('$gte' in value || '$lte' in value) return (!value.$gte || new Date(actual) >= value.$gte) && (!value.$lte || new Date(actual) <= value.$lte)
       if ('$regex' in value) return new RegExp(value.$regex, value.$options).test(actual)
@@ -230,4 +231,75 @@ test('chat rate limit stops repeated provider calls', async () => {
   reply = { intent: 'reply', message: 'Hello', suggestions: [] }
   for (let index = 0; index < 10; index++) assert.equal((await chat({ user })).status, 200)
   assert.equal((await chat({ user })).status, 429); assert.equal(providerCalls.length, 10)
+})
+
+test('unclaim only permits the current claimer, even for admins, and rechecks at confirmation', async t => {
+  Object.assign(tasks.get(taskId), { status: 'claimed', claimedBy: member })
+  reply = { intent: 'unclaim', taskId, message: 'Review unclaim', suggestions: [] }
+  assert.equal((await chat()).status, 403)
+  const proposed = await chat({ user: member })
+  assert.equal(proposed.status, 200)
+  t.mock.method(Task, 'findOneAndUpdate', async (filter, update) => {
+    const task = tasks.get(taskId)
+    assert.equal(filter.claimedBy, member)
+    assert.equal(filter.status, 'claimed')
+    assert.equal(+filter.updatedAt, +new Date(task.updatedAt))
+    Object.assign(task, update.$set); writes++; return clone(task)
+  })
+  const saved = await request(`proposals/${proposed.data.proposal.id}/confirm`, { user: member })
+  assert.equal(saved.status, 200)
+  assert.equal(saved.data.task.status, 'open')
+  assert.equal(saved.data.task.claimedBy, null)
+  assert.equal(writes, 1)
+  Object.assign(tasks.get(taskId), { status: 'claimed', claimedBy: member })
+  const next = await chat({ user: member })
+  tasks.get(taskId).claimedBy = admin
+  assert.equal((await request(`proposals/${next.data.proposal.id}/confirm`, { user: member })).status, 403)
+  assert.equal(writes, 1)
+})
+
+test('deletion needs two confirmations, enforces manual permissions and supports retry', async t => {
+  reply = { intent: 'delete', taskId, message: 'Review deletion', suggestions: [] }
+  assert.equal((await chat({ user: member })).status, 403)
+  const proposed = await chat()
+  const path = `proposals/${proposed.data.proposal.id}/confirm`
+  t.mock.method(Task, 'deleteOne', async filter => {
+    assert.equal(String(filter.family), familyId)
+    assert.equal(+filter.updatedAt, +new Date(tasks.get(taskId).updatedAt))
+    tasks.delete(taskId); writes++; return { deletedCount: 1 }
+  })
+  const first = await request(path)
+  assert.equal(first.data.requiresSecondConfirmation, true)
+  assert.equal(writes, 0)
+  const second = await request(path)
+  assert.equal(second.status, 200)
+  assert.equal(second.data.deleted, true)
+  assert.equal(writes, 1)
+  assert.equal((await request(path)).data.deleted, true)
+  assert.equal(writes, 1)
+})
+
+test('deletion is blocked if a task starts between confirmations', async () => {
+  reply = { intent: 'delete', taskId, message: 'Review deletion', suggestions: [] }
+  const proposed = await chat()
+  const path = `proposals/${proposed.data.proposal.id}/confirm`
+  assert.equal((await request(path)).data.requiresSecondConfirmation, true)
+  tasks.get(taskId).status = 'in_progress'
+  assert.equal((await request(path)).status, 409)
+  assert.equal(writes, 0)
+})
+
+test('truncated provider replies return a specific safe error', async t => {
+  t.mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ candidates: [{ finishReason: 'MAX_TOKENS' }] })))
+  await assert.rejects(generateReply({ messages: [{ role: 'user', content: 'Create a checkup task' }], context: {} }),
+    error => error.status === 502 && error.message.includes('response space'))
+})
+
+test('creation schema requires task details while updates still allow partial fields', () => {
+  const [create, partial] = responseSchema.anyOf
+  assert.deepEqual(create.properties.intent.enum, ['create'])
+  assert.ok(create.required.includes('task'))
+  assert.deepEqual(create.properties.task.required, ['title', 'recipient', 'startAt', 'location'])
+  assert.ok(partial.properties.intent.enum.includes('update'))
+  assert.equal(partial.properties.task.required, undefined)
 })

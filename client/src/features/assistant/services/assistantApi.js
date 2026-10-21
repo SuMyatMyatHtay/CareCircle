@@ -4,11 +4,11 @@ async function post(familyId, path, body, signal) {
   const token = sessionStorage.getItem('token')
   if (!token) throw new Error('Please log in again to use the assistant.')
   // A wall-clock deadline also covers connections that never reach Axios's response timer.
-  const deadline = AbortSignal.timeout(25000)
+  const deadline = AbortSignal.timeout(55000)
   try {
     const response = await http.post(`/families/${familyId}/assistant/${path}`, body, {
       signal: signal ? AbortSignal.any([signal, deadline]) : deadline,
-      timeout: 25000, headers: { Authorization: `Bearer ${token}` }
+      timeout: 55000, headers: { Authorization: `Bearer ${token}` }
     })
     return response.data
   } catch (error) {

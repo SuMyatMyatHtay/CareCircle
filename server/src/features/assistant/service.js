@@ -1,5 +1,5 @@
 import mongoose from 'mongoose'
-import Task, { LOCKED_STATUSES } from '../tasks/TaskModel.js'
+import Task, { LOCKED_STATUSES, UNDELETABLE_STATUSES } from '../tasks/TaskModel.js'
 import Recipient from '../recipients/CareRecipient.model.js'
 import Proposal from './Proposal.model.js'
 import { parseTaskInput, createFamilyTask, updateFamilyTask } from '../tasks/controller.js'
@@ -31,6 +31,19 @@ export function taskSummary(task, recipients = []) {
 }
 
 export async function validateDraft(reply, { familyId, userId, memberRole }) {
+  if (['unclaim', 'delete'].includes(reply.intent)) {
+    if (!validId(reply.taskId)) throw assistantError(400, 'Which task do you mean?')
+    const before = await Task.getTaskInFamily(familyId, reply.taskId)
+    if (!before) throw assistantError(404, 'That task was not found in this family.')
+    if (reply.intent === 'unclaim') {
+      if (id(before.claimedBy) !== userId) throw assistantError(403, 'You can only unclaim your own task. You cannot unclaim for someone else.')
+      if (before.status !== 'claimed') throw assistantError(409, 'Only a claimed task that has not started can be unclaimed.')
+    } else {
+      if (memberRole !== 'admin' && id(before.createdBy) !== userId) throw assistantError(403, 'Only the task creator or an admin can delete this task.')
+      if (UNDELETABLE_STATUSES.includes(before.status)) throw assistantError(409, 'In-progress or completed tasks cannot be deleted.')
+    }
+    return { changes: {}, before, preview: taskSummary(before) }
+  }
   if (!plain(reply.task)) throw assistantError(400, 'Please describe the task details you want to change.')
   const source = reply.task
   // No model-provided ownership, status, assignment, family or database operators.
@@ -98,12 +111,15 @@ export async function chat({ body, familyId, familyName, userId, memberRole, gen
   const [recipients, recent] = await Promise.all([
     Recipient.find({ family: familyId, isActive: true }).select('name nickname').sort({ name: 1 }).limit(100).lean(),
     Task.find({ family: familyId, startAt: { $gte: new Date(Date.now() - 30 * 86400000) } })
-      .select('title recipient startAt endAt location category needsTransit status createdBy')
+      .select('title recipient startAt endAt location category needsTransit status createdBy claimedBy')
       .sort({ startAt: 1 }).limit(80).lean()
   ])
   const context = { family: familyName, userId, role: memberRole,
     recipients: recipients.map(person => ({ id: id(person), name: person.name, nickname: person.nickname })),
-    tasks: recent.map(task => ({ ...taskSummary(task, recipients), canEdit: !LOCKED_STATUSES.includes(task.status) &&
+    tasks: recent.map(task => ({ ...taskSummary(task, recipients),
+      canUnclaim: task.status === 'claimed' && id(task.claimedBy) === userId,
+      canDelete: !UNDELETABLE_STATUSES.includes(task.status) && (memberRole === 'admin' || id(task.createdBy) === userId),
+      canEdit: !LOCKED_STATUSES.includes(task.status) &&
       (memberRole === 'admin' || id(task.createdBy) === userId) })) }
   const reply = await generate({ messages, context })
   if (reply.intent === 'reply') return { message: reply.message, suggestions: reply.suggestions }
@@ -113,7 +129,7 @@ export async function chat({ body, familyId, familyName, userId, memberRole, gen
     return { message: results.length ? 'Here are the matching tasks. Choose one if you want to make changes.' : 'I couldn’t find matching tasks. Try a different name, keyword or date.',
       tasks: results.slice(0, 10).map(task => taskSummary(task, recipients)), hasMore: results.length > 10, suggestions: [] }
   }
-  if (!['create', 'update'].includes(reply.intent)) throw assistantError(502, 'Please try describing your task again.')
+  if (!['create', 'update', 'unclaim', 'delete'].includes(reply.intent)) throw assistantError(502, 'Please try describing your task again.')
   const { changes, before, preview } = await validateDraft(reply, { familyId, userId, memberRole })
   const taskId = before?._id || new mongoose.Types.ObjectId()
   const proposal = await Proposal.create({ family: familyId, user: userId, action: reply.intent, taskId,
@@ -134,9 +150,17 @@ export async function confirm({ proposalId, familyId, userId, memberRole }) {
   if (!proposal) throw assistantError(404, 'Task proposal not found.')
   if (proposal.expiresAt <= new Date()) throw assistantError(410, 'This proposal expired. Ask the assistant to prepare it again.')
   if (proposal.state === 'completed') {
+    if (proposal.action === 'delete') return { deleted: true, taskId: id(proposal.taskId) }
     const task = await Task.getTaskInFamily(familyId, proposal.taskId)
     if (!task) throw assistantError(404, 'The saved task no longer exists.')
     return { task: await Task.getPopulatedTaskById(task._id) }
+  }
+  if (proposal.action === 'delete' && proposal.state === 'pending' && !proposal.deletionAcknowledged) {
+    await validateDraft({ intent: 'delete', taskId: id(proposal.taskId) }, { familyId, userId, memberRole })
+    const acknowledged = await Proposal.findOneAndUpdate({ ...scope, state: 'pending', deletionAcknowledged: { $ne: true } },
+      { $set: { deletionAcknowledged: true } }, { new: true })
+    if (!acknowledged) throw assistantError(409, 'Confirmation changed. Please try again.')
+    return { requiresSecondConfirmation: true, message: 'Delete this task permanently? This cannot be undone. Confirm once more to delete it.' }
   }
   // A create has a reserved ID: recover a successful write even if the response was lost.
   if (proposal.state === 'processing' && proposal.action === 'create') {
@@ -152,9 +176,20 @@ export async function confirm({ proposalId, familyId, userId, memberRole }) {
   let task
   try {
     // Re-check current permissions, active recipient and full validation at confirmation.
-    const { changes } = await validateDraft({ intent: proposal.action, taskId: id(proposal.taskId), task: proposal.changes },
+    const { changes, before } = await validateDraft({ intent: proposal.action, taskId: id(proposal.taskId), task: proposal.changes },
       { familyId, userId, memberRole })
-    task = proposal.action === 'create'
+    if (['unclaim', 'delete'].includes(proposal.action)) {
+      if (+new Date(before.updatedAt) !== +new Date(proposal.expectedUpdatedAt)) throw assistantError(409, 'This task changed. Please prepare a new proposal.')
+      const filter = { _id: before._id, family: familyId, updatedAt: new Date(proposal.expectedUpdatedAt), status: before.status, claimedBy: before.claimedBy ?? null }
+      if (proposal.action === 'delete') {
+        const result = await Task.deleteOne(filter)
+        if (!result.deletedCount) throw assistantError(409, 'This task changed. Please prepare a new proposal.')
+      } else {
+        task = await Task.findOneAndUpdate(filter, { $set: { status: 'open', claimedBy: null, claimedAt: null } }, { new: true })
+        if (!task) throw assistantError(409, 'This task changed. Please prepare a new proposal.')
+        task = await Task.getPopulatedTaskById(task._id)
+      }
+    } else task = proposal.action === 'create'
       ? await createFamilyTask({ body: changes, familyId, userId, taskId: proposal.taskId })
       : await updateFamilyTask({ body: changes, familyId, userId, memberRole, taskId: proposal.taskId,
         expectedUpdatedAt: proposal.expectedUpdatedAt })
@@ -166,6 +201,7 @@ export async function confirm({ proposalId, familyId, userId, memberRole }) {
     throw error
   }
   await Proposal.updateOne(scope, { $set: { state: 'completed' } })
+  if (proposal.action === 'delete') return { deleted: true, taskId: id(proposal.taskId) }
   return { task }
 }
 

@@ -73,6 +73,28 @@ test('sending a message only prepares a proposal, and confirmation updates the c
   assert.equal(events[0].type, 'carecircle:task-updated')
   await mounted.chat.confirm(card); assert.equal(requests.length, 2)
 })
+test('deletion keeps the card pending after the first confirmation and removes the task after the second', async t => {
+  let confirmations = 0
+  mounted.queryClient.setQueryData(['families', 'family-a', 'tasks'], [{ _id: 'task-1', title: 'Eye check' }])
+  t.mock.method(http, 'post', async path => {
+    if (path.endsWith('/chat')) return { data: { message: 'Review deletion', proposal: { ...proposal, action: 'delete' } } }
+    confirmations++
+    return { data: confirmations === 1 ? { requiresSecondConfirmation: true, message: 'Confirm permanent deletion.' }
+      : { deleted: true, taskId: 'task-1' } }
+  })
+  await mounted.chat.send('Delete my task')
+  const card = mounted.chat.messages.value[1]
+  await mounted.chat.confirm(card)
+  assert.equal(card.proposalState, 'pending')
+  assert.equal(card.proposal.deletionAcknowledged, true)
+  assert.equal(mounted.queryClient.getQueryData(['families', 'family-a', 'tasks']).length, 1)
+  assert.equal(events.length, 0)
+  await mounted.chat.confirm(card)
+  assert.equal(card.proposalState, 'saved')
+  assert.equal(mounted.queryClient.getQueryData(['families', 'family-a', 'tasks']).length, 0)
+  assert.match(mounted.chat.messages.value.at(-1).content, /^Deleted:/)
+})
+
 test('switching families aborts the request, clears chat and discards late replies', async t => {
   const pending = deferred(); let signal
   t.mock.method(http, 'post', (_path, _body, config) => { signal = config.signal; return pending.promise })

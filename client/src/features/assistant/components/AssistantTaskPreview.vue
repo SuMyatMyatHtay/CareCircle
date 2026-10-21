@@ -3,6 +3,8 @@ import { computed } from 'vue'
 const props = defineProps({ proposal: { type: Object, required: true }, state: { type: String, default: 'pending' }, busy: Boolean })
 defineEmits(['confirm', 'dismiss'])
 const labels = { title: 'Task', recipient: 'For', startAt: 'Starts', endAt: 'Ends', location: 'Location', category: 'Category', needsTransit: 'Transport', description: 'Notes' }
+const actionLabels = { create: 'New task', update: 'Task changes', unclaim: 'Unclaim your task', delete: 'Delete task' }
+const confirmLabel = computed(() => ({ create: 'Confirm task', update: 'Confirm changes', unclaim: 'Confirm unclaim', delete: props.proposal.deletionAcknowledged ? 'Yes, permanently delete' : 'Review deletion' })[props.proposal.action])
 function format(field, task) {
   const value = task?.[field]
   if (field === 'recipient') return task?.recipientName || 'Household'
@@ -19,11 +21,12 @@ const rows = computed(() => Object.keys(labels).filter(field => props.proposal.a
 </script>
 <template>
   <div class="assistant-task-preview">
-    <div class="preview-label"><i class="bi bi-calendar-check" aria-hidden="true"></i> {{ proposal.action === 'create' ? 'New task' : 'Task changes' }}</div>
+    <div class="preview-label"><i class="bi bi-calendar-check" aria-hidden="true"></i> {{ actionLabels[proposal.action] }}</div>
     <h3>{{ proposal.task.title }}</h3>
     <dl><div v-for="row in rows" :key="row.label"><dt>{{ row.label }}</dt><dd><span v-if="proposal.action === 'update' && row.before !== row.after" class="preview-before">{{ row.before }}</span>{{ row.after }}</dd></div></dl>
     <p class="preview-timezone">Times shown in Singapore time.</p>
-    <div v-if="state === 'pending'" class="preview-actions"><button type="button" :disabled="busy" @click="$emit('dismiss')">Dismiss</button><button type="button" class="preview-confirm" :disabled="busy" @click="$emit('confirm')">{{ busy ? 'Please wait…' : proposal.action === 'create' ? 'Confirm task' : 'Confirm changes' }}</button></div>
+    <p v-if="proposal.action === 'delete' && state === 'pending'" class="text-danger" role="alert">{{ proposal.confirmationWarning || 'Deleting permanently removes this task. You will be asked to confirm again.' }}</p>
+    <div v-if="state === 'pending'" class="preview-actions"><button type="button" :disabled="busy" @click="$emit('dismiss')">Dismiss</button><button type="button" class="preview-confirm" :disabled="busy" @click="$emit('confirm')">{{ busy ? 'Please wait…' : confirmLabel }}</button></div>
     <p v-else class="preview-state" role="status">{{ ({ saved: '✓ Saved to your family’s tasks', cancelled: 'Dismissed · no changes saved', replaced: 'Replaced by your next message', unavailable: 'No longer available · please prepare a new proposal' })[state] }}</p>
   </div>
 </template>

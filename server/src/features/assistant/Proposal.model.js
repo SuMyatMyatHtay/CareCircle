@@ -4,7 +4,8 @@ import mongoose from 'mongoose'
 const schema = new mongoose.Schema({
   family: { type: mongoose.Schema.Types.ObjectId, required: true },
   user: { type: mongoose.Schema.Types.ObjectId, required: true },
-  action: { type: String, enum: ['create', 'update'], required: true },
+  action: { type: String, enum: ['create', 'update', 'unclaim', 'delete'], required: true },
+  deletionAcknowledged: { type: Boolean, default: false },
   taskId: { type: mongoose.Schema.Types.ObjectId, required: true },
   changes: { type: mongoose.Schema.Types.Mixed, required: true },
   expectedUpdatedAt: Date,

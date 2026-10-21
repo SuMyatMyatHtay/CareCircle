@@ -29,7 +29,8 @@ export function useFamilyDashboard() {
         const from = new Date(`${singaporeDay(new Date())}T00:00:00+08:00`).getTime()
         return familyTasks.tasks.value.filter((task) => {
           const start = new Date(task.startAt).getTime()
-          return start >= from && start < from + 7 * 86400000 &&
+          // Include today and the next 10 Singapore calendar days.
+          return start >= from && start < from + 11 * 86400000 &&
             ['open', 'claimed', 'in_progress'].includes(task.status)
         })
       })
@@ -200,8 +201,17 @@ export function useFamilyDashboard() {
     )
       loadTasks(true)
   }
+  function onAssistantTaskUpdated(event) {
+    const detail = event.detail
+    if (workspace.isPreview || detail?.familyId !== workspace.selectedFamilyId.value) return
+    const title = detail.task?.title || detail.title || 'Task'
+    const action = { create: 'posted', update: 'updated', unclaim: 'unclaimed', delete: 'deleted' }[detail.action] || 'updated'
+    addActivity(`${workspace.user.value.name} ${action} “${title}”`)
+    showToast(`“${title}” ${action}.`)
+  }
   onMounted(() => {
     if (!workspace.isPreview) {
+      window.addEventListener('carecircle:task-updated', onAssistantTaskUpdated)
       interval = setInterval(refreshVisible, 20000)
       document.addEventListener('visibilitychange', refreshVisible)
     }
@@ -211,6 +221,7 @@ export function useFamilyDashboard() {
     clearInterval(interval)
     clearTimeout(toastTimer)
     document.removeEventListener('visibilitychange', refreshVisible)
+    window.removeEventListener('carecircle:task-updated', onAssistantTaskUpdated)
   })
   return {
     tasks,
