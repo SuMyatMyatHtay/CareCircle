@@ -91,6 +91,7 @@ onMounted(load)
       <div class="col-12 col-lg-5 col-xxl-4">
         <section class="avatar-card p-3 p-md-4">
           <div class="avatar-eyebrow mb-3"><i class="bi bi-stars me-1"></i>LIVE PREVIEW</div>
+
           <div class="avatar-preview-background rounded-4 p-2 p-md-3"><AvatarPreview :appearance="appearance" /></div>
           <p class="small text-secondary text-center mt-3 mb-0">{{ wardrobe.bases.find(x => x.id === appearance.baseId)?.name }} · Outfit preview</p>
           <p v-if="error" class="alert alert-danger rounded-4 mt-3 mb-0" role="alert">{{ error }}</p>

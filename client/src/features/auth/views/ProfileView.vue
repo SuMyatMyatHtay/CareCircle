@@ -85,6 +85,7 @@ onMounted(loadProfile)
       </div>
       <div class="col-12 col-xl-5"><section class="profile-card bg-white rounded-4 p-4">
         <div class="text-center mb-3"><span class="profile-eyebrow">♡ MY LITTLE SELF ♡</span><h2 class="h4 fw-bold mt-3 mb-2">My Avatar</h2><p class="text-secondary small mb-0">A little digital version of you! ♡</p></div>
+
         <div class="pet-display rounded-4 p-3 text-center"><AvatarPreview :appearance="avatarAppearance" /></div>
         <div class="d-grid mt-3"><RouterLink to="/avatar-studio" class="btn profile-primary rounded-pill py-3 fw-bold"><i class="bi bi-stars me-2"></i>Customize avatar</RouterLink></div>
         <p class="small text-secondary text-center mt-3 mb-0">Mix and match outfits to express your style. Your saved look appears here! ♡</p>
