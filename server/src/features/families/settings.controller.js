@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto'
 import mongoose from 'mongoose'
 import Family from './Family.model.js'
 
-const PUBLIC_FIELDS = 'name email preferredLang telegramUsername'
+const PUBLIC_FIELDS = 'name email preferredLang telegramUsername profilePicture'
 const adminCount = {
   $size: {
     $filter: {
@@ -20,6 +20,7 @@ function publicMember(member) {
     user: {
       _id: user._id.toString(),
       name: user.name,
+      profilePicture: user.profilePicture || '',
       email: user.email,
       preferredLang: user.preferredLang || 'en',
       telegramUsername: user.telegramUsername || '',

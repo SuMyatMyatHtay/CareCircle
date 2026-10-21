@@ -1,4 +1,5 @@
 <script setup>
+import CareAvatar from '../../../components/common/CareAvatar.vue'
 // Owner: Jhen (C)
 // One care recipient on Family home: initials, name, care summary and a link to their hub.
 //   <RecipientCard :recipient="recipient" :needs-someone="2" />
@@ -21,7 +22,7 @@ const summary = computed(() =>
 <template>
     <article class="recipient-card">
         <div class="recipient-head">
-            <span class="avatar" aria-hidden="true">{{ initials(name) }}</span>
+            <CareAvatar :person="recipient" />
             <div class="head-text">
                 <h3>{{ name }}</h3>
                 <p>{{ summary }}</p>

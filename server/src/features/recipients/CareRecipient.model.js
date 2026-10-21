@@ -99,6 +99,7 @@ const careRecipientSchema = new mongoose.Schema({
         default: ''
     },
 
+    profilePicture: { type: String, default: '' },
     careType: {
         type: String,
         enum: {
@@ -167,7 +168,7 @@ careRecipientSchema.index(
 // ---------- Database operations ----------
 // Every query on care recipients lives here; controller.js only calls these statics.
 
-const USER_FIELDS = 'name telegramUsername'
+const USER_FIELDS = 'name telegramUsername profilePicture'
 
 function populateLinkedUser(query) {
     return query.populate('linkedUser', USER_FIELDS)

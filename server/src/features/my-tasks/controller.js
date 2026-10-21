@@ -6,7 +6,7 @@ import Task from '../tasks/TaskModel.js'
 import Family from '../families/Family.model.js'
 import { TASK_STATUSES } from '../../constants.js'
 
-const USER_FIELDS = 'name telegramUsername'
+const USER_FIELDS = 'name telegramUsername profilePicture'
 
 function parseDate(value) {
     const date = new Date(value)
@@ -60,7 +60,7 @@ export async function getMyTasks(req, res, next) {
             .populate('createdBy', USER_FIELDS)
             .populate('claimedBy', USER_FIELDS)
         // Recipient model belongs to C; only populate once it is registered
-        if (mongoose.models.CareRecipient) query.populate('recipient', 'name nickname careType')
+        if (mongoose.models.CareRecipient) query.populate('recipient', 'name nickname careType profilePicture')
 
         const tasks = await query
         return res.json({ tasks })

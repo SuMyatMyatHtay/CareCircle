@@ -7,6 +7,7 @@
 //   req.user.userId, req.family, req.memberRole
 
 import mongoose from 'mongoose'
+import { validProfilePicture } from '../../utils/profilePicture.js'
 import CareRecipient from './CareRecipient.model.js'
 import { CARE_TYPES, EVENTS } from '../../constants.js'
 
@@ -126,6 +127,11 @@ function parseRecipientInput(body, { partial }) {
     const data = {}
     const errors = []
     const has = (key) => input[key] !== undefined
+
+    if (has('profilePicture')) {
+        if (!validProfilePicture(input.profilePicture)) errors.push('Choose a valid profile picture')
+        else data.profilePicture = input.profilePicture
+    }
 
     if (has('name') || !partial) {
         if (typeof input.name !== 'string' || !input.name.trim()) errors.push('Name is required')

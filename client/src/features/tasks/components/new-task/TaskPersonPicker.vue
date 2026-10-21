@@ -1,4 +1,5 @@
 <script setup>
+import CareAvatar from '../../../../components/common/CareAvatar.vue'
 // Owner: Marcus (D)
 // "Who is it for?": one pill per care recipient plus a dashed "Household" pill (null).
 //   <TaskPersonPicker v-model="form.recipient.value" :recipients="recipients" />
@@ -19,7 +20,7 @@ const model = defineModel({ type: [String, null], default: null })
             <button v-for="recipient in recipients" :key="recipient._id" type="button" class="person-pill"
                 :class="{ selected: model === recipient._id }" :aria-pressed="model === recipient._id"
                 @click="model = recipient._id">
-                <span class="pill-avatar" aria-hidden="true">{{ initials(displayName(recipient)) }}</span>
+                <CareAvatar :person="recipient" size="tiny" />
                 {{ displayName(recipient) }}
             </button>
             <button type="button" class="person-pill household" :class="{ selected: model === null }"

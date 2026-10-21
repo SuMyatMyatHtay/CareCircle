@@ -7,8 +7,8 @@ import { EVENTS, LOG_TYPES } from '../../constants.js'
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 50
 
-const USER_FIELDS = 'name telegramUsername'
-const RECIPIENT_FIELDS = 'name nickname careType'
+const USER_FIELDS = 'name telegramUsername profilePicture'
+const RECIPIENT_FIELDS = 'name nickname careType profilePicture'
 
 function httpError(status, message, errors) {
     return Object.assign(new Error(message), { status, errors })

@@ -3,6 +3,7 @@
 // Add / edit form for a care recipient. Pass a recipient to edit it; leave it out to create one.
 //   <RecipientForm :recipient="recipient" @saved="onSaved" @cancel="close" />
 import { ref, computed } from 'vue'
+import ProfilePicturePicker from '../../../components/common/ProfilePicturePicker.vue'
 import { useActiveFamily } from '../../../composables/useActiveFamily.js'
 import { CARE_TYPES, MOBILITY_LEVELS, ALLERGY_SEVERITIES, dateKey } from '../recipientLabels.js'
 import { createRecipient, updateRecipient, getRecipientErrorMessage } from '../services/recipientsApi.js'
@@ -20,6 +21,7 @@ const isEdit = computed(() => Boolean(props.recipient))
 // ---- Form state, copied from the recipient so Cancel leaves it untouched ----
 const source = props.recipient || {}
 
+const profilePicture = ref(source.profilePicture || '')
 const name = ref(source.name || '')
 const nickname = ref(source.nickname || '')
 const dateOfBirth = ref(source.dateOfBirth ? dateKey(source.dateOfBirth) : '')
@@ -104,6 +106,7 @@ function buildPayload() {
         : null
 
     return {
+        profilePicture: profilePicture.value,
         name: name.value,
         nickname: nickname.value,
         careType: careType.value,
@@ -151,6 +154,7 @@ async function save() {
 
 <template>
     <form class="recipient-form" novalidate @submit.prevent="save">
+        <ProfilePicturePicker v-model="profilePicture" :care-type="careType" :disabled="isSaving" />
         <div class="row g-3">
             <div class="col-md-4">
                 <label class="field-label" for="recipient-name">Full name</label>
