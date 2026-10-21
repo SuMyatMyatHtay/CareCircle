@@ -204,7 +204,7 @@ function requestMobileLogout() {
         @retry="loadFamilies"
       />
       <template v-else-if="selectedFamily">
-        <p v-if="feedback" class="care-feedback" role="status">
+        <p v-if="feedback" class="care-feedback care-settings-feedback" role="status">
           <i class="bi bi-check-circle" aria-hidden="true"></i>
           {{ feedback }}
         </p>
@@ -269,7 +269,7 @@ function requestMobileLogout() {
       </div>
       <p
         v-if="feedback"
-        class="care-feedback care-mobile-settings-feedback"
+        class="care-feedback care-settings-feedback care-mobile-settings-feedback"
         role="status"
       >
         {{ feedback }}

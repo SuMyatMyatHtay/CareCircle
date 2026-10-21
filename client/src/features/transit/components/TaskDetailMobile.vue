@@ -198,7 +198,7 @@ watch(() => [props.task._id, props.task.status], loadSession, { immediate: true 
     gap: 16px;
     min-height: calc(100vh - 140px);
     font-family: Nunito, Inter, system-ui, sans-serif;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .top {
@@ -211,7 +211,7 @@ watch(() => [props.task._id, props.task.status], loadSession, { immediate: true 
     border: none;
     background: none;
     font-size: 22px;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .menu-wrap {
@@ -226,9 +226,9 @@ watch(() => [props.task._id, props.task.status], loadSession, { immediate: true 
     flex-direction: column;
     min-width: 200px;
     overflow: hidden;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--theme-border, #e5e7eb);
     border-radius: 14px;
-    background: white;
+    background: var(--theme-panel, white);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
 }
 
@@ -236,17 +236,17 @@ watch(() => [props.task._id, props.task.status], loadSession, { immediate: true 
 .menu button {
     padding: 12px 16px;
     border: none;
-    background: white;
+    background: var(--theme-panel, white);
     font-family: inherit;
     font-size: 15px;
     font-weight: 700;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
     text-align: left;
     text-decoration: none;
 }
 
 .menu .danger {
-    color: #9f3a2b;
+    color: var(--theme-danger, #9f3a2b);
 }
 
 .head {
@@ -258,14 +258,14 @@ watch(() => [props.task._id, props.task.status], loadSession, { immediate: true 
 .for {
     font-size: 14px;
     font-weight: 700;
-    color: #5b6470;
+    color: var(--theme-muted, #5b6470);
 }
 
 h1 {
     margin: 0;
     font-size: 24px;
     font-weight: 900;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .m-progress {
@@ -281,7 +281,7 @@ h1 {
     display: block;
     height: 6px;
     border-radius: 3px;
-    background: #dce3dc;
+    background: var(--theme-neutral, #dce3dc);
 }
 
 .on .seg {
@@ -293,25 +293,25 @@ h1 {
     margin-top: 6px;
     font-size: 12px;
     font-weight: 700;
-    color: #5b6470;
+    color: var(--theme-muted, #5b6470);
 }
 
 .on .seg-label {
     font-weight: 800;
-    color: #1f5a2c;
+    color: var(--theme-green, #1f5a2c);
 }
 
 .msg {
     padding: 10px 14px;
     border-radius: 14px;
-    background: #fff6e0;
+    background: var(--theme-warning-soft, #fff6e0);
     font-size: 14px;
-    color: #7a4b00;
+    color: var(--theme-warning, #7a4b00);
 }
 
 .msg.is-error {
-    background: #ffe9e4;
-    color: #9f3a2b;
+    background: var(--theme-danger-soft, #ffe9e4);
+    color: var(--theme-danger, #9f3a2b);
 }
 
 .live {
@@ -321,10 +321,10 @@ h1 {
     padding: 12px 14px;
     border: none;
     border-radius: 18px;
-    background: #e8f5e9;
+    background: var(--theme-soft, #e8f5e9);
     font-family: inherit;
     text-align: left;
-    color: #1f5a2c;
+    color: var(--theme-green, #1f5a2c);
 }
 
 .live-pill {
@@ -345,18 +345,18 @@ h1 {
 .live-text strong {
     font-size: 15px;
     font-weight: 800;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .live-text small {
     font-size: 13px;
-    color: #5b6470;
+    color: var(--theme-muted, #5b6470);
 }
 
 .info {
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--theme-border, #e5e7eb);
     border-radius: 18px;
-    background: white;
+    background: var(--theme-panel, white);
 }
 
 .info-row {
@@ -366,12 +366,12 @@ h1 {
 }
 
 .info-row + .info-row {
-    border-top: 1px solid #f0f1f3;
+    border-top: 1px solid var(--theme-border, #f0f1f3);
 }
 
 .info-row > .bi {
     font-size: 20px;
-    color: #2f7a3f;
+    color: var(--theme-green, #2f7a3f);
 }
 
 .info-row div {
@@ -387,14 +387,14 @@ h1 {
 
 .info-row small {
     font-size: 13px;
-    color: #5b6470;
+    color: var(--theme-muted, #5b6470);
 }
 
 .link {
     margin-top: 4px;
     font-size: 14px;
     font-weight: 800;
-    color: #2f7a3f;
+    color: var(--theme-green, #2f7a3f);
     text-decoration: none;
 }
 
@@ -405,7 +405,7 @@ h1 {
 .notes {
     padding: 14px 16px;
     border-radius: 18px;
-    background: #fff6e0;
+    background: var(--theme-warning-soft, #fff6e0);
 }
 
 .notes strong {
@@ -425,8 +425,8 @@ h1 {
     gap: 8px;
     margin: auto -18px 0; /* full width under the 18px layout padding */
     padding: 13px 20px 20px;
-    border-top: 1px solid #e5e7eb;
-    background: white;
+    border-top: 1px solid var(--theme-border, #e5e7eb);
+    background: var(--theme-panel, white);
 }
 
 .btn-main {
@@ -457,18 +457,18 @@ h1 {
 
 .btn-plain {
     height: 48px;
-    border: 1px solid #dce3dc;
+    border: 1px solid var(--theme-border, #dce3dc);
     border-radius: 14px;
-    background: white;
+    background: var(--theme-panel, white);
     font-family: inherit;
     font-size: 15px;
     font-weight: 800;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .btn-plain.danger {
-    border-color: #f6c9bf;
-    color: #9f3a2b;
+    border-color: var(--theme-danger-border, #f6c9bf);
+    color: var(--theme-danger, #9f3a2b);
 }
 
 button:disabled {

@@ -50,11 +50,11 @@ const addressLine = computed(() => {
     line-height: 20px;
     letter-spacing: 0.07px;
     font-weight: 500;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .address .bi {
     font-size: 17px;
-    color: #6b7280;
+    color: var(--theme-muted, #6b7280);
 }
 </style>

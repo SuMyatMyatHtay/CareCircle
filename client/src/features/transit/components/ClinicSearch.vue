@@ -107,24 +107,24 @@ function choose(place) {
 .hint {
     margin: 8px 0 0;
     font-size: 13px;
-    color: #6b7280;
+    color: var(--theme-muted, #6b7280);
 }
 
 .hint.is-error {
-    color: #a33a26;
+    color: var(--theme-danger, #a33a26);
 }
 
 .results {
     margin: 8px 0 0;
     padding: 0;
     list-style: none;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--theme-border, #e5e7eb);
     border-radius: 12px;
     overflow: hidden;
 }
 
 .results li + li {
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--theme-border, #e5e7eb);
 }
 
 .result {
@@ -133,16 +133,16 @@ function choose(place) {
     width: 100%;
     padding: 10px 12px;
     border: none;
-    background: white;
+    background: var(--theme-panel, white);
     text-align: left;
 }
 
 .result:hover {
-    background: #e8f5e9;
+    background: var(--theme-soft, #e8f5e9);
 }
 
 .result .bi {
-    color: #2f7a3f;
+    color: var(--theme-green, #2f7a3f);
 }
 
 .result span {
@@ -152,17 +152,17 @@ function choose(place) {
 
 .result strong {
     font-size: 14px;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .result small {
     font-size: 12px;
-    color: #6b7280;
+    color: var(--theme-muted, #6b7280);
 }
 
 .credit {
     margin: 6px 0 0;
     font-size: 11px;
-    color: #6b7280;
+    color: var(--theme-muted, #6b7280);
 }
 </style>

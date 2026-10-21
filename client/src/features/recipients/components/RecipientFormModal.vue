@@ -68,8 +68,8 @@ onUnmounted(() => {
     width: 100%;
     max-width: 720px;
     padding: 28px;
-    background: white;
-    border: 1px solid #E4ECE5;
+    background: var(--theme-panel, white);
+    border: 1px solid var(--theme-border, #E4ECE5);
     border-radius: 20px;
 }
 
@@ -85,14 +85,14 @@ onUnmounted(() => {
     margin: 0;
     font-size: 24px;
     font-weight: 800;
-    color: #2F2F2F;
+    color: var(--theme-text, #2F2F2F);
 }
 
 .close-button {
     padding: 4px;
     border: none;
     background: none;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
     font-size: 18px;
 }
 

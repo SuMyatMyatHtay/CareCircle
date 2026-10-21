@@ -2,8 +2,8 @@
   height: 100dvh;
   display: flex;
   overflow: hidden;
-  background: #FCFBF8;
-  color: #2F2F2F;
+  background: var(--theme-page, #FCFBF8);
+  color: var(--theme-text, #2F2F2F);
   font-family: 'Nunito', system-ui, sans-serif;
 }
 
@@ -31,33 +31,33 @@
 .app-topbar {
   flex-shrink: 0;
   min-height: 70px;
-  background: white;
-  border-bottom: 1px solid #E5EDE6;
+  background: var(--theme-panel, white);
+  border-bottom: 1px solid var(--theme-border, #E5EDE6);
 }
 
 .app-menu-button {
-  color: #398A51;
-  background: #E8F5E9;
+  color: var(--theme-green, #398A51);
+  background: var(--theme-soft, #E8F5E9);
   border: none;
 }
 
 .app-menu-button:hover {
-  background: #D6ECD9;
+  background: var(--theme-soft, #D6ECD9);
 }
 
 .app-topbar-brand {
-  color: #398A51;
+  color: var(--theme-green, #398A51);
   font-size: 19px;
 }
 
 .app-profile-button {
-  color: #398A51;
-  border: 1px solid #B5DDC0;
+  color: var(--theme-green, #398A51);
+  border: 1px solid var(--theme-accent-border, #B5DDC0);
 }
 
 .app-profile-button:hover {
-  background: #E8F5E9;
-  color: #2E7D43;
+  background: var(--theme-soft, #E8F5E9);
+  color: var(--theme-green, #2E7D43);
 }
 
 /* Only the content scrolls */

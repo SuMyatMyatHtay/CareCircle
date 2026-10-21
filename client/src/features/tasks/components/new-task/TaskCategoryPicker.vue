@@ -40,10 +40,10 @@ const model = defineModel({ type: String, default: 'other' })
     gap: 6px;
     min-height: 64px;
     padding: 12px 4px 10px;
-    border: 1px solid #E5E7EB;
+    border: 1px solid var(--theme-border, #E5E7EB);
     border-radius: 12px;
-    background: white;
-    color: #2F2F2F;
+    background: var(--theme-panel, white);
+    color: var(--theme-text, #2F2F2F);
     font-size: 12px;
     font-weight: 500;
 }
@@ -61,23 +61,23 @@ const model = defineModel({ type: String, default: 'other' })
 }
 
 .category-tile:hover {
-    background: #F7FAF7;
+    background: var(--theme-page, #F7FAF7);
 }
 
 .category-tile.selected {
     padding: 11px 3px 9px;
-    border: 2px solid #2F7A3F;
-    background: #E8F5E9;
-    color: #1F5A2C;
+    border: 2px solid var(--theme-accent-border, #2F7A3F);
+    background: var(--theme-soft, #E8F5E9);
+    color: var(--theme-green, #1F5A2C);
     font-weight: 600;
 }
 
 .category-tile.selected .bi {
-    color: #2F7A3F;
+    color: var(--theme-green, #2F7A3F);
 }
 
 .category-tile:focus-visible {
-    outline: 3px solid #A8D5B5;
+    outline: 3px solid var(--theme-accent-border, #A8D5B5);
     outline-offset: 2px;
 }
 

@@ -12,17 +12,17 @@
 
   --cc-green: #5fae85;
 
-  --cc-deep: #256d52;
+  --cc-deep: var(--theme-green, #256d52);
 
   --cc-pink: #f29a97;
 
-  --cc-ink: #26352f;
+  --cc-ink: var(--theme-text, #26352f);
 
-  --cc-muted: #65746e;
+  --cc-muted: var(--theme-muted, #65746e);
 
   min-height: 100dvh;
 
-  background: #fffaf8;
+  background: var(--theme-page, #fffaf8);
 
   color: var(--cc-ink);
 
@@ -84,9 +84,9 @@
 
     150deg,
 
-    #f4faf5 0%,
+    var(--theme-soft, #f4faf5) 0%,
 
-    #fff5f1 86%
+    var(--theme-page, #fff5f1) 86%
 
   );
 
@@ -108,7 +108,7 @@
 
   text-decoration: none !important;
 
-  color: #243a32 !important;
+  color: var(--theme-text, #243a32) !important;
 
   font-size: clamp(20px, 1.65vw, 25px);
 
@@ -134,7 +134,7 @@
 
   letter-spacing: 0;
 
-  color: #82928a;
+  color: var(--theme-muted, #82928a);
 
 }
 
@@ -144,7 +144,7 @@
 
   height: 36px;
 
-  border: 2px solid #60b68a;
+  border: 2px solid var(--theme-accent-border, #60b68a);
 
   border-radius: 50%;
 
@@ -152,7 +152,7 @@
 
   place-items: center;
 
-  color: #f29999;
+  color: var(--theme-danger, #f29999);
 
   font-size: 32px;
 
@@ -166,7 +166,7 @@
 
 .cc-brand-accent {
 
-  color: #ef9395;
+  color: var(--theme-danger, #ef9395);
 
 }
 
@@ -239,7 +239,7 @@
 
   font-style: normal;
 
-  color: #e98f93;
+  color: var(--theme-danger, #e98f93);
 
 }
 
@@ -253,7 +253,7 @@
 
   line-height: 1.65;
 
-  color: #718078;
+  color: var(--theme-muted, #718078);
 
 }
 
@@ -319,7 +319,7 @@
    ========================================== */
 
 .cc-auth-main {
-  background: #ffffff;
+  background: var(--theme-panel, #ffffff);
   min-width: 0;
   min-height: 0;
   height: 100dvh;
@@ -343,7 +343,7 @@
 
   text-align: center;
 
-  color: #9dac9f;
+  color: var(--theme-muted, #9dac9f);
 
   margin: 24px 0 0;
 
@@ -351,7 +351,7 @@
 
 .cc-auth-foot span {
 
-  color: #ee9891;
+  color: var(--theme-danger, #ee9891);
 
 }
 
@@ -375,7 +375,7 @@
 
 .cc-auth .auth-eyebrow {
 
-  color: #4a9773;
+  color: var(--theme-green, #4a9773);
 
   letter-spacing: 0.14em;
 
@@ -419,7 +419,7 @@
 
   font-size: 14px;
 
-  color: #76847c;
+  color: var(--theme-muted, #76847c);
 
   line-height: 1.6;
 
@@ -449,7 +449,7 @@
 
   font-weight: 700;
 
-  color: #36463e;
+  color: var(--theme-text, #36463e);
 
 }
 
@@ -473,9 +473,9 @@
 
   gap: 10px;
 
-  border: 1px solid #dce8df;
+  border: 1px solid var(--theme-border, #dce8df);
 
-  background: #fcfefd;
+  background: var(--theme-soft, #fcfefd);
 
   border-radius: 12px;
 
@@ -489,7 +489,7 @@
 
 .cc-auth .auth-card .input-wrap:focus-within {
 
-  border-color: #75b993;
+  border-color: var(--theme-accent-border, #75b993);
 
   box-shadow: 0 0 0 3px #d7efe2;
 
@@ -499,7 +499,7 @@
 
   font-size: 16px;
 
-  color: #85a095;
+  color: var(--theme-muted, #85a095);
 
 }
 
@@ -521,13 +521,13 @@
 
   font-size: 14px;
 
-  color: #293b33;
+  color: var(--theme-text, #293b33);
 
 }
 
 .cc-auth .auth-card .input-wrap input::placeholder {
 
-  color: #9aa9a0;
+  color: var(--theme-muted, #9aa9a0);
 
 }
 
@@ -537,7 +537,7 @@
 
   background: transparent;
 
-  color: #79978a;
+  color: var(--theme-muted, #79978a);
 
   padding: 5px;
 
@@ -597,17 +597,17 @@
 
 .cc-auth .auth-alternate {
 
-  border: 1px solid #f6b4b1;
+  border: 1px solid var(--theme-danger-border, #f6b4b1);
 
-  background: #fff6f5;
+  background: var(--theme-page, #fff6f5);
 
-  color: #c56f70 !important;
+  color: var(--theme-danger, #c56f70) !important;
 
 }
 
 .cc-auth .auth-alternate:hover {
 
-  background: #ffeceb;
+  background: var(--theme-danger-soft, #ffeceb);
 
 }
 
@@ -627,7 +627,7 @@
 
   margin: 17px 0;
 
-  color: #a5b1a9;
+  color: var(--theme-muted, #a5b1a9);
 
   font-size: 12px;
 
@@ -641,7 +641,7 @@
 
   height: 1px;
 
-  background: #e8efea;
+  background: var(--theme-neutral, #e8efea);
 
   flex: 1;
 
@@ -653,7 +653,7 @@
 
   text-align: center;
 
-  color: #85948a;
+  color: var(--theme-muted, #85948a);
 
   margin: 18px 0 0;
 
@@ -661,7 +661,7 @@
 
 .cc-auth .auth-bottom a {
 
-  color: #2f8661;
+  color: var(--theme-green, #2f8661);
 
   font-weight: 750;
 
@@ -671,9 +671,9 @@
 
   margin: 12px 0 0;
 
-  background: #e9f8ef;
+  background: var(--theme-soft, #e9f8ef);
 
-  color: #2b7754;
+  color: var(--theme-green, #2b7754);
 
   border-radius: 10px;
 
@@ -685,7 +685,7 @@
 
 .cc-auth .field-error {
 
-  color: #be5e5e;
+  color: var(--theme-danger, #be5e5e);
 
   font-size: 11px;
 
@@ -701,7 +701,7 @@
 
   border-radius: 11px;
 
-  background: #f4f9f5;
+  background: var(--theme-soft, #f4f9f5);
 
   display: flex;
 
@@ -713,13 +713,13 @@
 
   font-size: 11px;
 
-  color: #708478;
+  color: var(--theme-muted, #708478);
 
 }
 
 .cc-auth .auth-preview a {
 
-  color: #29845c;
+  color: var(--theme-green, #29845c);
 
   font-weight: 700;
 
@@ -733,7 +733,7 @@
 
   font-size: 10px;
 
-  color: #5b9d78;
+  color: var(--theme-green, #5b9d78);
 
 }
 
@@ -743,7 +743,7 @@
 
   font-weight: 400;
 
-  color: #8ca49a;
+  color: var(--theme-muted, #8ca49a);
 
 }
 
@@ -771,7 +771,7 @@
 
   line-height: 1.5;
 
-  color: #65776c !important;
+  color: var(--theme-muted, #65776c) !important;
 
 }
 
@@ -779,7 +779,7 @@
 
   margin-top: 3px;
 
-  accent-color: #5fac83;
+  accent-color: var(--theme-green, #5fac83);
 
   flex: none;
 
@@ -787,13 +787,13 @@
 
 .cc-auth .required {
 
-  color: #e98c88;
+  color: var(--theme-danger, #e98c88);
 
 }
 
 .cc-auth .optional {
 
-  color: #9daaa1;
+  color: var(--theme-muted, #9daaa1);
 
   font-size: 11px;
 
@@ -946,11 +946,11 @@
 
       180deg,
 
-      #eef8f1 0%,
+      var(--theme-soft, #eef8f1) 0%,
 
-      #fff7f5 27%,
+      var(--theme-page, #fff7f5) 27%,
 
-      #ffffff 63%
+      var(--theme-panel, #ffffff) 63%
 
     );
 
@@ -976,11 +976,11 @@
 
     padding: 25px 21px;
 
-    border: 1px solid #e9eee9;
+    border: 1px solid var(--theme-border, #e9eee9);
 
     border-radius: 22px;
 
-    background: #ffffff;
+    background: var(--theme-panel, #ffffff);
 
     box-shadow: 0 12px 45px rgba(72, 94, 75, 0.06);
 
@@ -1042,11 +1042,11 @@
   margin-top: 14px;
   padding: 12px 14px;
 
-  background: #fff0ef;
-  border: 1px solid #f5c8c5;
+  background: var(--theme-danger-soft, #fff0ef);
+  border: 1px solid var(--theme-danger-border, #f5c8c5);
   border-radius: 12px;
 
-  color: #b44f54;
+  color: var(--theme-danger, #b44f54);
   font-size: 13px;
   line-height: 1.5;
 }

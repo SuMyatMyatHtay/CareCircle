@@ -44,18 +44,18 @@ const facts = computed(() => careFacts(props.recipient))
 }
 
 .fact-coral {
-    background: #FFF0EB;
-    color: #9A3A2A;
+    background: var(--theme-danger-soft, #FFF0EB);
+    color: var(--theme-danger, #9A3A2A);
     font-weight: 600;
 }
 
 .fact-lavender {
-    background: #EEE8FD;
-    color: #4B3B8F;
+    background: var(--theme-purple-soft, #EEE8FD);
+    color: var(--theme-purple, #4B3B8F);
 }
 
 .fact-amber {
-    background: #FFF8E1;
-    color: #7A5A00;
+    background: var(--theme-warning-soft, #FFF8E1);
+    color: var(--theme-warning, #7A5A00);
 }
 </style>

@@ -45,29 +45,29 @@ const model = defineModel({ type: [String, null], default: null })
     gap: 8px;
     min-height: 44px;
     padding: 6px 14px 6px 6px;
-    border: 1px solid #E5E7EB;
+    border: 1px solid var(--theme-border, #E5E7EB);
     border-radius: 999px;
-    background: white;
-    color: #2F2F2F;
+    background: var(--theme-panel, white);
+    color: var(--theme-text, #2F2F2F);
     font-size: 14px;
     font-weight: 500;
 }
 
 .person-pill:hover {
-    background: #F7FAF7;
+    background: var(--theme-page, #F7FAF7);
 }
 
 .person-pill.household {
     padding-left: 14px;
     border-style: dashed;
-    border-color: #C9CEC6;
+    border-color: var(--theme-border, #C9CEC6);
 }
 
 .person-pill.selected {
     padding: 5px 13px 5px 5px;
-    border: 2px solid #2F7A3F;
-    background: #E8F5E9;
-    color: #1F5A2C;
+    border: 2px solid var(--theme-accent-border, #2F7A3F);
+    background: var(--theme-soft, #E8F5E9);
+    color: var(--theme-green, #1F5A2C);
     font-weight: 600;
 }
 
@@ -77,7 +77,7 @@ const model = defineModel({ type: [String, null], default: null })
 }
 
 .person-pill:focus-visible {
-    outline: 3px solid #A8D5B5;
+    outline: 3px solid var(--theme-accent-border, #A8D5B5);
     outline-offset: 2px;
 }
 
@@ -88,8 +88,8 @@ const model = defineModel({ type: [String, null], default: null })
     width: 30px;
     height: 30px;
     border-radius: 50%;
-    background: #FDF3E4;
-    color: #A0703A;
+    background: var(--theme-warning-soft, #FDF3E4);
+    color: var(--theme-danger, #A0703A);
     font-size: 11px;
     font-weight: 800;
 }

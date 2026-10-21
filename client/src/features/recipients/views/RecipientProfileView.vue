@@ -238,15 +238,15 @@ async function archive() {
 }
 
 .section-card.care-notes-card {
-    background: #FFF8E1;
-    border-color: #FFE6A3;
+    background: var(--theme-warning-soft, #FFF8E1);
+    border-color: var(--theme-warning-border, #FFE6A3);
 }
 
 .edit-link {
     padding: 0;
     border: none;
     background: none;
-    color: #2E7D43;
+    color: var(--theme-green, #2E7D43);
     font-size: 14px;
     font-weight: 700;
 }
@@ -271,7 +271,7 @@ async function archive() {
 .info-rows dt {
     flex: 0 0 110px;
     font-weight: 400;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
 }
 
 .info-rows dd {
@@ -279,18 +279,18 @@ async function archive() {
     min-width: 0;
     margin: 0;
     font-weight: 600;
-    color: #2F2F2F;
+    color: var(--theme-text, #2F2F2F);
     overflow-wrap: anywhere;
 }
 
 .card-text {
     margin: 0;
     font-size: 14px;
-    color: #2F2F2F;
+    color: var(--theme-text, #2F2F2F);
 }
 
 .text-muted-soft {
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
 }
 
 .care-notes {
@@ -300,13 +300,13 @@ async function archive() {
 .empty-text {
     margin: 0;
     font-size: 14px;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
 }
 
 .small-note {
     margin: 10px 0 0;
     font-size: 12px;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
 }
 
 .chip-row {
@@ -328,18 +328,18 @@ async function archive() {
 }
 
 .chip-green {
-    background: #E8F5E9;
-    color: #2E7D43;
+    background: var(--theme-soft, #E8F5E9);
+    color: var(--theme-green, #2E7D43);
 }
 
 .chip-muted {
-    background: #F3F4F1;
-    color: #2F2F2F;
+    background: var(--theme-page, #F3F4F1);
+    color: var(--theme-text, #2F2F2F);
 }
 
 .chip-coral {
-    background: #FFF0EB;
-    color: #C0564B;
+    background: var(--theme-danger-soft, #FFF0EB);
+    color: var(--theme-danger, #C0564B);
 }
 
 .medication-list {
@@ -357,13 +357,13 @@ async function archive() {
     gap: 2px;
     padding: 10px 12px;
     border-radius: 10px;
-    background: #FBFBF7;
+    background: var(--theme-page, #FBFBF7);
     font-size: 14px;
 }
 
 .medication-list span {
     font-size: 12px;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
 }
 
 .map-placeholder {
@@ -375,8 +375,8 @@ async function archive() {
     height: 120px;
     margin-bottom: 12px;
     border-radius: 10px;
-    background: #E8F5E9;
-    color: #2E7D43;
+    background: var(--theme-soft, #E8F5E9);
+    color: var(--theme-green, #2E7D43);
     font-size: 12px;
     font-weight: 700;
 }
@@ -408,8 +408,8 @@ async function archive() {
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: #E8F5E9;
-    color: #2E7D43;
+    background: var(--theme-soft, #E8F5E9);
+    color: var(--theme-green, #2E7D43);
     font-size: 12px;
     font-weight: 800;
 }
@@ -423,7 +423,7 @@ async function archive() {
 
 .contact-text a {
     font-size: 12px;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
 }
 
 .archive-row {
@@ -434,12 +434,12 @@ async function archive() {
     gap: 12px;
     margin-top: 28px;
     padding-top: 20px;
-    border-top: 1px solid #E4ECE5;
+    border-top: 1px solid var(--theme-border, #E4ECE5);
 }
 
 .archive-error {
     margin: 0;
-    color: #C0564B;
+    color: var(--theme-danger, #C0564B);
     font-size: 14px;
 }
 
@@ -448,16 +448,16 @@ async function archive() {
     align-items: center;
     gap: 8px;
     padding: 10px 16px;
-    border: 1px solid #FFDAD0;
+    border: 1px solid var(--theme-danger-border, #FFDAD0);
     border-radius: 10px;
-    background: #FFF0EB;
-    color: #C0564B;
+    background: var(--theme-danger-soft, #FFF0EB);
+    color: var(--theme-danger, #C0564B);
     font-size: 14px;
     font-weight: 700;
 }
 
 .archive-button:hover:not(:disabled) {
-    background: #FFE4DB;
+    background: var(--theme-danger-soft, #FFE4DB);
 }
 
 .archive-button:disabled {

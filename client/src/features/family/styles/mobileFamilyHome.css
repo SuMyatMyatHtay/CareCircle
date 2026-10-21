@@ -132,7 +132,7 @@
   padding: 12px;
 }
 .care-mobile-task--open {
-  border-color: #ffdad1;
+  border-color: var(--theme-danger-border, #ffdad1);
   background: var(--care-coral-soft);
 }
 .care-mobile-task-row {

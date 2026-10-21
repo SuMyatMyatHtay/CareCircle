@@ -47,8 +47,8 @@ const summary = computed(() =>
     gap: 16px;
     height: 100%;
     padding: 20px;
-    background: white;
-    border: 1px solid #E4ECE5;
+    background: var(--theme-panel, white);
+    border: 1px solid var(--theme-border, #E4ECE5);
     border-radius: 16px;
 }
 
@@ -66,8 +66,8 @@ const summary = computed(() =>
     width: 52px;
     height: 52px;
     border-radius: 50%;
-    background: #FDF3E4;
-    color: #A0703A;
+    background: var(--theme-warning-soft, #FDF3E4);
+    color: var(--theme-danger, #A0703A);
     font-size: 18px;
     font-weight: 800;
 }
@@ -87,7 +87,7 @@ h3 {
 .recipient-head p {
     margin: 0;
     font-size: 14px;
-    color: #7B8391;
+    color: var(--theme-muted, #7B8391);
 }
 
 .recipient-foot {
@@ -100,15 +100,15 @@ h3 {
 .needs-pill {
     padding: 3px 10px;
     border-radius: 999px;
-    background: #FFF0EB;
-    color: #C0564B;
+    background: var(--theme-danger-soft, #FFF0EB);
+    color: var(--theme-danger, #C0564B);
     font-size: 12px;
     font-weight: 700;
 }
 
 .open-hub {
     margin-left: auto;
-    color: #2E7D43;
+    color: var(--theme-green, #2E7D43);
     font-size: 14px;
     font-weight: 700;
     text-decoration: none;

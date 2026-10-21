@@ -32,7 +32,7 @@ const bottom = computed(() => {
 </template>
 
 <style scoped>
-.pet-avatar { position: relative; width: 100%; aspect-ratio: 1 / 1; overflow: hidden; border-radius: 26px; background: radial-gradient(circle at 50% 45%, #fff 0%, #eaf7ed 70%, #ffebed 100%); isolation: isolate; }
+.pet-avatar { position: relative; width: 100%; aspect-ratio: 1 / 1; overflow: hidden; border-radius: 26px; background: radial-gradient(circle at 50% 45%, var(--theme-panel, #fff) 0%, var(--theme-soft, #eaf7ed) 70%, var(--theme-danger-soft, #ffebed) 100%); isolation: isolate; }
 .pet-avatar--clear { background: transparent; }
 .pet-avatar img { display: block; position: absolute; object-fit: contain; pointer-events: none; user-select: none; }
 .pet-avatar__base { width: 100%; height: 94%; left: 0; bottom: 0; }

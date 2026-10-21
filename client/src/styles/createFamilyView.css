@@ -15,12 +15,12 @@
   padding: 42px 24px 55px;
 
   background:
-    radial-gradient(circle at 12% 28%, #E5F4E9, transparent 35%),
-    radial-gradient(circle at 88% 78%, #FFE4DC, transparent 34%),
-    #FBF8F7;
+    radial-gradient(circle at 12% 28%, var(--theme-soft, #E5F4E9), transparent 35%),
+    radial-gradient(circle at 88% 78%, var(--theme-danger-soft, #FFE4DC), transparent 34%),
+    var(--theme-page, #FBF8F7);
 
   font-family: 'Nunito', system-ui, sans-serif;
-  color: #2F2F2F;
+  color: var(--theme-text, #2F2F2F);
 }
 
 /* ===============================
@@ -37,8 +37,8 @@
   width: 100%;
   padding: 30px 42px 36px;
 
-  background: #FFFFFF;
-  border: 2px solid #F1EAE5;
+  background: var(--theme-panel, #FFFFFF);
+  border: 2px solid var(--theme-danger-border, #F1EAE5);
   border-radius: 36px;
 
   text-align: center;
@@ -57,7 +57,7 @@
   align-items: center;
   gap: 7px;
 
-  color: #579C72;
+  color: var(--theme-green, #579C72);
   font-size: 15px;
   font-weight: 800;
   text-decoration: none;
@@ -67,7 +67,7 @@
 }
 
 .back-link:hover {
-  color: #347650;
+  color: var(--theme-green, #347650);
 }
 
 /* Desktop: outside card */
@@ -93,14 +93,14 @@
   gap: 7px;
   width: fit-content;
 
-  color: #579C72;
+  color: var(--theme-green, #579C72);
   font-size: 15px;
   font-weight: 800;
   text-decoration: none;
 }
 
 .back-link:hover {
-  color: #347650;
+  color: var(--theme-green, #347650);
 }
 
 .mobile-back-row {
@@ -124,7 +124,7 @@
   margin-bottom: 18px;
   border-radius: 25px;
   overflow: hidden;
-  background: #FFF1EC;
+  background: var(--theme-danger-soft, #FFF1EC);
 }
 
 .family-picture {
@@ -142,7 +142,7 @@
   position: absolute;
   z-index: 2;
 
-  color: #FF9E95;
+  color: var(--theme-danger, #FF9E95);
   font-size: 25px;
 
   text-shadow: 0 3px 7px rgba(255, 255, 255, 0.8);
@@ -177,8 +177,8 @@
 .family-card .eyebrow {
   display: inline-block;
 
-  background: #E8F5E9;
-  color: #589B72;
+  background: var(--theme-soft, #E8F5E9);
+  color: var(--theme-green, #589B72);
 
   padding: 9px 20px;
   border-radius: 50px;
@@ -191,7 +191,7 @@
 .family-card h1 {
   margin: 20px 0 12px;
 
-  color: #3D3938;
+  color: var(--theme-text, #3D3938);
   font-size: clamp(28px, 3vw, 36px);
   font-weight: 900;
   letter-spacing: -0.8px;
@@ -203,13 +203,13 @@
 
   margin: 0 auto 27px;
 
-  color: #85817E;
+  color: var(--theme-muted, #85817E);
   font-size: 16px;
   line-height: 1.7;
 }
 
 .family-card .subtitle strong {
-  color: #4E9267;
+  color: var(--theme-green, #4E9267);
 }
 
 /* ===============================
@@ -224,7 +224,7 @@
   display: block;
   margin-bottom: 11px;
 
-  color: #2F2F2F;
+  color: var(--theme-text, #2F2F2F);
   font-size: 15px;
   font-weight: 800;
 }
@@ -235,8 +235,8 @@
 
   padding: 17px 20px;
 
-  background: #FFFCFA;
-  border: 2px solid #E7EDE7;
+  background: var(--theme-page, #FFFCFA);
+  border: 2px solid var(--theme-border, #E7EDE7);
   border-radius: 17px;
 
   font-size: 16px;
@@ -248,19 +248,19 @@
 }
 
 .family-card input:focus {
-  background: #FFFFFF;
-  border-color: #6DBF7C;
+  background: var(--theme-panel, #FFFFFF);
+  border-color: var(--theme-accent-border, #6DBF7C);
   box-shadow: 0 0 0 4px rgba(109, 191, 124, 0.14);
 }
 
 .family-card input::placeholder {
-  color: #A9A9A9;
+  color: var(--theme-muted, #A9A9A9);
 }
 
 .family-card .hint {
   margin: 10px 0 22px;
 
-  color: #98A29A;
+  color: var(--theme-muted, #98A29A);
   font-size: 12px;
 }
 
@@ -307,8 +307,8 @@
 ================================ */
 
 .family-card .error {
-  background: #FFF1EF;
-  color: #C94C4C;
+  background: var(--theme-danger-soft, #FFF1EF);
+  color: var(--theme-danger, #C94C4C);
 
   padding: 12px 14px;
   border-radius: 12px;
@@ -323,8 +323,8 @@
 ================================ */
 
 .invite-code-card {
-  background: #EAF6EC;
-  border: 2px dashed #A9D8B4;
+  background: var(--theme-soft, #EAF6EC);
+  border: 2px dashed var(--theme-accent-border, #A9D8B4);
 
   padding: 24px;
   border-radius: 22px;
@@ -332,7 +332,7 @@
 }
 
 .invite-code-card p {
-  color: #579C72;
+  color: var(--theme-green, #579C72);
   font-size: 12px;
   font-weight: 900;
   letter-spacing: 1px;
@@ -342,7 +342,7 @@
 .invite-code-card h2 {
   margin: 0 0 20px;
 
-  color: #42865C;
+  color: var(--theme-green, #42865C);
   font-size: 30px;
   font-weight: 900;
   letter-spacing: 3px;
@@ -351,14 +351,14 @@
 }
 
 .invite-code-card button {
-  background: #FFFFFF;
-  color: #42865C;
-  border: 1px solid #B5DDC0;
+  background: var(--theme-panel, #FFFFFF);
+  color: var(--theme-green, #42865C);
+  border: 1px solid var(--theme-accent-border, #B5DDC0);
   box-shadow: none;
 }
 
 .invite-code-card button:hover:not(:disabled) {
-  background: #F7FFF8;
+  background: var(--theme-soft, #F7FFF8);
 }
 
 .family-card .invite-hint {
@@ -370,13 +370,13 @@
   display: inline-block;
   margin-top: 8px;
 
-  color: #579C72;
+  color: var(--theme-green, #579C72);
   font-weight: 800;
   text-decoration: none;
 }
 
 .done-link:hover {
-  color: #347650;
+  color: var(--theme-green, #347650);
 }
 
 /* ===============================
@@ -391,7 +391,7 @@
   width: 100%;
   margin: 9px 0 0;
 
-  color: #97A79B;
+  color: var(--theme-muted, #97A79B);
   font-size: 12px;
   text-align: center;
 }

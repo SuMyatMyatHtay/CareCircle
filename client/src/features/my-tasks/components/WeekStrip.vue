@@ -51,9 +51,9 @@ const days = computed(() => {
     flex-direction: column;
     gap: 12px;
     padding: 20px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--theme-border, #e5e7eb);
     border-radius: 16px;
-    background: white;
+    background: var(--theme-panel, white);
 }
 
 h2 {
@@ -61,7 +61,7 @@ h2 {
     font-size: 18px;
     letter-spacing: 0.09px;
     font-weight: 600;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .week {
@@ -86,14 +86,14 @@ li {
     font-size: 12px;
     line-height: 16px;
     font-weight: 500;
-    color: #6b7280;
+    color: var(--theme-muted, #6b7280);
 }
 
 .number {
     font-size: 14px;
     line-height: 20px;
     font-weight: 700;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .today {

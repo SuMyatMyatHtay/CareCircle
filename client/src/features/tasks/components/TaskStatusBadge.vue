@@ -36,13 +36,13 @@ const label = computed(() => {
 }
 
 .status-open {
-    background: #FFF0EB;
-    color: #C0564B;
+    background: var(--theme-danger-soft, #FFF0EB);
+    color: var(--theme-danger, #C0564B);
 }
 
 .status-claimed {
-    background: #E8F5E9;
-    color: #2E7D43;
+    background: var(--theme-soft, #E8F5E9);
+    color: var(--theme-green, #2E7D43);
 }
 
 .status-in_progress {
@@ -51,13 +51,13 @@ const label = computed(() => {
 }
 
 .status-completed {
-    background: #EEF1F4;
-    color: #5D6B7A;
+    background: var(--theme-neutral, #EEF1F4);
+    color: var(--theme-muted, #5D6B7A);
 }
 
 .status-cancelled {
-    background: #F3F3F3;
-    color: #9A9A9A;
+    background: var(--theme-page, #F3F3F3);
+    color: var(--theme-muted, #9A9A9A);
     text-decoration: line-through;
 }
 </style>

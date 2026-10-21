@@ -11,12 +11,14 @@ export function useFamilySettings() {
     membersError = ref(''),
     error = ref(''),
     busy = ref(false),
-    feedback = ref('')
+    feedback = ref(''),
+    pendingLanguage = ref('')
   const members = workspace.isPreview
     ? computed(() => previewState.members)
     : realMembers
-  const language = computed(() => workspace.user.value.preferredLang || 'en')
-  let version = 0
+  const language = computed(() => pendingLanguage.value || workspace.user.value.preferredLang || 'en')
+  let version = 0,
+    languageVersion = 0
   async function loadMembers() {
     if (workspace.isPreview) return
     const current = ++version,
@@ -118,17 +120,26 @@ export function useFamilySettings() {
     feedback.value = 'New invite code ready. The previous code no longer works.'
   }
   async function changeLanguage(value) {
-    if (workspace.isPreview) {
-      const self = previewState.members.find(
-        (member) => member.user._id === workspace.user.value.id,
-      )
-      if (self) self.user.preferredLang = value
-    } else {
-      await api.saveLanguage(value)
-      workspace.refreshUser()
-      await loadMembers()
+    if (value === language.value) return
+    const current = ++languageVersion
+    // Keep the user's selection visible while the request is pending. A native
+    // select otherwise snaps back when the parent renders its disabled state.
+    pendingLanguage.value = value
+    try {
+      if (workspace.isPreview) {
+        const self = previewState.members.find(
+          (member) => member.user._id === workspace.user.value.id,
+        )
+        if (self) self.user.preferredLang = value
+      } else {
+        const saved = await api.saveLanguage(value)
+        workspace.refreshUser()
+        updateOwnMember(saved)
+      }
+      feedback.value = 'Your language preference has been saved.'
+    } finally {
+      if (current === languageVersion) pendingLanguage.value = ''
     }
-    feedback.value = 'Your language preference has been saved.'
   }
   async function changeProfile({ name, phone }) {
     if (name.length < 2 || name.length > 80 || phone.length > 30) {
@@ -140,11 +151,17 @@ export function useFamilySettings() {
       )
       if (self) Object.assign(self.user, { name, phone })
     } else {
-      await api.saveProfile({ name, phone })
+      const saved = await api.saveProfile({ name, phone })
       workspace.refreshUser()
-      await loadMembers()
+      updateOwnMember(saved)
     }
     feedback.value = 'Your profile has been saved.'
+  }
+  function updateOwnMember(profile) {
+    // A profile save already returns the latest user. Patch this row in place
+    // so changing a preference never blanks/reloads the family member list.
+    const member = realMembers.value.find(entry => entry.user._id === profile.id)
+    if (member) Object.assign(member.user, profile)
   }
   async function run(action) {
     if (busy.value) return false
@@ -169,6 +186,8 @@ export function useFamilySettings() {
     workspace.selectedFamilyId,
     () => {
       version++
+      languageVersion++
+      pendingLanguage.value = ''
       busy.value = false
       feedback.value = ''
       error.value = ''

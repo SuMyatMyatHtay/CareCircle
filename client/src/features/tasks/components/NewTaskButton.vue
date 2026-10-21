@@ -60,7 +60,7 @@ function create() {
 }
 
 .new-task-button:focus-visible {
-    outline: 3px solid #A8D5B5;
+    outline: 3px solid var(--theme-accent-border, #A8D5B5);
     outline-offset: 2px;
 }
 </style>
