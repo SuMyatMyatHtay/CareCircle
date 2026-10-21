@@ -6,7 +6,7 @@
 //   <TaskLocationCard :location="task.location" />                    (E: OneMap)
 //   <TaskTransitActions :task="task" :family-id="familyId" ...>        (E: transit + Google Calendar)
 // and this file + its route can be deleted.
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import TaskLocationCard from '../components/TaskLocationCard.vue'
 import TaskTransitActions from '../components/TaskTransitActions.vue'
@@ -145,7 +145,14 @@ function startTrip() {
     })
 }
 
-onMounted(load)
+function onAssistantUpdate(event) {
+    if (event.detail?.familyId === props.familyId && event.detail?.task?._id === props.taskId) load()
+}
+onMounted(() => {
+    load()
+    window.addEventListener('carecircle:task-updated', onAssistantUpdate)
+})
+onUnmounted(() => window.removeEventListener('carecircle:task-updated', onAssistantUpdate))
 watch(() => [props.familyId, props.taskId], load)
 </script>
 

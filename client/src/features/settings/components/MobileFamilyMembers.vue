@@ -30,6 +30,7 @@ defineEmits(['manage', 'retry'])
     </p>
     <ul v-else>
       <li v-for="member in members" :key="member.user._id">
+        <RouterLink :to="{ name: 'public-profile', params: { userId: member.user._id } }" class="care-text-button">View {{ member.user.name }}'s profile</RouterLink>
         <button
           class="care-mobile-member-row"
           :disabled="busy || (!isAdmin && member.user._id !== userId)"

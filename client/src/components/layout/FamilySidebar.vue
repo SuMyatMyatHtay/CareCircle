@@ -164,7 +164,7 @@ async function copyInviteCode(inviteCode) {
         </div>
 
         <!-- NAVIGATION -->
-        <nav class="sidebar-nav overflow-y-auto" aria-label="Family navigation">
+        <nav class="sidebar-nav" aria-label="Family navigation">
         <RouterLink :to="homePath" class="nav-item" exact-active-class="active" @click="emit('navigate')">
             <i class="bi bi-house-door"></i>
             Family home
@@ -186,6 +186,7 @@ async function copyInviteCode(inviteCode) {
             </div>
 
             <div class="nav-heading">CARE RECIPIENTS</div>
+            <div class="sidebar-recipients" role="region" aria-label="Care recipients" tabindex="0">
             <p v-if="recipientsLoading && !recipients.length" class="empty-recipients">Loading care recipients…</p>
             <p v-else-if="recipientsError" class="empty-recipients">{{ recipientsError }}</p>
             <p v-else-if="!recipients.length" class="empty-recipients">No care recipients yet.</p>
@@ -198,6 +199,7 @@ async function copyInviteCode(inviteCode) {
             Add care recipient
             <span class="coming-tag">Soon</span>
             </div>
+            </div>
         </template>
         </nav>
 
@@ -207,14 +209,11 @@ async function copyInviteCode(inviteCode) {
                 <i class="bi bi-gear"></i>
                 Family settings
             </RouterLink>
-            <RouterLink v-if="!preview" to="/profile" class="nav-item care-profile-nav" active-class="active" @click="emit('navigate')">
-                <i class="bi bi-person-circle"></i>
-                My profile
-            </RouterLink>
 
             <RouterLink
                 :to="preview ? settingsPath : '/profile'"
                 class="profile-row text-decoration-none text-reset"
+                @click="emit('navigate')"
                 >
                 <CareAvatar :person="user" />
                 <span class="profile-details">

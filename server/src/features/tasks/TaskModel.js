@@ -151,9 +151,10 @@ taskSchema.statics.createTask = function (taskData) {
 }
 
 // Returns null if the task was completed or cancelled in the meantime
-taskSchema.statics.updateEditableTask = function (familyId, taskId, changes) {
+taskSchema.statics.updateEditableTask = function (familyId, taskId, changes, expectedUpdatedAt) {
     return this.findOneAndUpdate(
-        { _id: taskId, family: familyId, status: { $nin: LOCKED_STATUSES } },
+        { _id: taskId, family: familyId, status: { $nin: LOCKED_STATUSES },
+            ...(expectedUpdatedAt ? { updatedAt: new Date(expectedUpdatedAt) } : {}) },
         { $set: changes },
         { new: true, runValidators: true }
     )

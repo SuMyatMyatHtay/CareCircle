@@ -94,7 +94,7 @@ function parseLocation(value, errors) {
 // Pick and type-check the editable fields from a request body.
 // partial = true for PATCH (only the fields sent), false for POST.
 // Length/range limits are left to the schema validators.
-function parseTaskInput(body, { partial }) {
+export function parseTaskInput(body, { partial }) {
     const input = body && typeof body === 'object' ? body : {}
     const data = {}
     const errors = []
@@ -363,18 +363,7 @@ export async function getTask(req, res, next) {
 // New tasks are always open; status and claimedBy in the body are ignored.
 export async function createTask(req, res, next) {
     try {
-        const data = parseTaskInput(req.body, { partial: false })
-        await assertRecipientInFamily(data.recipient, req.family._id)
-
-        const task = await Task.createTask({
-            ...data,
-            family: req.family._id,
-            createdBy: req.user.userId,
-            status: TASK_STATUS.OPEN
-        })
-
-        const populated = await Task.getPopulatedTaskById(task._id)
-        announce(EVENTS.TASK_CREATED, populated)
+        const populated = await createFamilyTask({ body: req.body, familyId: req.family._id, userId: req.user.userId })
         return res.status(201).json({ task: populated })
     } catch (error) {
         return handleError(error, res, next)
@@ -384,41 +373,61 @@ export async function createTask(req, res, next) {
 // PATCH /api/families/:familyId/tasks/:taskId   (creator or admin)
 export async function updateTask(req, res, next) {
     try {
-        const task = await findTaskInFamily(req.family._id, req.params.taskId)
-
-        if (!isCreatorOrAdmin(task, req.user.userId, req.memberRole)) {
-            throw httpError(403, 'Only the task creator or an admin can edit this task')
-        }
-        if (LOCKED_STATUSES.includes(task.status)) {
-            throw httpError(409, `Task is ${task.status} and can no longer be edited`)
-        }
-
-        // Only editable fields are picked, so status and claimedBy are ignored
-        const changes = parseTaskInput(req.body, { partial: true })
-        if (!Object.keys(changes).length) {
-            throw httpError(400, 'Validation failed', ['Nothing to update'])
-        }
-
-        await assertRecipientInFamily(changes.recipient, req.family._id)
-
-        const startAt = changes.startAt ?? task.startAt
-        const endAt = changes.endAt !== undefined ? changes.endAt : task.endAt
-        if (endAt && endAt < startAt) {
-            throw httpError(400, 'Validation failed', ['End time must be after the start time'])
-        }
-
-        // Status guard: if it was completed/cancelled meanwhile, don't edit it
-        const updated = await Task.updateEditableTask(req.family._id, task._id, changes)
-        if (!updated) {
-            throw httpError(409, 'Task was changed by someone else. Refresh and try again.')
-        }
-
-        const populated = await Task.getPopulatedTaskById(updated._id)
-        announce('task.updated', populated)
+        const populated = await updateFamilyTask({ body: req.body, familyId: req.family._id,
+            taskId: req.params.taskId, userId: req.user.userId, memberRole: req.memberRole })
         return res.json({ task: populated })
     } catch (error) {
         return handleError(error, res, next)
     }
+}
+
+// Shared by the task form and the assistant's explicit confirmation endpoint.
+export async function createFamilyTask({ body, familyId, userId, taskId }) {
+    const data = parseTaskInput(body, { partial: false })
+    await assertRecipientInFamily(data.recipient, familyId)
+    if (data.endAt && data.endAt < data.startAt) {
+        throw httpError(400, 'End time must be after the start time')
+    }
+    const task = await Task.createTask({ ...data, ...(taskId ? { _id: taskId } : {}),
+        family: familyId, createdBy: userId, status: TASK_STATUS.OPEN })
+    const populated = await Task.getPopulatedTaskById(task._id)
+    announce(EVENTS.TASK_CREATED, populated)
+    return populated
+}
+
+export async function updateFamilyTask({ body, familyId, taskId, userId, memberRole, expectedUpdatedAt }) {
+    const task = await findTaskInFamily(familyId, taskId)
+
+    if (!isCreatorOrAdmin(task, userId, memberRole)) {
+        throw httpError(403, 'Only the task creator or an admin can edit this task')
+    }
+    if (LOCKED_STATUSES.includes(task.status)) {
+        throw httpError(409, `Task is ${task.status} and can no longer be edited`)
+    }
+
+    // Only editable fields are picked, so status and claimedBy are ignored
+    const changes = parseTaskInput(body, { partial: true })
+    if (!Object.keys(changes).length) {
+        throw httpError(400, 'Validation failed', ['Nothing to update'])
+    }
+
+    await assertRecipientInFamily(changes.recipient, familyId)
+
+    const startAt = changes.startAt ?? task.startAt
+    const endAt = changes.endAt !== undefined ? changes.endAt : task.endAt
+    if (endAt && endAt < startAt) {
+        throw httpError(400, 'Validation failed', ['End time must be after the start time'])
+    }
+
+    // Status guard: if it was completed/cancelled meanwhile, don't edit it
+    const updated = await Task.updateEditableTask(familyId, task._id, changes, expectedUpdatedAt)
+    if (!updated) {
+        throw httpError(409, 'Task was changed by someone else. Refresh and try again.')
+    }
+
+    const populated = await Task.getPopulatedTaskById(updated._id)
+    announce('task.updated', populated)
+    return populated
 }
 
 // DELETE /api/families/:familyId/tasks/:taskId   (creator or admin)

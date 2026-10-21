@@ -158,10 +158,12 @@ function onVisible() {
 }
 onMounted(() => {
     loadTasks()
+    window.addEventListener('carecircle:task-updated', loadTasks)
     clock = setInterval(() => { now.value = Date.now() }, 60 * 1000)
     document.addEventListener('visibilitychange', onVisible)
 })
 onUnmounted(() => {
+    window.removeEventListener('carecircle:task-updated', loadTasks)
     clearInterval(clock)
     document.removeEventListener('visibilitychange', onVisible)
 })
