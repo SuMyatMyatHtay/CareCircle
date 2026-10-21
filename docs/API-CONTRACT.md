@@ -9,7 +9,7 @@ All endpoints, by package. **Implemented** means the endpoint is merged and test
 | C | Jhen | `/api/families/:familyId/recipients` | Implemented |
 | D | Marcus | `/api/families/:familyId/tasks` | Planned (model and routes done; controller stubs return 501) |
 | E | Chaithra | `/api/me/tasks`, `/api/families/:familyId/tasks/:taskId/transit`, `/api/families/:familyId/transit`, `/api/integrations/clinics` | Implemented |
-| F | SeungHak | `/api/families/:familyId/logs`, `/api/families/:familyId/notifications`, `/api/integrations` | Logs implemented; notifications and integrations planned |
+| F | SeungHak | `/api/families/:familyId/logs`, `/api/families/:familyId/notifications`, `/api/integrations` | Logs and voice transcription implemented; notifications and Telegram planned |
 
 Every package router is mounted in `server/src/routes/index.js` at the path listed in this file. Endpoints that are still placeholders return `501`.
 
@@ -223,6 +223,7 @@ Base: `/api/families/:familyId/tasks/:taskId/transit` (mounted before D's tasks 
 | Method | Path | Who | Query | Response | Status |
 |---|---|---|---|---|---|
 | GET | `/api/integrations/clinics` | logged in | `q` (at least 2 characters) | `{ clinics: [{ name, address, postal, lat, lng }] }`, up to 10. Same shape as a task's `location`. `502` if OneMap is down. | Implemented |
+| POST | `/api/integrations/transcribe` | logged in | Raw audio body (`Content-Type: audio/webm`, `audio/mp4`, ...), max 4 MB | `{ text }`. Uses Groq Whisper. `429` if Groq's rate limit is hit, `502` if Groq is down, `503` if `GROQ_API_KEY` is not set. | Implemented |
 
 - Calls OneMap's public search API from the server. `lat`/`lng` are numbers and `postal` is 6 digits or `''`, so a result can be saved as `task.location` directly.
 - Frontend: `client/src/features/transit/components/ClinicSearch.vue` emits `select` with the location. D can use it in the task form: `<ClinicSearch @select="(loc) => (form.location = loc)" />`.

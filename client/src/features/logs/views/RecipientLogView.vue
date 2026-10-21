@@ -4,12 +4,13 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQueryClient } from '@tanstack/vue-query'
 import { useActiveFamily } from '../../../composables/useActiveFamily.js'
+import { useRecipient } from '../../../composables/useRecipients.js'
 import { queryKeys } from '../../../services/queryClient.js'
 import LogForm from '../components/LogForm.vue'
 import LogList from '../components/LogList.vue'
 import LogTypeFilter from '../components/LogTypeFilter.vue'
 import { getLogs, createLog, updateLog, deleteLog, translateLog, getLogErrorMessage, TRANSLATION_NOT_CONNECTED } from '../services/logsApi.js'
-import { placeholderRecipient } from '../placeholderRecipients.js'
+import { displayName } from '../../recipients/recipientLabels.js'
 
 const PAGE_SIZE = 20
 
@@ -50,11 +51,8 @@ async function translate(log, lang) {
     }
 }
 
-const recipientName = computed(() => {
-    const fromLog = logs.value.find((log) => typeof log.recipient === 'object' && log.recipient)?.recipient
-    const recipient = fromLog || placeholderRecipient(recipientId.value)
-    return recipient?.nickname || recipient?.name || ''
-})
+const { recipient } = useRecipient(recipientId)
+const recipientName = computed(() => displayName(recipient.value))
 
 const logs = ref([])
 const isLoading = ref(false)
