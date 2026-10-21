@@ -6,7 +6,9 @@
     "dev": "concurrently -n FRONTEND,BACKEND -c cyan,green \"npm run dev --prefix client\" \"npm run dev --prefix server\"",
     "dev:client": "npm run dev --prefix client",
     "dev:server": "npm run dev --prefix server",
-    "build": "npm run build --prefix client"
+    "build": "npm run build --prefix client",
+    "test:settings": "node --test tests/unit/family-settings.test.mjs tests/unit/settings-account.test.mjs",
+    "test:family": "node --test tests/unit/family-settings.test.mjs tests/unit/settings-account.test.mjs tests/unit/family-workspace.test.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

@@ -6,24 +6,41 @@
 //   http.get(`/families/${selectedFamilyId.value}/tasks`)
 
 import { ref, computed } from 'vue'
-import { getMyFamilies, getFamilyErrorMessage } from '../features/family/services/familyApi.js'
+import {
+  getMyFamilies,
+  getFamilyErrorMessage,
+} from '../features/family/services/familyApi.js'
 
 const families = ref([])
 const selectedFamilyId = ref(sessionStorage.getItem('activeFamilyId') || '')
 const isLoading = ref(false)
 const errorMessage = ref('')
+let requestVersion = 0
+let familySessionToken = sessionStorage.getItem('token') || ''
 
 const selectedFamily = computed(
-  () => families.value.find((f) => f.id === selectedFamilyId.value) || null
+  () => families.value.find((f) => f.id === selectedFamilyId.value) || null,
 )
 
 // Load the logged-in user's families and keep the previous selection if it is still valid
 async function loadFamilies() {
+  const version = ++requestVersion
+  const requestToken = sessionStorage.getItem('token') || ''
+  const isCurrent = () =>
+    version === requestVersion &&
+    requestToken === (sessionStorage.getItem('token') || '')
+  // Do not show a previous account's cached families during a new sign-in.
+  if (requestToken !== familySessionToken) {
+    families.value = []
+    selectedFamilyId.value = sessionStorage.getItem('activeFamilyId') || ''
+  }
+  familySessionToken = requestToken
   isLoading.value = true
   errorMessage.value = ''
 
   try {
     const result = await getMyFamilies()
+    if (!isCurrent()) return
     if (!Array.isArray(result)) {
       throw new Error('Invalid family data from server.')
     }
@@ -32,11 +49,12 @@ async function loadFamilies() {
     const stillMine = result.some((f) => f.id === selectedFamilyId.value)
     selectFamily(stillMine ? selectedFamilyId.value : result[0]?.id || '')
   } catch (error) {
+    if (!isCurrent()) return
     errorMessage.value = getFamilyErrorMessage(error)
     families.value = []
     selectFamily('')
   } finally {
-    isLoading.value = false
+    if (version === requestVersion) isLoading.value = false
   }
 }
 
@@ -48,7 +66,11 @@ function selectFamily(familyId) {
 
 // Call on logout so the next user doesn't see the previous user's families
 function clearFamilies() {
+  requestVersion++
+  familySessionToken = sessionStorage.getItem('token') || ''
   families.value = []
+  isLoading.value = false
+  errorMessage.value = ''
   selectFamily('')
 }
 
@@ -61,6 +83,6 @@ export function useActiveFamily() {
     errorMessage,
     loadFamilies,
     selectFamily,
-    clearFamilies
+    clearFamilies,
   }
 }

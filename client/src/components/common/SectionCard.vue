@@ -21,8 +21,8 @@ defineProps({
 .section-card {
     height: 100%;
     padding: 22px 20px;
-    background: white;
-    border: 1px solid #E4ECE5;
+    background: var(--care-panel, white);
+    border: 1px solid var(--care-border, #E4ECE5);
     border-radius: 16px;
 }
 
@@ -38,6 +38,6 @@ defineProps({
     margin: 0;
     font-size: 18px;
     font-weight: 800;
-    color: #2F2F2F;
+    color: var(--care-text, #2F2F2F);
 }
 </style>

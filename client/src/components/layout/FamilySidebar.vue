@@ -2,30 +2,28 @@
 <script setup>
 import { ref, computed } from 'vue'
 import '../../styles/components/familySidebar.css'
-import { useRouter, useRoute } from 'vue-router'
-import { useRecipients } from '../../composables/useRecipients.js'
+import CareAvatar from '../common/CareAvatar.vue'
+import { useRoute } from 'vue-router'
 import { displayName, initials, careTypeLabel } from '../../features/recipients/recipientLabels.js'
-import {
-  logoutUser,
-  clearUserSession
-} from '../../features/auth/services/authApi.js'
+import { useSettingsAccountActions } from '../../features/settings/composables/useSettingsAccountActions.js'
 
-const router = useRouter() 
-const isLoggingOut = ref(false)
-const logoutError = ref('')
+const { loggingOut: isLoggingOut, logoutError, logOut: handleLogout } = useSettingsAccountActions()
 const copiedInviteCode = ref('')
+const route = useRoute()
 
 const props = defineProps({
     families: { type: Array, default: () => [] },
     selectedFamilyId: { type: String, default: '' },
-    user: { type: Object, default: () => ({}) }
+    user: { type: Object, default: () => ({}) },
+    recipients: { type: Array, default: () => [] },
+    recipientsLoading: Boolean,
+    recipientsError: { type: String, default: '' },
+    preview: Boolean,
+    homePath: { type: String, default: '/home' },
+    settingsPath: { type: String, default: '/settings' }
 })
 
-const emit = defineEmits(['select-family', 'navigate', 'collapse'])
-
-// Care recipients (C): cached per family, shared with every page
-const route = useRoute()
-const { recipients, isLoading: recipientsLoading, errorMessage: recipientsError } = useRecipients()
+const emit = defineEmits(['select-family', 'navigate', 'collapse', 'open-recipient'])
 
 const showSwitcher = ref(false)
 
@@ -66,37 +64,12 @@ async function copyInviteCode(inviteCode) {
     }
 }
 
-async function handleLogout(){ 
-    if(isLoggingOut.value){ 
-        return
-    }
-    isLoggingOut.value = true
-    logoutError.value = ""
-
-    try{ 
-        await logoutUser()
-        clearUserSession() 
-        await router.replace('/login')
-    } catch(error){ 
-        if(error.response?.status === 401){ 
-            clearUserSession()
-            await router.replace('/login')
-            return
-        }
-
-        console.error('Logout failed: ', error)
-        logoutError.value = "Unable to log out. Please try again."
-    } finally { 
-        isLoggingOut.value = false
-    }
-}
-
 </script>
 
 <template>
     <aside class="family-sidebar">
         <div class="d-flex align-items-center justify-content-between mb-4">
-            <RouterLink to="/home" class="sidebar-brand mb-0">
+            <RouterLink :to="homePath" class="sidebar-brand mb-0">
                 <span class="brand-icon">
                 <i class="bi bi-heart-pulse"></i>
                 </span>
@@ -134,6 +107,8 @@ async function handleLogout(){
                     tabindex="0"
                     title="Click to copy invite code"
                     @click.stop="copyInviteCode(selectedFamily.inviteCode)"
+                    @keydown.enter.stop.prevent="copyInviteCode(selectedFamily.inviteCode)"
+                    @keydown.space.stop.prevent="copyInviteCode(selectedFamily.inviteCode)"
                 >
                     <i
                         class="bi"
@@ -172,11 +147,11 @@ async function handleLogout(){
 
             <div class="switcher-divider"></div>
 
-            <RouterLink to="/create-family" class="switcher-action" >
+            <RouterLink v-if="!preview" to="/create-family" class="switcher-action" >
             <i class="bi bi-plus-lg"></i> Create a new family
             </RouterLink>
 
-            <RouterLink to="/join-family" class="switcher-action">
+            <RouterLink v-if="!preview" to="/join-family" class="switcher-action">
             <i class="bi bi-person-plus"></i> Join with invite code
             </RouterLink>
         </div>
@@ -184,16 +159,20 @@ async function handleLogout(){
 
         <!-- NAVIGATION -->
         <nav class="sidebar-nav overflow-y-auto" aria-label="Family navigation">
-        <RouterLink to="/home" class="nav-item " active-class="active" @click="emit('navigate')">
+        <RouterLink :to="homePath" class="nav-item" exact-active-class="active" @click="emit('navigate')">
             <i class="bi bi-house-door"></i>
             Family home
         </RouterLink>
 
         <template v-if="selectedFamily">
-            <RouterLink to="/my-tasks" class="nav-item" active-class="active" @click="emit('navigate')">
+            <RouterLink v-if="!preview" to="/my-tasks" class="nav-item" active-class="active" @click="emit('navigate')">
             <i class="bi bi-list-check"></i>
             My tasks
             </RouterLink>
+            <div v-else class="nav-item unavailable">
+            <i class="bi bi-list-check"></i>
+            My tasks <span class="coming-tag">Soon</span>
+            </div>
 
             <div class="nav-item unavailable">
             <i class="bi bi-calendar3"></i>
@@ -201,52 +180,34 @@ async function handleLogout(){
             </div>
 
             <div class="nav-heading">CARE RECIPIENTS</div>
-            <p v-if="recipientsLoading && !recipients.length" class="empty-recipients">
-            Loading...
-            </p>
-            <p v-else-if="recipientsError" class="empty-recipients">
-            {{ recipientsError }}
-            </p>
-            <p v-else-if="!recipients.length" class="empty-recipients">
-            No care recipients yet.
-            </p>
+            <p v-if="recipientsLoading && !recipients.length" class="empty-recipients">Loading care recipients…</p>
+            <p v-else-if="recipientsError" class="empty-recipients">{{ recipientsError }}</p>
+            <p v-else-if="!recipients.length" class="empty-recipients">No care recipients yet.</p>
+            <template v-if="preview"><button v-for="recipient in recipients" :key="recipient._id || recipient.id" type="button" class="care-sidebar-recipient" @click="emit('open-recipient', recipient)"><CareAvatar :person="recipient" size="small" /><span><strong>{{ displayName(recipient) }}</strong><small>{{ careTypeLabel(recipient.careType) }}</small></span></button></template>
+            <template v-else><RouterLink v-for="recipient in recipients" :key="recipient._id" :to="{ name: 'recipient-overview', params: { recipientId: recipient._id } }" class="nav-item recipient-item" :class="{ active: route.params.recipientId === recipient._id }" @click="emit('navigate')"><span class="recipient-initials">{{ initials(displayName(recipient)) }}</span><span class="recipient-text"><strong>{{ displayName(recipient) }}</strong><small>{{ careTypeLabel(recipient.careType) }}</small></span></RouterLink></template>
 
-            <RouterLink
-            v-for="recipient in recipients"
-            :key="recipient._id"
-            :to="{ name: 'recipient-overview', params: { recipientId: recipient._id } }"
-            class="nav-item recipient-item"
-            :class="{ active: route.params.recipientId === recipient._id }"
-            @click="emit('navigate')"
-            >
-            <span class="recipient-initials">{{ initials(displayName(recipient)) }}</span>
-            <span class="recipient-text">
-                <strong>{{ displayName(recipient) }}</strong>
-                <small>{{ careTypeLabel(recipient.careType) }}</small>
-            </span>
-            </RouterLink>
-
-            <RouterLink to="/recipients/new" class="nav-item add-recipient" @click="emit('navigate')">
+            <RouterLink v-if="!preview" to="/recipients/new" class="nav-item add-recipient" @click="emit('navigate')"><i class="bi bi-plus-lg"></i>Add care recipient</RouterLink>
+            <div v-else class="nav-item unavailable">
             <i class="bi bi-plus-lg"></i>
             Add care recipient
-            </RouterLink>
+            <span class="coming-tag">Soon</span>
+            </div>
         </template>
         </nav>
 
         <!-- BOTTOM AREA -->
         <div class="sidebar-bottom">
-            <div v-if="selectedFamily" class="nav-item unavailable">
+            <RouterLink v-if="selectedFamily" :to="settingsPath" class="nav-item" exact-active-class="active" @click="emit('navigate')">
                 <i class="bi bi-gear"></i>
                 Family settings
-                <span class="coming-tag">Soon</span>
-            </div>
-            <RouterLink to="/profile" class="nav-item" active-class="active" @click="emit('navigate')">
+            </RouterLink>
+            <RouterLink v-if="!preview" to="/profile" class="nav-item care-profile-nav" active-class="active" @click="emit('navigate')">
                 <i class="bi bi-person-circle"></i>
                 My profile
             </RouterLink>
 
             <RouterLink
-                to="/profile"
+                :to="preview ? settingsPath : '/profile'"
                 class="profile-row text-decoration-none text-reset"
                 >
                 <span class="profile-avatar">
@@ -259,6 +220,7 @@ async function handleLogout(){
                 </span>
             </RouterLink>
             <button
+                v-if="!preview"
                 type="button"
                 class="logout-button"
                 :disabled="isLoggingOut"

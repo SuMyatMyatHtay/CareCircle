@@ -5,7 +5,7 @@ All endpoints, by package. **Implemented** means the endpoint is merged and test
 | Pkg | Owner | Base path | Status |
 |---|---|---|---|
 | A | Sera | `/api/auth`, `/api/families` | Planned (middleware and models done) |
-| B | SangYoon | `/api/families/:familyId` (members, settings), `/api/users/me` | Planned |
+| B | SangYoon | `/api/families/:familyId` (members, invitations); language via A's `/api/auth/me` | Member/invite code complete with local HTTP tests; MongoDB integration pending |
 | C | Jhen | `/api/families/:familyId/recipients` | Implemented |
 | D | Marcus | `/api/families/:familyId/tasks` | Planned (model and routes done; controller stubs return 501) |
 | E | Chaithra | `/api/me/tasks`, `/api/families/:familyId/tasks/:taskId/transit`, `/api/families/:familyId/transit`, `/api/integrations/clinics` | Implemented |
@@ -89,16 +89,19 @@ Always filter queries by `family: req.family._id`. Never take a family ID, user 
 
 | Method | Path | Who | Body | Response | Status |
 |---|---|---|---|---|---|
-| GET | `/api/families/:familyId/members` | member | none | `{ members: [{ user: { _id, name, email, telegramUsername }, role, relationship, joinedAt }] }` | Planned |
-| PATCH | `/api/families/:familyId/members/:userId` | admin | `{ role?, relationship? }` | `{ member }`. `409` if it would remove the last admin. | Planned |
-| DELETE | `/api/families/:familyId/members/:userId` | admin, or the user themself (leaving) | none | `204`. `409` if it would remove the last admin. | Planned |
+| GET | `/api/families/:familyId/members` | member | none | `{ members: [{ user: { _id, name, email, preferredLang, telegramUsername }, role, joinedAt }] }` | Code + local HTTP tests; live DB pending |
+| PATCH | `/api/families/:familyId/members/:userId` | admin | `{ role }` | `{ member }`. `409` if it would remove the last admin or access changed during the request. | Code + local HTTP tests; live DB pending |
+| DELETE | `/api/families/:familyId/members/:userId` | admin, or the user themself (leaving) | none | `204`. `409` if it would remove the last admin or access changed during the request. | Code + local HTTP tests; live DB pending |
 | PATCH | `/api/families/:familyId` | admin | `{ name }` | `{ family }` | Planned |
-| POST | `/api/families/:familyId/invite-code` | admin | none | `{ inviteCode }` (a new code; the old one stops working) | Planned |
+| POST | `/api/families/:familyId/invite-code` | admin | none | `{ inviteCode }` (10 hexadecimal characters; the old one stops working) | Code + local HTTP tests; live DB pending |
 | PATCH | `/api/users/me` | logged in | `{ name?, phone?, preferredLang?, telegramUsername? }` | `{ user }` | Planned |
 
-- **Dashboard:** Family Home doesn't need its own endpoint. It combines C's `GET /recipients` with D's `GET /tasks?from=<now>&to=<+7 days>&status=open,claimed,in_progress`.
+- **Dashboard:** Family Home doesn't need its own endpoint. It shares C's `GET /recipients` and D's `GET /tasks` query caches with the recipient pages, then filters the seven-day active-task window locally.
 - **Light and dark mode:** handled in the browser only, saved in `localStorage`. No API.
 - **`preferredLang`:** a LibreTranslate language code, e.g. `en` or `zh`. F's logs use it to decide which translation to show.
+- **Current UI language save:** uses the existing `PATCH /api/auth/me` endpoint. It fetches `/api/auth/me` first and sends the complete profile fields required by A's controller. `/api/users/me` remains planned.
+- **Current membership schema:** contains `userId`, `role`, `joinedAt`; no relationship field. The role endpoint accepts only `role` and rejects additional fields. Relationship editing requires an agreed schema extension with A.
+- **Dashboard implementation:** Home filters active tasks from Singapore midnight to seven days later, shows today's tasks, and polls every 20 seconds while visible. Persistent activity, active transit and Telegram preference delivery remain E/F integration work. See [FAMILY-UI.md](FAMILY-UI.md).
 
 ---
 
