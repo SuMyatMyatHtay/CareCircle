@@ -185,8 +185,8 @@ const ACTIONS = {
     },
     unclaim: {
         from: [TASK_STATUS.CLAIMED],
-        allowed: (task, userId, role) => isClaimer(task, userId) || role === 'admin',
-        forbidden: 'Only the person who claimed this task or an admin can unclaim it',
+        allowed: (task, userId) => isClaimer(task, userId) || task.createdBy.toString() === userId,
+        forbidden: 'Only the task creator or the person who claimed it can unclaim it',
         conflict: (task) => `Task is ${task.status} and cannot be unclaimed`,
         set: () => ({ status: TASK_STATUS.OPEN, claimedBy: null, claimedAt: null }),
         event: EVENTS.TASK_UNCLAIMED
@@ -370,7 +370,7 @@ export async function createTask(req, res, next) {
     }
 }
 
-// PATCH /api/families/:familyId/tasks/:taskId   (creator or admin)
+// PATCH /api/families/:familyId/tasks/:taskId   (creator only)
 export async function updateTask(req, res, next) {
     try {
         const populated = await updateFamilyTask({ body: req.body, familyId: req.family._id,
@@ -398,8 +398,8 @@ export async function createFamilyTask({ body, familyId, userId, taskId }) {
 export async function updateFamilyTask({ body, familyId, taskId, userId, memberRole, expectedUpdatedAt }) {
     const task = await findTaskInFamily(familyId, taskId)
 
-    if (!isCreatorOrAdmin(task, userId, memberRole)) {
-        throw httpError(403, 'Only the task creator or an admin can edit this task')
+    if (task.createdBy.toString() !== userId) {
+        throw httpError(403, 'Only the task creator can edit this task')
     }
     if (LOCKED_STATUSES.includes(task.status)) {
         throw httpError(409, `Task is ${task.status} and can no longer be edited`)
@@ -430,14 +430,14 @@ export async function updateFamilyTask({ body, familyId, taskId, userId, memberR
     return populated
 }
 
-// DELETE /api/families/:familyId/tasks/:taskId   (creator or admin)
+// DELETE /api/families/:familyId/tasks/:taskId   (creator only)
 // in_progress and completed tasks can't be deleted; cancel them instead.
 export async function deleteTask(req, res, next) {
     try {
         const task = await findTaskInFamily(req.family._id, req.params.taskId)
 
-        if (!isCreatorOrAdmin(task, req.user.userId, req.memberRole)) {
-            throw httpError(403, 'Only the task creator or an admin can delete this task')
+        if (task.createdBy.toString() !== req.user.userId) {
+            throw httpError(403, 'Only the task creator can delete this task')
         }
         if (UNDELETABLE_STATUSES.includes(task.status)) {
             throw httpError(409, `Task is ${task.status} and cannot be deleted. Cancel it instead.`)

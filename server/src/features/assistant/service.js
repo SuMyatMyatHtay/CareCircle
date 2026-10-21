@@ -36,10 +36,10 @@ export async function validateDraft(reply, { familyId, userId, memberRole }) {
     const before = await Task.getTaskInFamily(familyId, reply.taskId)
     if (!before) throw assistantError(404, 'That task was not found in this family.')
     if (reply.intent === 'unclaim') {
-      if (id(before.claimedBy) !== userId) throw assistantError(403, 'You can only unclaim your own task. You cannot unclaim for someone else.')
+      if (id(before.claimedBy) !== userId && id(before.createdBy) !== userId) throw assistantError(403, 'Only the task creator or the person who claimed it can unclaim this task.')
       if (before.status !== 'claimed') throw assistantError(409, 'Only a claimed task that has not started can be unclaimed.')
     } else {
-      if (memberRole !== 'admin' && id(before.createdBy) !== userId) throw assistantError(403, 'Only the task creator or an admin can delete this task.')
+      if (id(before.createdBy) !== userId) throw assistantError(403, 'Only the task creator can delete this task. Admins cannot delete another member’s task.')
       if (UNDELETABLE_STATUSES.includes(before.status)) throw assistantError(409, 'In-progress or completed tasks cannot be deleted.')
     }
     return { changes: {}, before, preview: taskSummary(before) }
@@ -65,7 +65,7 @@ export async function validateDraft(reply, { familyId, userId, memberRole }) {
     if (!validId(reply.taskId)) throw assistantError(400, 'Which task would you like to update?')
     before = await Task.getTaskInFamily(familyId, reply.taskId)
     if (!before) throw assistantError(404, 'That task was not found in this family.')
-    if (memberRole !== 'admin' && id(before.createdBy) !== userId) throw assistantError(403, 'Only the task creator or a family admin can edit this task.')
+    if (id(before.createdBy) !== userId) throw assistantError(403, 'Only the task creator can edit this task.')
     if (LOCKED_STATUSES.includes(before.status)) throw assistantError(409, 'Completed or cancelled tasks cannot be edited.')
   } else if (source.recipient === undefined) {
     throw assistantError(400, 'Who is this task for? Please specify a care receiver or household.')
@@ -117,10 +117,10 @@ export async function chat({ body, familyId, familyName, userId, memberRole, gen
   const context = { family: familyName, userId, role: memberRole,
     recipients: recipients.map(person => ({ id: id(person), name: person.name, nickname: person.nickname })),
     tasks: recent.map(task => ({ ...taskSummary(task, recipients),
-      canUnclaim: task.status === 'claimed' && id(task.claimedBy) === userId,
-      canDelete: !UNDELETABLE_STATUSES.includes(task.status) && (memberRole === 'admin' || id(task.createdBy) === userId),
+      canUnclaim: task.status === 'claimed' && (id(task.claimedBy) === userId || id(task.createdBy) === userId),
+      canDelete: !UNDELETABLE_STATUSES.includes(task.status) && id(task.createdBy) === userId,
       canEdit: !LOCKED_STATUSES.includes(task.status) &&
-      (memberRole === 'admin' || id(task.createdBy) === userId) })) }
+      id(task.createdBy) === userId })) }
   const reply = await generate({ messages, context })
   if (reply.intent === 'reply') return { message: reply.message, suggestions: reply.suggestions }
   if (reply.intent === 'search') {

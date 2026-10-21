@@ -12,6 +12,9 @@ const props = defineProps({
     task: { type: Object, required: true },
     familyId: { type: String, required: true },
     isClaimer: { type: Boolean, default: false },
+    canDelete: { type: Boolean, default: false },
+    canEdit: { type: Boolean, default: false },
+    canUnclaim: { type: Boolean, default: false },
     isBusy: { type: Boolean, default: false },
     notice: { type: String, default: '' },
     actionError: { type: String, default: '' }
@@ -111,8 +114,8 @@ watch(() => [props.task._id, props.task.status], loadSession, { immediate: true 
                 </button>
                 <div v-if="menuOpen" class="menu" @click="menuOpen = false">
                     <a :href="googleCalendarUrl(task)" target="_blank" rel="noopener">Add to Google Calendar</a>
-                    <button type="button" @click="emit('edit')">Edit</button>
-                    <button type="button" class="danger" @click="emit('delete')">Delete</button>
+                    <button v-if="canEdit" type="button" @click="emit('edit')">Edit</button>
+                    <button v-if="canDelete" type="button" class="danger" @click="emit('delete')">Delete</button>
                 </div>
             </div>
         </div>
@@ -176,13 +179,13 @@ watch(() => [props.task._id, props.task.status], loadSession, { immediate: true 
             <p>{{ task.description }}</p>
         </section>
 
-        <footer v-if="mainButton || (isClaimer && ['claimed', 'in_progress'].includes(status))" class="footer">
+        <footer v-if="mainButton || canUnclaim || (isClaimer && ['claimed', 'in_progress'].includes(status))" class="footer">
             <button v-if="mainButton" type="button" class="btn-main" :disabled="isBusy" @click="emit(mainButton.event)">
                 <i class="bi" :class="mainButton.icon" aria-hidden="true"></i> {{ mainButton.label }}
             </button>
-            <div v-if="isClaimer && ['claimed', 'in_progress'].includes(status)" class="pair">
-                <button type="button" class="btn-plain" :disabled="isBusy" @click="emit('complete')">Mark as done</button>
-                <button v-if="status === 'claimed'" type="button" class="btn-plain danger" :disabled="isBusy" @click="emit('unclaim')">
+            <div v-if="canUnclaim || (isClaimer && ['claimed', 'in_progress'].includes(status))" class="pair">
+                <button v-if="isClaimer" type="button" class="btn-plain" :disabled="isBusy" @click="emit('complete')">Mark as done</button>
+                <button v-if="canUnclaim" type="button" class="btn-plain danger" :disabled="isBusy" @click="emit('unclaim')">
                     Unclaim
                 </button>
             </div>

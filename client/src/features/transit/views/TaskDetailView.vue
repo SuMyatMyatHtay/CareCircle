@@ -38,6 +38,10 @@ try { me = JSON.parse(sessionStorage.getItem('user') || '{}') } catch { me = {} 
 
 const idOf = (value) => (value && typeof value === 'object' ? value._id : value)
 const isClaimer = computed(() => Boolean(me.id) && idOf(task.value?.claimedBy) === me.id)
+const isCreator = computed(() => Boolean(me.id) && idOf(task.value?.createdBy) === me.id)
+const canEdit = computed(() => isCreator.value && !['completed', 'cancelled'].includes(task.value?.status))
+const canUnclaim = computed(() => (isCreator.value || isClaimer.value) && task.value?.status === 'claimed')
+const canDelete = computed(() => Boolean(me.id) && idOf(task.value?.createdBy) === me.id && !['in_progress', 'completed'].includes(task.value?.status))
 const status = computed(() => task.value?.status)
 const who = computed(() => recipientName(task.value))
 const claimerName = computed(() => task.value?.claimedBy?.name || '')
@@ -117,11 +121,13 @@ const markDone = () => {
     if (window.confirm(`Mark "${task.value.title}" as done?`)) run(() => completeTask(props.familyId, props.taskId), 'Marked as done.')
 }
 const giveBack = () => {
+    if (!canUnclaim.value || isBusy.value) return
     if (window.confirm(`Give back "${task.value.title}"? It goes back to the family as available.`)) {
         run(() => unclaimTask(props.familyId, props.taskId), 'Given back to the family.')
     }
 }
 async function remove() {
+    if (!canDelete.value || isBusy.value) return
     if (!window.confirm(`Delete "${task.value.title}"? This can't be undone.`)) return
     isBusy.value = true
     try {
@@ -170,6 +176,9 @@ watch(() => [props.familyId, props.taskId], load)
             :task="task"
             :family-id="familyId"
             :is-claimer="isClaimer"
+            :can-delete="canDelete"
+            :can-edit="canEdit"
+            :can-unclaim="canUnclaim"
             :is-busy="isBusy"
             :notice="notice"
             :action-error="actionError"
@@ -218,8 +227,8 @@ watch(() => [props.familyId, props.taskId], load)
                     </div>
                     <span class="spacer"></span>
                     <!-- D (Marcus) owns editing; the task form isn't built yet -->
-                    <button type="button" class="btn-secondary" @click="notice = 'Editing comes with the task form (Task Management).'">Edit</button>
-                    <button type="button" class="btn-secondary danger" :disabled="isBusy" @click="remove">Delete</button>
+                    <button v-if="canEdit" type="button" class="btn-secondary" @click="notice = 'Editing comes with the task form (Task Management).'">Edit</button>
+                    <button v-if="canDelete" type="button" class="btn-secondary danger" :disabled="isBusy" @click="remove">Delete</button>
                 </div>
 
                 <h1>{{ task.title }}</h1>
@@ -280,7 +289,7 @@ watch(() => [props.familyId, props.taskId], load)
                         </button>
                     </template>
                     <template #end>
-                        <button v-if="isClaimer && status === 'claimed'" type="button" class="btn-secondary" :disabled="isBusy" @click="giveBack">
+                        <button v-if="canUnclaim" type="button" class="btn-secondary" :disabled="isBusy" @click="giveBack">
                             Give back task
                         </button>
                     </template>

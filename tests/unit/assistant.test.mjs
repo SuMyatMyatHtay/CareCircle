@@ -12,6 +12,7 @@ import { requireFamilyMember } from '../../server/src/middleware/requireFamilyMe
 import assistantRoutes from '../../server/src/features/assistant/routes.js'
 import { isoDate, searchFilter, validateDraft } from '../../server/src/features/assistant/service.js'
 import { generateReply, validateConversation, buildPrompt, responseSchema } from '../../server/src/features/assistant/gemini.js'
+import { deleteTask, unclaimTask, updateFamilyTask } from '../../server/src/features/tasks/controller.js'
 
 const familyId = '000000000000000000000001', otherFamily = '000000000000000000000002'
 let admin = '000000000000000000000101'
@@ -233,8 +234,8 @@ test('chat rate limit stops repeated provider calls', async () => {
   assert.equal((await chat({ user })).status, 429); assert.equal(providerCalls.length, 10)
 })
 
-test('unclaim only permits the current claimer, even for admins, and rechecks at confirmation', async t => {
-  Object.assign(tasks.get(taskId), { status: 'claimed', claimedBy: member })
+test('unclaim blocks unrelated admins and rechecks the claimer at confirmation', async t => {
+  Object.assign(tasks.get(taskId), { status: 'claimed', claimedBy: member, createdBy: outsider })
   reply = { intent: 'unclaim', taskId, message: 'Review unclaim', suggestions: [] }
   assert.equal((await chat()).status, 403)
   const proposed = await chat({ user: member })
@@ -256,6 +257,41 @@ test('unclaim only permits the current claimer, even for admins, and rechecks at
   tasks.get(taskId).claimedBy = admin
   assert.equal((await request(`proposals/${next.data.proposal.id}/confirm`, { user: member })).status, 403)
   assert.equal(writes, 1)
+})
+
+test('the creator can release someone else’s claim through both assistant and manual actions', async t => {
+  Object.assign(tasks.get(taskId), { status: 'claimed', claimedBy: member, createdBy: admin })
+  reply = { intent: 'unclaim', taskId, message: 'Review unclaim', suggestions: [] }
+  const proposed = await chat()
+  assert.equal(proposed.status, 200)
+  t.mock.method(Task, 'findOneAndUpdate', async (filter, update) => {
+    assert.equal(filter.claimedBy, member)
+    Object.assign(tasks.get(taskId), update.$set)
+    return clone(tasks.get(taskId))
+  })
+  const saved = await request(`proposals/${proposed.data.proposal.id}/confirm`)
+  assert.equal(saved.status, 200)
+  assert.equal(saved.data.task.status, 'open')
+  Object.assign(tasks.get(taskId), { status: 'claimed', claimedBy: member })
+  t.mock.method(Task, 'updateTaskStatus', async (task, changes) => {
+    Object.assign(tasks.get(taskId), changes); return clone(tasks.get(taskId))
+  })
+  const req = { family: { _id: familyId }, params: { taskId }, user: { userId: admin }, memberRole: 'member' }
+  const res = { json(value) { this.body = value; return this } }
+  await unclaimTask(req, res, error => { throw error })
+  assert.equal(res.body.task.status, 'open')
+})
+
+test('admin edit is denied unless the admin created the task, including old proposals', async () => {
+  tasks.get(taskId).createdBy = member
+  reply = { intent: 'update', taskId, task: { title: 'Changed title' }, message: 'Review changes', suggestions: [] }
+  assert.equal((await chat()).status, 403)
+  await assert.rejects(updateFamilyTask({ familyId, taskId, userId: admin, memberRole: 'admin', body: { title: 'Changed title' } }), { status: 403 })
+  const proposed = await chat({ user: member })
+  assert.equal(proposed.status, 200)
+  tasks.get(taskId).createdBy = admin
+  assert.equal((await request(`proposals/${proposed.data.proposal.id}/confirm`, { user: member })).status, 403)
+  assert.equal(writes, 0)
 })
 
 test('deletion needs two confirmations, enforces manual permissions and supports retry', async t => {
@@ -302,4 +338,28 @@ test('creation schema requires task details while updates still allow partial fi
   assert.deepEqual(create.properties.task.required, ['title', 'recipient', 'startAt', 'location'])
   assert.ok(partial.properties.intent.enum.includes('update'))
   assert.equal(partial.properties.task.required, undefined)
+})
+
+test('admins cannot propose or confirm deletion of another member’s task', async () => {
+  tasks.get(taskId).createdBy = member
+  reply = { intent: 'delete', taskId, message: 'Delete task', suggestions: [] }
+  assert.equal((await chat()).status, 403)
+  const proposed = await chat({ user: member })
+  assert.equal(proposed.status, 200)
+  const path = `proposals/${proposed.data.proposal.id}/confirm`
+  assert.equal((await request(path, { user: member })).data.requiresSecondConfirmation, true)
+  tasks.get(taskId).createdBy = admin
+  assert.equal((await request(path, { user: member })).status, 403)
+  assert.equal(writes, 0)
+})
+
+test('manual endpoints also reject admin deletion and unclaiming for someone else', async () => {
+  Object.assign(tasks.get(taskId), { createdBy: member, claimedBy: member, status: 'claimed' })
+  const req = { family: { _id: familyId }, params: { taskId }, user: { userId: admin }, memberRole: 'admin' }
+  for (const handler of [deleteTask, unclaimTask]) {
+    const res = { status(code) { this.code = code; return this }, json(value) { this.body = value; return this } }
+    await handler(req, res, error => { throw error })
+    assert.equal(res.code, 403)
+  }
+  assert.equal(writes, 0)
 })
