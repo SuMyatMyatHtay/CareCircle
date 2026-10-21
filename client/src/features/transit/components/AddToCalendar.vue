@@ -137,7 +137,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
 </template>
 
 <style scoped>
-/* Same tokens as the Figma: green #2f7a3f, text #2e2e2e / #6b7280, border #e5e7eb */
+/* Same tokens as the Figma: green var(--theme-green, #2f7a3f), text var(--theme-text, #2e2e2e) / var(--theme-muted, #6b7280), border var(--theme-border, #e5e7eb) */
 .cal-backdrop {
     position: fixed;
     inset: 0;
@@ -158,10 +158,10 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
     max-height: calc(100vh - 32px);
     padding: 20px;
     border-radius: 16px;
-    background: white;
+    background: var(--theme-panel, white);
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
     font-family: Nunito, Inter, system-ui, sans-serif;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .cal-head {
@@ -181,8 +181,8 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
     height: 36px;
     border: none;
     border-radius: 50%;
-    background: #f3f4f6;
-    color: #374151;
+    background: var(--theme-neutral, #f3f4f6);
+    color: var(--theme-text, #374151);
 }
 
 .cal-task {
@@ -191,7 +191,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
     gap: 2px;
     padding: 12px 14px;
     border-radius: 12px;
-    background: #e8f5e9;
+    background: var(--theme-soft, #e8f5e9);
 }
 
 .cal-task strong {
@@ -201,7 +201,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
 .cal-task span,
 .cal-row-text span {
     font-size: 14px;
-    color: #5b6470;
+    color: var(--theme-muted, #5b6470);
 }
 
 .cal-apps {
@@ -216,30 +216,30 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
     gap: 12px;
     width: 100%;
     padding: 12px 14px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--theme-border, #e5e7eb);
     border-radius: 12px;
-    background: white;
+    background: var(--theme-panel, white);
     font-family: inherit;
     font-size: 16px;
     font-weight: 700;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
     text-align: left;
     text-decoration: none;
 }
 
 .cal-app:hover,
 .cal-app:focus-visible {
-    border-color: #2f7a3f;
-    background: #f6fbf6;
+    border-color: var(--theme-green, #2f7a3f);
+    background: var(--theme-soft, #f6fbf6);
 }
 
 .cal-app.synced {
-    border-color: #cfe8d3;
-    background: #f6fbf6;
+    border-color: var(--theme-accent-border, #cfe8d3);
+    background: var(--theme-soft, #f6fbf6);
 }
 
 .cal-app.synced .go {
-    color: #2f7a3f;
+    color: var(--theme-green, #2f7a3f);
 }
 
 .synced-text {
@@ -250,12 +250,12 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
 .synced-text small {
     font-size: 12px;
     font-weight: 500;
-    color: #2f7a3f;
+    color: var(--theme-green, #2f7a3f);
 }
 
 .cal-app .go {
     margin-left: auto;
-    color: #6b7280;
+    color: var(--theme-muted, #6b7280);
 }
 
 .cal-icon {
@@ -269,13 +269,13 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
 }
 
 .google { background: #e8f0fe; color: #1a73e8; }
-.apple { background: #f3f4f6; color: #111827; }
+.apple { background: var(--theme-neutral, #f3f4f6); color: #111827; }
 .outlook { background: #e5f1fb; color: #0f6cbd; }
 
 .cal-hint {
     margin: 0;
     font-size: 13px;
-    color: #6b7280;
+    color: var(--theme-muted, #6b7280);
 }
 
 .cal-hint.top {
@@ -289,7 +289,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
     padding: 0;
     overflow-y: auto;
     list-style: none;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--theme-border, #e5e7eb);
     border-radius: 12px;
 }
 
@@ -301,7 +301,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
 }
 
 .cal-list li + li {
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--theme-border, #e5e7eb);
 }
 
 .cal-row-text {
@@ -337,18 +337,18 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
 
 .cal-empty {
     margin: 0;
-    color: #6b7280;
+    color: var(--theme-muted, #6b7280);
 }
 
 .cal-cancel {
     padding: 12px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--theme-border, #e5e7eb);
     border-radius: 10px;
-    background: white;
+    background: var(--theme-panel, white);
     font-family: inherit;
     font-size: 15px;
     font-weight: 700;
-    color: #374151;
+    color: var(--theme-text, #374151);
 }
 
 /* Phones: slides up from the bottom */

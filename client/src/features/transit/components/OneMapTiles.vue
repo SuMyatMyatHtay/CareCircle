@@ -92,10 +92,16 @@ const grid = computed(() => {
     const z = zoomLevel.value
     // Centre of everything (or the only point)
     const box = bounds(allPoints.value, z)
-    const cx = (box.minX + box.maxX) / 2
+    const fitX = Math.max(40, props.fitWidth / 2 - FIT_MARGIN)
+    const fitY = Math.max(40, (props.height - props.bottomSpace - topSpace.value) / 2 - FIT_MARGIN)
+    const fits = (box.maxX - box.minX) / 2 <= fitX && (box.maxY - box.minY) / 2 <= fitY
+    // Too far apart to fit even fully zoomed out (e.g. Yishun -> Novena on a phone):
+    // keep the person in view and let the destination sit off the edge
+    const focus = !fits && live.value ? toPixels(live.value, z) : null
+    const cx = focus ? focus.x : (box.minX + box.maxX) / 2
     // Shift so the points sit in the free part of the card: above the bottom card and
     // below the room kept for the photo pin and its bubble
-    const cy = (box.minY + box.maxY) / 2 + (props.bottomSpace - topSpace.value) / 2
+    const cy = (focus ? focus.y : (box.minY + box.maxY) / 2) + (props.bottomSpace - topSpace.value) / 2
 
     const firstX = Math.floor(cx / TILE) - Math.floor(COLS / 2)
     const firstY = Math.floor(cy / TILE) - Math.floor(ROWS / 2)

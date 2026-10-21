@@ -505,7 +505,7 @@ onUnmounted(stopPolling)
     gap: 24px;
     padding: 10px 16px;
     border-radius: 14px;
-    background: white;
+    background: var(--theme-panel, white);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
@@ -522,16 +522,16 @@ onUnmounted(stopPolling)
 
 .people-bar strong {
     font-size: 15px;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .people-bar small {
     font-size: 13px;
-    color: #2f7a3f;
+    color: var(--theme-green, #2f7a3f);
 }
 
 .people-bar small.paused {
-    color: #7a5a00;
+    color: var(--theme-warning, #7a5a00);
 }
 
 
@@ -628,7 +628,7 @@ h1 {
 }
 
 .badge-live {
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
     color: white;
 }
 
@@ -661,7 +661,7 @@ h1 {
 
 .btn-primary-cc {
     border: 1px solid var(--theme-accent-border, #2f7a3f);
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
     color: white;
 }
 
@@ -870,11 +870,11 @@ h2 {
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
 }
 
 .current .rail-dot {
-    box-shadow: 0 0 0 5px #e8f5e9;
+    box-shadow: 0 0 0 5px var(--theme-soft, #e8f5e9);
 }
 
 .rail-line {

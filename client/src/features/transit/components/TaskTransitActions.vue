@@ -173,7 +173,7 @@ watch(() => [props.task?._id, props.task?.status], loadSession, { immediate: tru
 }
 
 .badge-live {
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
     color: white;
 }
 
@@ -194,7 +194,7 @@ watch(() => [props.task?._id, props.task?.status], loadSession, { immediate: tru
     padding: 20px;
     border: 1px solid var(--theme-accent-border, #2f7a3f);
     border-radius: 8px;
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
     color: white;
     font-size: 14px;
     line-height: 20px;

@@ -144,17 +144,17 @@ onMounted(async () => {
     align-items: center;
     gap: 10px;
     padding: 8px 14px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--theme-border, #e5e7eb);
     border-radius: 10px;
-    background: white;
+    background: var(--theme-panel, white);
     font-family: inherit;
     text-align: left;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
 }
 
 .gsync-connect:hover {
-    border-color: #2f7a3f;
-    background: #f6fbf6;
+    border-color: var(--theme-green, #2f7a3f);
+    background: var(--theme-soft, #f6fbf6);
 }
 
 .gsync-connect .bi-google {
@@ -176,17 +176,17 @@ onMounted(async () => {
 
 .gsync small {
     font-size: 12px;
-    color: #6b7280;
+    color: var(--theme-muted, #6b7280);
 }
 
 .gsync-on {
-    border-color: #cfe8d3;
-    background: #e8f5e9;
+    border-color: var(--theme-accent-border, #cfe8d3);
+    background: var(--theme-soft, #e8f5e9);
 }
 
 .gsync-on > .bi {
     font-size: 18px;
-    color: #2f7a3f;
+    color: var(--theme-green, #2f7a3f);
 }
 
 .gsync-menu {
@@ -200,7 +200,7 @@ onMounted(async () => {
     border: none;
     border-radius: 8px;
     background: transparent;
-    color: #2f7a3f;
+    color: var(--theme-green, #2f7a3f);
 }
 
 .gsync-more:hover {
@@ -216,9 +216,9 @@ onMounted(async () => {
     flex-direction: column;
     min-width: 200px;
     padding: 6px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--theme-border, #e5e7eb);
     border-radius: 10px;
-    background: white;
+    background: var(--theme-panel, white);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
@@ -232,20 +232,20 @@ onMounted(async () => {
     padding: 8px 10px;
     border: none;
     border-radius: 8px;
-    background: white;
+    background: var(--theme-panel, white);
     font-family: inherit;
     font-size: 14px;
     font-weight: 600;
-    color: #2e2e2e;
+    color: var(--theme-text, #2e2e2e);
     text-align: left;
 }
 
 .gsync-pop button:hover {
-    background: #f3f4f6;
+    background: var(--theme-neutral, #f3f4f6);
 }
 
 .gsync-pop .danger {
-    color: #a33a26;
+    color: var(--theme-danger, #a33a26);
 }
 
 .gsync-msg {
@@ -258,16 +258,16 @@ onMounted(async () => {
     margin: 0;
     padding: 8px 12px;
     border-radius: 10px;
-    background: #e8f5e9;
+    background: var(--theme-soft, #e8f5e9);
     font-size: 13px;
-    color: #1f5a2c;
+    color: var(--theme-green, #1f5a2c);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     cursor: pointer;
 }
 
 .gsync-msg.is-error {
-    background: #ffe9e4;
-    color: #9f3a2b;
+    background: var(--theme-danger-soft, #ffe9e4);
+    color: var(--theme-danger, #9f3a2b);
 }
 
 /* Phone */

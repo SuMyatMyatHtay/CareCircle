@@ -153,11 +153,11 @@ function open(task) {
 .cal-btn {
     width: 40px;
     height: 40px;
-    border: 1px solid #dce3dc;
+    border: 1px solid var(--theme-border, #dce3dc);
     border-radius: 12px;
-    background: white;
+    background: var(--theme-panel, white);
     font-size: 18px;
-    color: #2f7a3f;
+    color: var(--theme-green, #2f7a3f);
 }
 
 h1 {
@@ -228,7 +228,7 @@ h1 {
     display: block;
     height: 100%;
     border-radius: 5px;
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
     transition: width 0.3s ease;
 }
 

@@ -100,7 +100,7 @@ function choose(place) {
     width: 44px;
     border: none;
     border-radius: 10px;
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
     color: white;
 }
 

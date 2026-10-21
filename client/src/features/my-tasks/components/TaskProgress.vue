@@ -76,7 +76,7 @@ const steps = computed(() => [
 
 .reached .dot {
     border-color: var(--theme-accent-border, #2f7a3f);
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
 }
 
 .reached .label {

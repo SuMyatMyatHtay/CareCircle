@@ -41,6 +41,7 @@ const milestones = computed(() => props.session?.milestones || [])
 const isActive = computed(() => props.session?.status === 'active')
 const isEnded = computed(() => props.session?.status === 'ended')
 const trail = computed(() => props.session?.path || [])
+const hasPlace = computed(() => Number.isFinite(props.task.location?.lat) && Number.isFinite(props.task.location?.lng))
 const placeName = computed(() => props.task.location?.name || 'the clinic')
 
 // Done steps (as posted) followed by the preset steps still to come
@@ -119,8 +120,8 @@ function safelyHome() {
         </div>
 
         <template v-else>
-            <!-- Live map: once there's a live position or a trail to show -->
-            <section v-if="liveSpot || trail.length > 1" class="live-map body" aria-label="Live map">
+            <!-- Map: always on a trip with a place (the clinic pin), plus the person once they share location -->
+            <section v-if="liveSpot || trail.length > 1 || hasPlace" class="live-map body" aria-label="Live map">
                 <OneMapTiles
                     :lat="task.location?.lat ?? null"
                     :lng="task.location?.lng ?? null"
@@ -130,7 +131,7 @@ function safelyHome() {
                     :trail="trail"
                     :live-time="liveTime"
                     :live-note="liveNote"
-                    :label="liveSpot ? (liveCaption || `Live · updated ${time(liveSpot.at)}`) : 'Route travelled'"
+                    :label="liveSpot ? (liveCaption || `Live · updated ${time(liveSpot.at)}`) : trail.length > 1 ? 'Route travelled' : (task.location?.name || 'Destination')"
                     :height="260"
                     :fit-width="320"
                 />
@@ -247,7 +248,7 @@ function safelyHome() {
     gap: 14px;
     height: 60px;
     padding: 0 16px 0 18px;
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
 }
 
 .back {
@@ -340,20 +341,20 @@ function safelyHome() {
 
 .done .dot {
     border: none;
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
 }
 
 .current .dot {
     width: 22px;
     height: 22px;
     border: 6px solid var(--theme-accent-border, #b8ddbe);
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
 }
 
 .line {
     flex: 1;
     width: 2px;
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
 }
 
 .current .line,
@@ -451,7 +452,7 @@ h2 {
     height: 48px;
     border: none;
     border-radius: 14px;
-    background: #2e2e2e;
+    background: var(--theme-text, #2e2e2e);
     color: white;
     font-size: 20px;
 }
@@ -477,7 +478,7 @@ h2 {
     margin-top: 16px;
     border: none;
     border-radius: 14px;
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
     font-family: inherit;
     font-size: 16px;
     font-weight: 800;

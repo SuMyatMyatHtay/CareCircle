@@ -158,7 +158,7 @@ const statusLabel = computed(() => {
 .family-purple { background: var(--theme-purple-soft, #eee8fd); color: var(--theme-purple, #4b3b8f); }
 .family-blue { background: var(--theme-blue-soft, #e3f0fb); color: var(--theme-blue, #1f5a8a); }
 .family-orange { background: var(--theme-warning-soft, #fff8e1); color: var(--theme-warning, #7a5a00); }
-.status-in_progress { background: #2f7a3f; color: white; }
+.status-in_progress { background: var(--theme-green, #2f7a3f); color: white; }
 .status-completed { background: var(--theme-page, #f3f4f6); color: var(--theme-muted, #6b7280); }
 
 .due-flag {
@@ -233,7 +233,7 @@ const statusLabel = computed(() => {
 
 .btn-primary-cc {
     border: 1px solid var(--theme-accent-border, #2f7a3f);
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
     color: white;
 }
 

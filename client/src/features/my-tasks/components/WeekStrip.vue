@@ -97,7 +97,7 @@ li {
 }
 
 .today {
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
 }
 
 .today .letter,
