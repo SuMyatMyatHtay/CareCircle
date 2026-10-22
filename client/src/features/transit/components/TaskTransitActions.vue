@@ -14,6 +14,7 @@ import { getTransitSession } from '../services/transitApi.js'
 import { startTask, getErrorMessage } from '../../my-tasks/services/myTasksApi.js'
 import { formatTime } from '../../my-tasks/utils/formatters.js'
 import AddToCalendar from './AddToCalendar.vue'
+import { WORDS } from '../utils/wording.js'
 
 const props = defineProps({
     task: { type: Object, required: true },
@@ -81,12 +82,12 @@ watch(() => [props.task?._id, props.task?.status], loadSession, { immediate: tru
     <div class="transit-actions">
         <!-- Live strip while someone is in transit -->
         <div v-if="session && latest" class="live-strip" :class="{ ended: !isLive }">
-            <span class="badge" :class="isLive ? 'badge-live' : 'badge-ended'">{{ isLive ? '● Live' : 'Ended' }}</span>
+            <span class="badge" :class="isLive ? 'badge-live' : 'badge-ended'">{{ isLive ? `● ${WORDS.live}` : WORDS.ended }}</span>
             <span class="live-text">
                 <strong>{{ latest.label }}</strong>
                 <small>{{ formatTime(latest.at) }} · {{ session.milestones.length }} update{{ session.milestones.length === 1 ? '' : 's' }}</small>
             </span>
-            <button v-if="isLive" type="button" class="btn-secondary" @click="openTransit">Update milestone</button>
+            <button v-if="isLive" type="button" class="btn-secondary" @click="openTransit">Post an update</button>
         </div>
 
         <div class="buttons">
@@ -97,20 +98,20 @@ watch(() => [props.task?._id, props.task?.status], loadSession, { immediate: tru
                 :disabled="isBusy"
                 @click="startTransit"
             >
-                Start transit mode
+                {{ WORDS.startTrip }}
             </button>
             <button v-else-if="transitButton === 'open'" type="button" class="btn-primary-lg" @click="openTransit">
-                Open transit mode
+                {{ WORDS.openTrip }}
             </button>
 
             <slot name="middle"></slot>
 
             <button type="button" class="btn-secondary" @click="calendarOpen = true">
-                <i class="bi bi-calendar-plus" aria-hidden="true"></i> Add to calendar
+                <i class="bi bi-calendar-plus" aria-hidden="true"></i> {{ WORDS.addToCalendar }}
             </button>
 
             <button v-if="transitButton === 'view'" type="button" class="btn-secondary" @click="openTransit">
-                View journey
+                {{ WORDS.viewTrip }}
             </button>
 
             <slot name="end"></slot>

@@ -52,7 +52,7 @@ const CATEGORY_LABELS = {
     childcare: 'Childcare', medication: 'Medication', companionship: 'Companionship', other: 'Other'
 }
 const STATUS_LABELS = {
-    open: 'Available', claimed: 'Claimed', in_progress: 'In progress', completed: 'Completed', cancelled: 'Cancelled'
+    open: 'Available', claimed: 'Claimed', in_progress: 'In progress', completed: 'Done', cancelled: 'Cancelled'
 }
 
 const dayText = computed(() => new Date(task.value.startAt).toLocaleDateString('en-GB', {
@@ -73,7 +73,7 @@ const flow = computed(() => {
     return [
         { label: 'Available', state: reached > 0 ? 'done' : reached === 0 ? 'current' : 'todo' },
         { label: middle, state: reached > 1 ? 'done' : reached === 1 ? 'current' : 'todo' },
-        { label: 'Completed', state: reached === 2 ? 'current' : 'todo' }
+        { label: 'Done', state: reached === 2 ? 'current' : 'todo' }
     ]
 })
 

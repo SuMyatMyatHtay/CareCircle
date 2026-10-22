@@ -209,6 +209,7 @@ Base: `/api/families/:familyId/tasks/:taskId/transit` (mounted before D's tasks 
 | GET | `/api/families/:familyId/transit?status=active` | member | none | `{ transitSessions }` with task and companion populated, newest first. `status` is `active` or `ended` (optional). For the live banner on Home. | Implemented |
 | GET | `/` | member | none | `{ transitSession }` (includes `lastLocation` and `path`); `404` if the task has no session | Implemented |
 | POST | `/milestones` | companion | `{ type, label?, lat?, lng? }` | `201 { transitSession }`. The server sets `at`. `403` if not the companion, `409` if the trip has ended. | Implemented |
+| DELETE | `/milestones?at=<step at>` | companion | none | `{ transitSession }` without that step. For removing a mistake (e.g. a typo). `404` if no step has that `at`, `409` for "Safely back home" (it completed the task). | Implemented |
 | POST | `/end` | companion | none | `{ transitSession }` with `status: 'ended'`. "End transit": stops the trip **without** completing the task (it stays `in_progress`). `409` if already ended. | Implemented |
 | POST | `/resume` | companion | none | `{ transitSession }` back to `active`, keeping its steps. Undoes an accidental End transit. `409` unless the task is still `in_progress` and the trip has ended. | Implemented |
 | PATCH | `/location` | companion | `{ lat, lng }` | `{ lastLocation }`. Sent every ~20 s by the companion's browser while active. Also adds the point to `path`. `403` if not the companion, `409` if ended. | Implemented |

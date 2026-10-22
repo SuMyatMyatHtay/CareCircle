@@ -13,9 +13,10 @@ import OneMapTiles from '../components/OneMapTiles.vue'
 import TransitMobile from '../components/TransitMobile.vue'
 import { useIsMobile } from '../../my-tasks/utils/useIsMobile.js'
 import PersonAvatar from '../../my-tasks/components/PersonAvatar.vue'
-import { getTask, getTransitSession, postMilestone, endTransit, resumeTransit, updateLocation } from '../services/transitApi.js'
+import { getTask, getTransitSession, postMilestone, removeMilestone, endTransit, resumeTransit, updateLocation } from '../services/transitApi.js'
 import { useLiveLocation } from '../utils/useLiveLocation.js'
 import { useActiveTransit } from '../utils/useActiveTransit.js'
+import { WORDS, TRIP_STEPS, extraUpdates } from '../utils/wording.js'
 import { startTask, getErrorMessage } from '../../my-tasks/services/myTasksApi.js'
 import { formatTime, recipientName } from '../../my-tasks/utils/formatters.js'
 import { useActiveFamily } from '../../../composables/useActiveFamily.js'
@@ -96,16 +97,10 @@ const postedTypes = computed(() => new Set(milestones.value.map((m) => m.type)))
 // Preset chips. departed / arrived / heading_home / home are the server's step types;
 // the rest are saved as custom updates with that text. Used chips disappear.
 const chips = computed(() => {
-    const all = [
-        { type: 'departed', label: who.value ? `On the way to fetch ${who.value}` : 'On the way' },
-        { type: 'custom', label: who.value ? `Fetched ${who.value}` : 'Picked up' },
-        { type: 'arrived', label: 'Reached hospital' },
-        { type: 'custom', label: 'Seeing the doctor' },
-        { type: 'custom', label: 'Collecting medicine' },
-        { type: 'custom', label: 'Going for lunch' },
-        { type: 'heading_home', label: 'Heading home' },
-        { type: 'home', label: 'Safely back home' }
-    ]
+    // Same steps and quick updates as the phone layout (utils/wording.js)
+    const [departed, arrived, consultation, headingHome, home] = TRIP_STEPS
+    const [pickedUp, doctor, medicine, lunch] = extraUpdates(who.value).map((label) => ({ type: 'custom', label }))
+    const all = [departed, pickedUp, arrived, doctor, consultation, medicine, lunch, headingHome, home]
     return all.filter((chip) =>
         chip.type === 'custom' ? !postedLabels.value.has(chip.label.toLowerCase()) : !postedTypes.value.has(chip.type)
     )
@@ -116,7 +111,7 @@ const subtitle = computed(() => {
     if (companionFirst.value) parts.push(who.value ? `${companionFirst.value} is with ${who.value}` : `with ${companionFirst.value}`)
     if (session.value?.startedAt) parts.push(`started ${formatTime(session.value.startedAt)}`)
     if (isActive.value) parts.push('family can follow live')
-    if (isEnded.value) parts.push(taskDone.value ? 'safely back home' : 'transit ended')
+    if (isEnded.value) parts.push(taskDone.value ? 'safely back home' : 'trip ended')
     return parts.filter(Boolean).join(' · ')
 })
 
@@ -212,6 +207,18 @@ function post(milestone, { confirmed = false } = {}) {
     })
 }
 
+// Remove a step posted by mistake (only the person on the trip; not "Safely back home")
+function canRemove(step) {
+    return isCompanion.value && step.type !== 'home'
+}
+function removeStep(step) {
+    if (!window.confirm(`Remove "${step.label}" from the trip? The family won't see it any more.`)) return
+    run(async () => {
+        session.value = await removeMilestone(props.familyId, props.taskId, step.at)
+        notice.value = 'Update removed.'
+    })
+}
+
 function postCustom() {
     const label = customText.value.trim()
     if (!label) {
@@ -222,7 +229,7 @@ function postCustom() {
 }
 
 function endTrip() {
-    if (!window.confirm('End transit without marking the task as done? Use "Safely back home" if everyone is home.')) return
+    if (!window.confirm('End the trip without marking the task as done? Use "Safely back home" if everyone is home.')) return
     run(async () => {
         session.value = await endTransit(props.familyId, props.taskId)
     })
@@ -231,7 +238,7 @@ function endTrip() {
 function resumeTrip() {
     run(async () => {
         session.value = await resumeTransit(props.familyId, props.taskId)
-        notice.value = 'Transit resumed. The family can follow along again.'
+        notice.value = 'Trip resumed. The family can follow along again.'
     })
 }
 
@@ -299,6 +306,7 @@ onUnmounted(stopPolling)
             :can-resume="canResume"
             @back="router.push({ name: 'task-detail', params: { familyId, taskId } })"
             @post="(m) => post(m, { confirmed: true })"
+            @remove="removeStep"
             @start="startTrip"
             @resume="resumeTrip"
             :other-trips="otherTrips"
@@ -325,13 +333,13 @@ onUnmounted(stopPolling)
                 <div class="title">
                     <div class="title-row">
                         <h1>Transit mode</h1>
-                        <span v-if="isActive" class="badge badge-live">● Live</span>
-                        <span v-else-if="isEnded" class="badge badge-ended">Ended</span>
+                        <span v-if="isActive" class="badge badge-live">● {{ WORDS.live }}</span>
+                        <span v-else-if="isEnded" class="badge badge-ended">{{ WORDS.ended }}</span>
                     </div>
                     <p>{{ subtitle }}</p>
                 </div>
                 <button v-if="isActive && isCompanion" type="button" class="btn-secondary" :disabled="isPosting" @click="endTrip">
-                    End transit
+                    {{ WORDS.endTrip }}
                 </button>
                 <button v-else type="button" class="btn-secondary" @click="router.push({ name: 'task-detail', params: { familyId, taskId } })">
                     Back to task
@@ -345,7 +353,7 @@ onUnmounted(stopPolling)
             <div v-if="actionError" class="notice is-error" role="alert">{{ actionError }}</div>
 
             <div v-if="otherTrips.length" class="also-live">
-                <span>Also on a trip:</span>
+                <span>{{ WORDS.alsoOnTrip }}</span>
                 <button v-for="trip in otherTrips" :key="trip.taskId" type="button" class="also-live-chip" @click="openLiveTransit(trip)">
                     <PersonAvatar :name="trip.companion?.name || ''" :size="24" tone="peach" />
                     {{ (trip.companion?.name || 'Someone').split(' ')[0] }} · {{ trip.mobileHeadline }}
@@ -426,9 +434,9 @@ onUnmounted(stopPolling)
                     </header>
 
                     <div v-if="!session" class="not-started">
-                        <p>Transit starts when {{ companionFirst || 'the person who claimed this task' }} taps "Start transit".</p>
+                        <p>Transit starts when {{ companionFirst || 'the person who claimed this task' }} taps "{{ WORDS.startTrip }}".</p>
                         <button v-if="canStart" type="button" class="btn-primary-cc wide" :disabled="isPosting" @click="startTrip">
-                            Start transit mode
+                            {{ WORDS.startTrip }}
                         </button>
                     </div>
 
@@ -449,15 +457,26 @@ onUnmounted(stopPolling)
                                     <template v-if="step.type === 'custom'"> · custom update</template>
                                 </small>
                             </span>
+                            <button
+                                v-if="canRemove(step)"
+                                type="button"
+                                class="remove-step"
+                                :disabled="isPosting"
+                                :aria-label="`Remove ${step.label}`"
+                                title="Remove this update"
+                                @click="removeStep(step)"
+                            >
+                                <i class="bi bi-x-lg" aria-hidden="true"></i>
+                            </button>
                         </li>
                     </ol>
 
                     <p v-if="isEnded" class="ended-note">
                         <i class="bi" :class="taskDone ? 'bi-house-heart-fill' : 'bi-flag'" aria-hidden="true"></i>
-                        {{ taskDone ? 'Safely back home. The task is marked as done.' : 'Transit ended. The task is still in progress.' }}
+                        {{ taskDone ? 'Safely back home. The task is marked as done.' : WORDS.tripEnded }}
                     </p>
                     <button v-if="canResume" type="button" class="btn-secondary wide resume" :disabled="isPosting" @click="resumeTrip">
-                        <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Resume transit
+                        <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> {{ WORDS.resumeTrip }}
                     </button>
 
                     <section v-if="isActive && isCompanion" class="post-box" aria-labelledby="post-title">
@@ -935,6 +954,23 @@ h2 {
 
 .current .rail-line {
     display: none;
+}
+
+.remove-step {
+    align-self: flex-start;
+    margin-left: auto;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--theme-muted, #6b7280);
+}
+
+.remove-step:hover:not(:disabled) {
+    background: #ffe9e4;
+    color: #a33a26;
 }
 
 .update-text {

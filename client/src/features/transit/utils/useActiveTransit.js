@@ -16,7 +16,7 @@ const NEXT_LABEL = {
     departed: 'arrived at clinic',
     arrived: 'consultation done',
     consultation_done: 'heading home',
-    heading_home: 'safely home'
+    heading_home: 'safely back home'
 }
 
 // Without a chosen profile picture, the shared avatar falls back by care type (every elderly

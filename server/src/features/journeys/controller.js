@@ -163,6 +163,39 @@ export async function addMilestone(req, res, next) {
     }
 }
 
+// DELETE /api/families/:familyId/tasks/:taskId/transit/milestones?at=<the step's at>   (companion only)
+// Remove a step posted by mistake (e.g. a typo in a custom update). Steps have no id, so
+// the step's own `at` time picks it. "Safely back home" can't be removed: it completed the task.
+export async function removeMilestone(req, res, next) {
+    try {
+        const taskId = getTaskId(req)
+        const at = new Date(req.query.at)
+        if (!req.query.at || Number.isNaN(at.getTime())) {
+            throw httpError(400, 'Validation failed', ['at must be the time of the step to remove'])
+        }
+
+        const session = await TransitSession.findOne({ task: taskId, family: req.family._id })
+        if (!session) throw httpError(404, 'Transit session not found')
+        if (session.companion.toString() !== req.user.userId) {
+            throw httpError(403, 'Only the person on this trip can remove updates')
+        }
+
+        const step = session.milestones.find((m) => m.at && m.at.getTime() === at.getTime())
+        if (!step) throw httpError(404, 'Update not found')
+        if (step.type === 'home') throw httpError(409, '"Safely back home" finished the task, so it can\'t be removed')
+
+        await TransitSession.updateOne(
+            { _id: session._id },
+            { $pull: { milestones: { at, type: { $ne: 'home' } } } }
+        )
+
+        const transitSession = await populateSession(TransitSession.findById(session._id))
+        return res.json({ transitSession })
+    } catch (error) {
+        return handleError(error, res, next)
+    }
+}
+
 // GET /api/families/:familyId/transit?status=active
 // For the live banner on Family Home.
 export async function listTransitSessions(req, res, next) {

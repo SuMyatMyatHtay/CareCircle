@@ -18,7 +18,7 @@ const isMobile = useIsMobile()
 const TABS = [
     { key: 'claimed', label: 'Upcoming', empty: 'Nothing coming up. Claim a task from Family home.' },
     { key: 'in_progress', label: 'In progress', empty: 'Nothing in progress right now.' },
-    { key: 'completed', label: 'Completed', empty: 'No completed tasks yet.' }
+    { key: 'completed', label: 'Done', empty: 'No completed tasks yet.' }
 ]
 const DUE_SOON_MS = 24 * 60 * 60 * 1000
 const FAMILY_TONES = ['green', 'purple', 'blue', 'orange']

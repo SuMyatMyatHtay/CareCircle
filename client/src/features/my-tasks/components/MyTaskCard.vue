@@ -5,6 +5,7 @@ import { computed } from 'vue'
 import TaskProgress from './TaskProgress.vue'
 import PersonAvatar from './PersonAvatar.vue'
 import { formatDay, formatTime, recipientName } from '../utils/formatters.js'
+import { WORDS } from '../../transit/utils/wording.js'
 
 const props = defineProps({
     task: { type: Object, required: true },
@@ -60,19 +61,19 @@ const statusLabel = computed(() => {
             </RouterLink>
 
             <template v-if="task.status === 'claimed'">
-                <button type="button" class="btn-secondary" :disabled="busy" @click="emit('give-back')">Give back</button>
+                <button type="button" class="btn-secondary" :disabled="busy" @click="emit('give-back')">{{ WORDS.giveBack }}</button>
                 <button type="button" class="btn-primary-cc" :disabled="busy" @click="emit('start')">
-                    {{ task.needsTransit ? 'Start transit' : 'Start task' }}
+                    {{ task.needsTransit ? WORDS.startTrip : WORDS.startTask }}
                 </button>
             </template>
 
             <template v-else-if="task.status === 'in_progress'">
-                <button v-if="task.needsTransit" type="button" class="btn-secondary" @click="emit('open-trip')">Open transit</button>
-                <button type="button" class="btn-primary-cc" :disabled="busy" @click="emit('complete')">Mark as done</button>
+                <button v-if="task.needsTransit" type="button" class="btn-secondary" @click="emit('open-trip')">{{ WORDS.openTrip }}</button>
+                <button type="button" class="btn-primary-cc" :disabled="busy" @click="emit('complete')">{{ WORDS.markDone }}</button>
             </template>
 
             <button v-else-if="task.needsTransit" type="button" class="btn-secondary" @click="emit('open-trip')">
-                View journey
+                {{ WORDS.viewTrip }}
             </button>
         </div>
     </article>
