@@ -1,8 +1,10 @@
 // Owner: Chaithra (E)
-// The live trip in a family, shaped for the Family Home banners (B's TransitBanner and
-// MobileTransitCard). Polls every 15 s, like the rest of Transit mode.
-//   const { liveTransit, openLiveTransit } = useActiveTransit(selectedFamilyId)
-//   liveTransit -> { recipient, companion, headline, mobileHeadline, detail, familyId, taskId } | null
+// The family's live trips, shaped for the Family Home banners (B's TransitBanner and
+// MobileTransitCard). Several people can be on a trip at once, so there's one banner each.
+// Polls every 15 s, like the rest of Transit mode.
+//   const { liveTransits, openLiveTransit } = useActiveTransit(selectedFamilyId)
+//   liveTransits -> [{ recipient, companion, headline, mobileHeadline, detail, familyId, taskId }]
+//   openLiveTransit(banner) opens that trip's Transit page
 import { ref, computed, watch, onMounted, onUnmounted, unref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getActiveTransitSessions } from '../services/transitApi.js'
@@ -15,6 +17,16 @@ const NEXT_LABEL = {
     arrived: 'consultation done',
     consultation_done: 'heading home',
     heading_home: 'safely home'
+}
+
+// Without a chosen profile picture, the shared avatar falls back by care type (every elderly
+// person becomes Grandpa, every user becomes Alex). Pick the sample picture by name first.
+const PICTURES = { grandpa: 'grandpa', grandma: 'grandma', emma: 'baby-emma', jasmine: 'jasmine', alex: 'alex', may: 'aunt-may', mia: 'mia' }
+function withPicture(person) {
+    if (!person || person.profilePicture) return person || {}
+    const words = String(person.nickname || person.name || '').toLowerCase().split(/\s+/)
+    const key = Object.keys(PICTURES).find((k) => words.includes(k))
+    return key ? { ...person, profilePicture: `/avatars/people/${PICTURES[key]}.png` } : person
 }
 
 const idOf = (value) => (value && typeof value === 'object' ? value._id : value)
@@ -47,8 +59,8 @@ function toBanner(session, familyId) {
     const when = formatTime(latest?.at || session.startedAt)
 
     return {
-        recipient: recipient || {},
-        companion,
+        recipient: withPicture(recipient),
+        companion: withPicture(companion),
         mobileHeadline,
         // MobileTransitCard shows the part before " with " and the part before the first " · "
         headline: `${mobileHeadline} with ${companionFirst}`,
@@ -79,11 +91,11 @@ export function useActiveTransit(familyIdRef, { enabled = true } = {}) {
         }
     }
 
-    // Newest active trip first (the server sorts by startedAt)
-    const liveTransit = computed(() => toBanner(sessions.value[0], unref(familyIdRef)))
+    // Newest trip first (the server sorts by startedAt)
+    const liveTransits = computed(() => sessions.value.map((s) => toBanner(s, unref(familyIdRef))).filter(Boolean))
+    const liveTransit = computed(() => liveTransits.value[0] || null)
 
-    function openLiveTransit() {
-        const banner = liveTransit.value
+    function openLiveTransit(banner = liveTransit.value) {
         if (banner?.taskId) {
             router.push({ name: 'transit', params: { familyId: banner.familyId, taskId: banner.taskId } })
         }
@@ -101,5 +113,5 @@ export function useActiveTransit(familyIdRef, { enabled = true } = {}) {
     })
     onUnmounted(() => clearInterval(timer))
 
-    return { liveTransit, openLiveTransit, reload: load }
+    return { liveTransits, liveTransit, openLiveTransit, reload: load }
 }

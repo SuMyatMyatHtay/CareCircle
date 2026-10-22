@@ -5,6 +5,7 @@
 import { ref, computed } from 'vue'
 import { formatTime } from '../../my-tasks/utils/formatters.js'
 import OneMapTiles from './OneMapTiles.vue'
+import PersonAvatar from '../../my-tasks/components/PersonAvatar.vue'
 
 const props = defineProps({
     task: { type: Object, required: true },
@@ -21,9 +22,10 @@ const props = defineProps({
     liveCaption: { type: String, default: '' },   // "Live · updated 1:42 PM" or "Location paused · …"
     canResume: { type: Boolean, default: false }, // companion, after an accidental End transit
     liveTime: { type: String, default: '' },       // photo-pin bubble: "12:25 AM Tue"
-    liveNote: { type: String, default: '' }        // photo-pin bubble: "Heading home"
+    liveNote: { type: String, default: '' },       // photo-pin bubble: "Heading home"
+    otherTrips: { type: Array, default: () => [] } // other family members on a trip right now
 })
-const emit = defineEmits(['back', 'post', 'start', 'dismiss', 'resume'])
+const emit = defineEmits(['back', 'post', 'start', 'dismiss', 'resume', 'open-trip'])
 
 // The fixed steps in order, with the labels used on the phone design
 const PRESETS = [
@@ -107,6 +109,15 @@ function safelyHome() {
             <span v-if="isActive" class="live">LIVE</span>
             <span v-else-if="isEnded" class="live ended">ENDED</span>
         </header>
+
+        <div v-if="otherTrips.length" class="also-live body">
+            <span>Also on a trip:</span>
+            <button v-for="trip in otherTrips" :key="trip.taskId" type="button" class="also-live-chip" @click="emit('open-trip', trip)">
+                <PersonAvatar :name="trip.companion?.name || ''" :size="24" tone="peach" />
+                {{ (trip.companion?.name || 'Someone').split(' ')[0] }} · {{ trip.mobileHeadline }}
+                <span class="also-live-dot" aria-hidden="true"></span>
+            </button>
+        </div>
 
         <div v-if="notice" class="msg" role="status" @click="emit('dismiss')">{{ notice }}</div>
         <div v-if="actionError" class="msg is-error" role="alert">{{ actionError }}</div>
@@ -203,6 +214,40 @@ function safelyHome() {
 </template>
 
 <style scoped>
+/* Other family members on a trip right now */
+.also-live {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--theme-muted, #6b7280);
+}
+
+.also-live-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px 4px 4px;
+    border: 1px solid var(--theme-accent-border, #cfe8d3);
+    border-radius: 999px;
+    background: var(--theme-soft, #e8f5e9);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--theme-text, #2e2e2e);
+    cursor: pointer;
+}
+
+.also-live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #e46f5c;
+}
+
 .live-map {
     margin-top: 12px;
 }

@@ -234,7 +234,7 @@ function isControl(event) {
 function onPointerDown(event) {
     if (!autoView.value || isControl(event) || (event.pointerType === 'mouse' && event.button !== 0)) return
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
-    mapEl.value.setPointerCapture?.(event.pointerId)
+    try { mapEl.value.setPointerCapture?.(event.pointerId) } catch { /* fine without it */ }
     dragging.value = true
     instant.value = true
     if (pointers.size === 2) {
@@ -324,6 +324,7 @@ watch(() => grid.value?.tiles[0]?.key, () => {
                     :key="tile.key"
                     :src="tile.src"
                     alt=""
+                    draggable="false"
                     :style="{ left: `${tile.left}px`, top: `${tile.top}px` }"
                     @error="onTileError"
                 />
@@ -364,7 +365,7 @@ watch(() => grid.value?.tiles[0]?.key, () => {
                 <span class="tip" aria-hidden="true"><span class="pulse"></span></span>
             </div>
 
-            <span v-if="label" class="label">{{ label }}</span>
+            <span v-if="label && !grid.live" class="label">{{ label }}</span>
 
             <!-- Zoom and recentre -->
             <div class="map-controls">
@@ -385,15 +386,6 @@ watch(() => grid.value?.tiles[0]?.key, () => {
                     <i class="bi bi-crosshair" aria-hidden="true"></i>
                 </button>
             </div>
-            <button
-                v-if="isMoved && live"
-                type="button"
-                class="recentre-pill"
-                :style="{ bottom: `${bottomSpace + 26}px` }"
-                @click="recentre"
-            >
-                <i class="bi bi-crosshair" aria-hidden="true"></i> {{ recentreLabel }}
-            </button>
 
             <div class="map-overlay"><slot></slot></div>
             <span v-if="tilesFailed" class="credit">Map pictures unavailable right now</span>
@@ -432,6 +424,8 @@ watch(() => grid.value?.tiles[0]?.key, () => {
 }
 
 .tiles img {
+    pointer-events: none;
+    -webkit-user-drag: none;
     position: absolute;
     width: 256px;
     height: 256px;
@@ -591,6 +585,13 @@ watch(() => grid.value?.tiles[0]?.key, () => {
     .person-pin { transition: none; }
 }
 
+.onemap.interactive .pin,
+.onemap.interactive .person-pin,
+.onemap.interactive .live-dot,
+.onemap.interactive .label {
+    pointer-events: none;
+}
+
 .onemap.interactive {
     cursor: grab;
     touch-action: none; /* the map handles dragging and pinching itself */
@@ -644,26 +645,6 @@ watch(() => grid.value?.tiles[0]?.key, () => {
 .map-btn.recentre.highlight {
     border-color: var(--theme-green, #2f7a3f);
     color: var(--theme-green, #2f7a3f);
-}
-
-.recentre-pill {
-    position: absolute;
-    left: 50%;
-    z-index: 4;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    border: none;
-    border-radius: 999px;
-    background: var(--theme-green, #2f7a3f);
-    color: white;
-    font-size: 13px;
-    font-weight: 700;
-    white-space: nowrap;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    transform: translateX(-50%);
-    cursor: pointer;
 }
 
 .label {

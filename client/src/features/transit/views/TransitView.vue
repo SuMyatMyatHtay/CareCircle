@@ -15,6 +15,7 @@ import { useIsMobile } from '../../my-tasks/utils/useIsMobile.js'
 import PersonAvatar from '../../my-tasks/components/PersonAvatar.vue'
 import { getTask, getTransitSession, postMilestone, endTransit, resumeTransit, updateLocation } from '../services/transitApi.js'
 import { useLiveLocation } from '../utils/useLiveLocation.js'
+import { useActiveTransit } from '../utils/useActiveTransit.js'
 import { startTask, getErrorMessage } from '../../my-tasks/services/myTasksApi.js'
 import { formatTime, recipientName } from '../../my-tasks/utils/formatters.js'
 import { useActiveFamily } from '../../../composables/useActiveFamily.js'
@@ -26,6 +27,10 @@ const props = defineProps({
 
 const router = useRouter()
 const isMobile = useIsMobile()
+
+// Other people in this family on a trip right now (switch to their live map)
+const { liveTransits, openLiveTransit } = useActiveTransit(computed(() => props.familyId))
+const otherTrips = computed(() => liveTransits.value.filter((t) => String(t.taskId) !== String(props.taskId)))
 const { families } = useActiveFamily()
 const POLL_MS = 10 * 1000
 
@@ -296,6 +301,8 @@ onUnmounted(stopPolling)
             @post="(m) => post(m, { confirmed: true })"
             @start="startTrip"
             @resume="resumeTrip"
+            :other-trips="otherTrips"
+            @open-trip="openLiveTransit"
             @dismiss="notice = ''"
         />
     </div>
@@ -336,6 +343,15 @@ onUnmounted(stopPolling)
                 <button type="button" class="notice-close" aria-label="Dismiss" @click="notice = ''">×</button>
             </div>
             <div v-if="actionError" class="notice is-error" role="alert">{{ actionError }}</div>
+
+            <div v-if="otherTrips.length" class="also-live">
+                <span>Also on a trip:</span>
+                <button v-for="trip in otherTrips" :key="trip.taskId" type="button" class="also-live-chip" @click="openLiveTransit(trip)">
+                    <PersonAvatar :name="trip.companion?.name || ''" :size="24" tone="peach" />
+                    {{ (trip.companion?.name || 'Someone').split(' ')[0] }} · {{ trip.mobileHeadline }}
+                    <span class="also-live-dot" aria-hidden="true"></span>
+                </button>
+            </div>
 
             <div class="columns">
                 <!-- Map column -->
@@ -494,6 +510,40 @@ onUnmounted(stopPolling)
 </template>
 
 <style scoped>
+/* Other family members on a trip right now */
+.also-live {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--theme-muted, #6b7280);
+}
+
+.also-live-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px 4px 4px;
+    border: 1px solid var(--theme-accent-border, #cfe8d3);
+    border-radius: 999px;
+    background: var(--theme-soft, #e8f5e9);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--theme-text, #2e2e2e);
+    cursor: pointer;
+}
+
+.also-live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #e46f5c;
+}
+
 .people-bar {
     position: absolute;
     left: 12px;
