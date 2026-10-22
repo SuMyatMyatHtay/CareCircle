@@ -146,7 +146,7 @@ function closeMenuOnFocusOut(event) {
                                 @click="chooseLanguage(option.code)"
                             >
                                 <span :lang="option.code">{{ option.label }}</span>
-                                <i v-if="option.cached" class="bi bi-check2" aria-label="saved"></i>
+                                <!-- <i v-if="option.cached" class="bi bi-check2" aria-label="saved"></i> -->
                             </button>
                         </li>
                     </ul>
@@ -188,7 +188,7 @@ function closeMenuOnFocusOut(event) {
         <p v-if="translateError" class="translate-error" role="alert">{{ translateError }}</p>
 
         <div v-if="shownLanguage" class="translation" :lang="shownLanguage">
-            <span class="translation-label">{{ languageLabel(shownLanguage) }} · LibreTranslate</span>
+            <span class="translation-label">{{ languageLabel(shownLanguage) }} · AzureTranslate</span>
             <p>{{ translations[shownLanguage] }}</p>
         </div>
     </article>

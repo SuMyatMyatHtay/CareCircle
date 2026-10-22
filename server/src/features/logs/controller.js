@@ -3,6 +3,7 @@
 import mongoose from 'mongoose'
 import LogEntry from './CareLog.model.js'
 import { EVENTS, LOG_TYPES } from '../../constants.js'
+import { translateText, isSupportedLanguage, SUPPORTED_LANGUAGES } from '../integrations/azureTranslate.js'
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 50
@@ -246,6 +247,48 @@ export async function deleteLog(req, res, next) {
 
         await log.deleteOne()
         return res.status(204).end()
+    } catch (error) {
+        return handleError(error, res, next)
+    }
+}
+
+// using the translation api
+export async function translateLog(req, res, next) {
+    try {
+        const log = await findLogInFamily(req.family._id, req.params.logId)
+
+        // Only accept languages we know about
+        const lang = req.body?.lang
+        if (typeof lang !== 'string' || !isSupportedLanguage(lang)) {
+            throw httpError(400, 'Validation failed', [
+                `lang must be one of: ${SUPPORTED_LANGUAGES.join(', ')}`
+            ])
+        }
+        if (lang === log.originalLang) {
+            throw httpError(400, 'Validation failed', ['This note is already in that language'])
+        }
+
+        // Cache hit: each text is only translated once per language
+        const cached = log.translations?.get(lang)
+        if (cached) return res.json({ lang, translation: cached, cached: true })
+
+        let translation
+        try {
+            translation = await translateText(log.content, lang, log.originalLang)
+        } catch (error) {
+            console.error('Translation failed:', error.message)
+            throw httpError(502, 'Translation service is unavailable. Please try again later.')
+        }
+        
+        console.log(lang, cached)
+
+        await LogEntry.updateOne(
+            { _id: log._id, content: log.content },
+            { $set: { [`translations.${lang}`]: translation } },
+            { timestamps: false }
+        )
+
+        return res.json({ lang, translation, cached: false })
     } catch (error) {
         return handleError(error, res, next)
     }
