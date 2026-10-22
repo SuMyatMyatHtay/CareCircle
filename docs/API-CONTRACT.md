@@ -8,7 +8,7 @@ All endpoints, by package. **Implemented** means the endpoint is merged and test
 | B | SangYoon | `/api/families/:familyId` (members, invitations); language via A's `/api/auth/me` | Member/invite code complete with local HTTP tests; MongoDB integration pending |
 | C | Jhen | `/api/families/:familyId/recipients` | Implemented |
 | D | Marcus | `/api/families/:familyId/tasks` | Planned (model and routes done; controller stubs return 501) |
-| E | Chaithra | `/api/me/tasks`, `/api/families/:familyId/tasks/:taskId/transit`, `/api/families/:familyId/transit`, `/api/integrations/clinics` | Implemented |
+| E | Chaithra | `/api/me/tasks`, `/api/me/google`, `/api/families/:familyId/tasks/:taskId/transit`, `/api/families/:familyId/transit`, `/api/integrations/clinics` | Implemented |
 | F | SeungHak | `/api/families/:familyId/logs`, `/api/families/:familyId/notifications`, `/api/integrations` | Logs and voice transcription implemented; notifications and Telegram planned |
 
 Every package router is mounted in `server/src/routes/index.js` at the path listed in this file. Endpoints that are still placeholders return `501`.
@@ -197,6 +197,7 @@ Proposal: the frontend updates the list in place from socket events. It doesn't 
 - **Tabs:** Upcoming = `claimed`, In Progress = `in_progress`, Completed = `completed`.
 - **"Due soon" flag:** worked out in the client (`startAt` within the next 24 hours). F's Telegram reminders handle the push side.
 - **Actions on My Tasks** use D's endpoints: Start task = `POST /start`, Give back = `POST /unclaim`, Mark as done = `POST /complete`.
+- Opening My Tasks also refreshes the user's Google Calendar (at most once a minute; see Google Calendar sync).
 - **Code:** `server/src/features/my-tasks/`, mounted at `/api/me` in `routes/index.js`. Reads D's `tasks` collection only.
 
 ### Transit
@@ -206,23 +207,43 @@ Base: `/api/families/:familyId/tasks/:taskId/transit` (mounted before D's tasks 
 | Method | Path | Who | Body | Response | Status |
 |---|---|---|---|---|---|
 | GET | `/api/families/:familyId/transit?status=active` | member | none | `{ transitSessions }` with task and companion populated, newest first. `status` is `active` or `ended` (optional). For the live banner on Home. | Implemented |
-| GET | `/` | member | none | `{ transitSession }`; `404` if the task has no session | Implemented |
+| GET | `/` | member | none | `{ transitSession }` (includes `lastLocation` and `path`); `404` if the task has no session | Implemented |
 | POST | `/milestones` | companion | `{ type, label?, lat?, lng? }` | `201 { transitSession }`. The server sets `at`. `403` if not the companion, `409` if the trip has ended. | Implemented |
+| DELETE | `/milestones?at=<step at>` | companion | none | `{ transitSession }` without that step. For removing a mistake (e.g. a typo). `404` if no step has that `at`, `409` for "Safely back home" (it completed the task). | Implemented |
 | POST | `/end` | companion | none | `{ transitSession }` with `status: 'ended'`. "End transit": stops the trip **without** completing the task (it stays `in_progress`). `409` if already ended. | Implemented |
-| PATCH | `/location` | companion | `{ lat, lng }` | `{ lastLocation }`. Sent every ~20 s by the companion's browser while active. `403` if not the companion, `409` if ended. | Implemented |
+| POST | `/resume` | companion | none | `{ transitSession }` back to `active`, keeping its steps. Undoes an accidental End transit. `409` unless the task is still `in_progress` and the trip has ended. | Implemented |
+| PATCH | `/location` | companion | `{ lat, lng }` | `{ lastLocation }`. Sent every ~20 s by the companion's browser while active. Also adds the point to `path`. `403` if not the companion, `409` if ended. | Implemented |
 
-- **Starting a session:** D's `POST /tasks/:taskId/start` creates it (`TaskModel.startTransitSession`). E never creates one directly.
+- **Starting a session:** D's `POST /tasks/:taskId/start` creates it (`TaskModel.startTransitSession`). Starting again after an unclaim is a new journey: steps, `path`, `lastLocation`, `startedAt` and `endedAt` are reset. E never creates a session directly.
 - **Step types:** `MILESTONE_TYPES` = `departed`, `arrived`, `consultation_done`, `heading_home`, `home`, `custom`. Preset steps send a type (label optional; the server fills a default). Custom steps send `type: 'custom'` and the text the user typed as `label` (required, max 80 characters).
 - **UI presets** (Transit mode chips): "On the way to fetch …" (`departed`), "Fetched …" (custom), "Reached hospital" (`arrived`), "Seeing the doctor", "Collecting medicine", "Going for lunch" (custom), "Heading home" (`heading_home`), "Safely back home" (`home`).
-- **Auto-complete:** a `home` milestone completes the task through D's exported `completeTask()` (not the HTTP endpoint), which also ends the session. If completing fails (e.g. the task was cancelled), the milestone is removed again and the error is returned.
+- **"Safely back home":** completes the task **first** through D's exported `completeTask()` (same rules as `POST /complete`). If that fails, nothing has been saved and the error is returned. Then the home step, `status: 'ended'` and `endedAt` are saved in one update (retried once).
+- **Live location and trail:** `lastLocation` is the latest position; `path` is the trail drawn on the map (`[{ lat, lng, at }]`, oldest first, capped at 500 points). A gap over 150 m is filled in along the roads (OSRM, OpenStreetMap routing, no API key); an impossible jump (over 2 km at over 120 km/h) starts the trail again. Browsers only share location while the Transit page is open, so the UI shows "Location paused" after 2 minutes without an update.
 - **Live timeline:** Transit mode polls `GET /` every 10 seconds while the trip is active (Socket.IO isn't set up, and the server runs serverless). When F's `notify()` exists, replace `announce()` in `journeys/controller.js` with `notify(familyId, 'transit.milestone', { transitSession })`.
 - **Model:** `server/src/features/journeys/Journey.model.js`, registered as `TransitSession` (collection `transitsessions`). E owns it.
+- **Demo helper:** `node server/simulate-trail.js [taskId]` draws a pretend trail on an active trip (for testing and demos).
+
+### Google Calendar sync
+
+| Method | Path | Who | Body | Response | Status |
+|---|---|---|---|---|---|
+| GET | `/api/me/google` | logged in | none | `{ available, connected, email, lastSyncedAt, lastError }`. `available: false` when the server has no Google settings. | Implemented |
+| GET | `/api/me/google/connect` | logged in | none | `{ url }`: Google's sign-in page. `503` if not set up. | Implemented |
+| GET | `/api/google/callback` | public (Google redirects here) | `code`, `state` | Saves the link, syncs, then redirects to `/my-tasks?calendar=connected` (or `cancelled` / `error`). | Implemented |
+| POST | `/api/me/google/sync` | logged in | none | `{ connected, added, updated, removed }`. `502` if Google can't be reached. | Implemented |
+| DELETE | `/api/me/google?removeEvents=true` | logged in | none | `204`. Stops syncing; with `removeEvents=true` also deletes the CareCircle events. | Implemented |
+
+- **What syncs:** the user's tasks that are `claimed`, `in_progress` or `completed` (from the last 30 days on) appear in their Google Calendar; given back, cancelled, deleted or left-family tasks are removed. Completed tasks get a ✓.
+- **When:** after any successful change to a task (`calendarAutoSync` middleware in front of D's tasks router, so D's code doesn't change), after "Safely back home", when the user opens My Tasks, and on "Sync now".
+- **Server settings** (`server/.env`, never committed): `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI=http://localhost:5173/api/google/callback`; deployed, also `APP_URL=<website address>` if the website and API are on different addresses. While the Google app is in testing, only Gmails added as test users can connect.
+- **Model:** `server/src/features/calendar-sync/GoogleCalendarLink.model.js` (collection `googlecalendarlinks`): refresh token (never sent to the browser), Google email, and taskId → event id.
+- **Code:** `server/src/features/calendar-sync/`, `client/src/features/my-tasks/components/GoogleCalendarSync.vue`.
 
 ### Clinic search (OneMap, CC-19)
 
 | Method | Path | Who | Query | Response | Status |
 |---|---|---|---|---|---|
-| GET | `/api/integrations/clinics` | logged in | `q` (at least 2 characters) | `{ clinics: [{ name, address, postal, lat, lng }] }`, up to 10. Same shape as a task's `location`. `502` if OneMap is down. | Implemented |
+| GET | `/api/integrations/clinics` | logged in | `q` (at least 2 characters) | `{ clinics, otherPlaces }`: each `[{ name, address, postal, lat, lng }]`. `clinics` are medical places (up to 10); `otherPlaces` (up to 5) are shown only when no clinic matched. `502` if OneMap is down. | Implemented |
 | POST | `/api/integrations/transcribe` | logged in | Raw audio body (`Content-Type: audio/webm`, `audio/mp4`, ...), max 4 MB | `{ text }`. Uses Groq Whisper. `429` if Groq's rate limit is hit, `502` if Groq is down, `503` if `GROQ_API_KEY` is not set. | Implemented |
 
 - Calls OneMap's public search API from the server. `lat`/`lng` are numbers and `postal` is 6 digits or `''`, so a result can be saved as `task.location` directly.
@@ -233,10 +254,12 @@ Base: `/api/families/:familyId/tasks/:taskId/transit` (mounted before D's tasks 
 All in `client/src/features/transit/components/`:
 
 - **`TaskLocationCard.vue`** (`:task`): OneMap map, address and Directions button. For D's Task detail page.
-- **`TaskTransitActions.vue`** (`:task`): Start transit / Open transit, live milestone, Add to Google Calendar. Has `#middle` and `#end` slots for D's own buttons. For D's Task detail page.
+- **`TaskTransitActions.vue`** (`:task`): Start transit / Open transit, live milestone, Add to calendar. Has `#middle` and `#end` slots for D's own buttons. For D's Task detail page.
+- **`AddToCalendar.vue`** (`v-model`, `:tasks`): pop-up with Google Calendar / Apple Calendar / Outlook buttons for one or more tasks.
+- **`OneMapTiles.vue`**: the OneMap map, with optional destination pin, companion photo pin + bubble, and trail.
 - **`LiveTransitBanner.vue`** (`:family-id`): "on the way" banner, polls every 15 s. For B's Family Home, replacing the TransitBanner placeholder.
 
-Pages: `/my-tasks` (My Tasks; "Sync to Google Calendar" downloads an `.ics` file, no server endpoint) and `/transit/:familyId/:taskId` (Transit mode).
+Pages: `/my-tasks` (My Tasks, with "Connect Google Calendar" and "Add to calendar") and `/transit/:familyId/:taskId` (Transit mode).
 
 **Temporary:** `client/src/features/transit/views/TaskDetailView.vue` at `/families/:familyId/tasks/:taskId` is a stand-in until D's Task detail page is ready. D can delete it and point the route to his own view.
 

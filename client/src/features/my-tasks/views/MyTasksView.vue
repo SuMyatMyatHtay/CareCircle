@@ -9,7 +9,8 @@ import WeekStrip from '../components/WeekStrip.vue'
 import MyTasksMobile from '../components/MyTasksMobile.vue'
 import { useIsMobile } from '../utils/useIsMobile.js'
 import { getMyTasks, startTask, unclaimTask, completeTask, getErrorMessage } from '../services/myTasksApi.js'
-import { downloadTasksAsCalendar } from '../utils/calendarExport.js'
+import AddToCalendar from '../../transit/components/AddToCalendar.vue'
+import GoogleCalendarSync from '../components/GoogleCalendarSync.vue'
 
 const router = useRouter()
 const isMobile = useIsMobile()
@@ -17,7 +18,7 @@ const isMobile = useIsMobile()
 const TABS = [
     { key: 'claimed', label: 'Upcoming', empty: 'Nothing coming up. Claim a task from Family home.' },
     { key: 'in_progress', label: 'In progress', empty: 'Nothing in progress right now.' },
-    { key: 'completed', label: 'Completed', empty: 'No completed tasks yet.' }
+    { key: 'completed', label: 'Done', empty: 'No completed tasks yet.' }
 ]
 const DUE_SOON_MS = 24 * 60 * 60 * 1000
 const FAMILY_TONES = ['green', 'purple', 'blue', 'orange']
@@ -85,14 +86,8 @@ function toggle(task) {
     expandedId.value = expandedId.value === task._id ? '' : task._id
 }
 
-function syncCalendar() {
-    if (!openTasks.value.length) {
-        notice.value = 'No upcoming tasks to add.'
-        return
-    }
-    downloadTasksAsCalendar(openTasks.value)
-    notice.value = 'Calendar file downloaded. In Google Calendar, go to Settings → Import & export → Import.'
-}
+// "Add to calendar" pop-up with the upcoming tasks (Google / Apple / Outlook on each)
+const calendarOpen = ref(false)
 
 async function loadTasks() {
     isLoading.value = true
@@ -183,6 +178,7 @@ onUnmounted(() => {
         :now="now"
         @select-tab="selectTab"
         @retry="loadTasks"
+        @calendar="calendarOpen = true"
     />
 
     <!-- Laptops: Figma "Web wireframes" layout -->
@@ -202,7 +198,10 @@ onUnmounted(() => {
                 <span aria-hidden="true">▾</span>
             </label>
 
-            <button type="button" class="btn-secondary" @click="syncCalendar">Sync to Google Calendar</button>
+            <GoogleCalendarSync />
+            <button type="button" class="btn-secondary" @click="calendarOpen = true">
+                <i class="bi bi-calendar-plus" aria-hidden="true"></i> Add to calendar
+            </button>
         </header>
 
         <div class="tabs" role="tablist" aria-label="Task status">
@@ -272,6 +271,9 @@ onUnmounted(() => {
             </aside>
         </div>
     </div>
+
+    <!-- Both layouts: "Add to calendar" pop-up -->
+    <AddToCalendar v-model="calendarOpen" :tasks="openTasks" />
 </template>
 
 <style scoped>

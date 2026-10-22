@@ -52,7 +52,7 @@ const CATEGORY_LABELS = {
     childcare: 'Childcare', medication: 'Medication', companionship: 'Companionship', other: 'Other'
 }
 const STATUS_LABELS = {
-    open: 'Available', claimed: 'Claimed', in_progress: 'In progress', completed: 'Completed', cancelled: 'Cancelled'
+    open: 'Available', claimed: 'Claimed', in_progress: 'In progress', completed: 'Done', cancelled: 'Cancelled'
 }
 
 const dayText = computed(() => new Date(task.value.startAt).toLocaleDateString('en-GB', {
@@ -73,7 +73,7 @@ const flow = computed(() => {
     return [
         { label: 'Available', state: reached > 0 ? 'done' : reached === 0 ? 'current' : 'todo' },
         { label: middle, state: reached > 1 ? 'done' : reached === 1 ? 'current' : 'todo' },
-        { label: 'Completed', state: reached === 2 ? 'current' : 'todo' }
+        { label: 'Done', state: reached === 2 ? 'current' : 'todo' }
     ]
 })
 
@@ -428,7 +428,7 @@ watch(() => [props.familyId, props.taskId], load)
 .tag-yellow { background: var(--theme-warning-soft, #fff8e1); color: var(--theme-warning, #7a5a00); }
 .status-open,
 .status-claimed { background: var(--theme-soft, #e8f5e9); color: var(--theme-green, #2f7a3f); }
-.status-in_progress { background: #2f7a3f; color: white; }
+.status-in_progress { background: var(--theme-green, #2f7a3f); color: white; }
 .status-completed,
 .status-cancelled { background: var(--theme-page, #f3f4f1); color: var(--theme-muted, #6b7280); }
 
@@ -457,7 +457,7 @@ h1 {
 }
 
 .flow-done { background: var(--theme-page, #f3f4f1); color: var(--theme-muted, #6b7280); }
-.flow-current { background: #2f7a3f; color: white; }
+.flow-current { background: var(--theme-green, #2f7a3f); color: white; }
 .flow-todo { background: var(--theme-panel, white); color: var(--theme-muted, #6b7280); }
 
 .when {

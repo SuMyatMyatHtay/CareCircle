@@ -20,6 +20,7 @@ import MobileTodayTasks from '../components/MobileTodayTasks.vue'
 import MobileHomeNavigation from '../components/MobileHomeNavigation.vue'
 import CareAvatar from '../../../components/common/CareAvatar.vue'
 import '../styles/mobileFamilyHome.css'
+import { useActiveTransit } from '../../transit/utils/useActiveTransit.js' // E: live trip banner
 
 const router = useRouter()
 const {
@@ -54,6 +55,23 @@ const {
   createTask,
   onTaskCreated,
 } = useFamilyDashboard()
+// E (Chaithra): the family's live trip for the banner; preview mode keeps its sample
+// One banner per live trip (several people can be travelling at once)
+const { liveTransits, openLiveTransit } = useActiveTransit(selectedFamilyId, { enabled: !isPreview })
+const allTransitBanners = computed(() => (isPreview ? [previewState.transit].filter(Boolean) : liveTransits.value))
+// Newest trip only, the rest behind "+N more on a trip" so Home never fills up with banners
+const showAllTrips = ref(false)
+const transitBanners = computed(() => (showAllTrips.value ? allTransitBanners.value : allTransitBanners.value.slice(0, 1)))
+const moreTrips = computed(() => Math.max(0, allTransitBanners.value.length - 1))
+const moreTripsLabel = computed(() =>
+  showAllTrips.value
+    ? 'Show less'
+    : `+${moreTrips.value} more ${moreTrips.value === 1 ? 'person' : 'people'} on a trip`,
+)
+function viewTransit(banner) {
+  if (isPreview) showTransit.value = true
+  else openLiveTransit(banner)
+}
 const firstName = computed(() => user.value.name?.split(/\s+/)[0] || 'friend')
 const greeting = computed(() => {
   const hour = Number(
@@ -174,9 +192,22 @@ watch(selectedFamilyId, () => {
       />
       <template v-else-if="selectedFamily">
         <TransitBanner
-          :session="isPreview ? previewState.transit : null"
-          @view="showTransit = true"
+          v-for="(banner, i) in transitBanners"
+          :key="banner.taskId || i"
+          :session="banner"
+          :style="i < transitBanners.length - 1 || moreTrips ? { marginBottom: '10px' } : null"
+          @view="viewTransit(banner)"
         />
+        <button
+          v-if="moreTrips"
+          type="button"
+          class="care-more-trips"
+          :aria-expanded="showAllTrips"
+          @click="showAllTrips = !showAllTrips"
+        >
+          {{ moreTripsLabel }}
+          <i class="bi" :class="showAllTrips ? 'bi-chevron-up' : 'bi-chevron-down'" aria-hidden="true"></i>
+        </button>
         <RecipientOverview
           :recipients="recipients"
           :loading="recipientsLoading"
@@ -203,10 +234,6 @@ watch(selectedFamilyId, () => {
           />
           <RecentUpdates :updates="activity" :preview="isPreview" />
         </div>
-        <p v-if="!isPreview" class="care-integration-note">
-          <i class="bi bi-info-circle" aria-hidden="true"></i>
-          Live transit will appear here when transit tracking is connected.
-        </p>
       </template>
     </div>
     <div class="care-home-mobile">
@@ -228,9 +255,22 @@ watch(selectedFamilyId, () => {
       />
       <template v-else-if="selectedFamily">
         <MobileTransitCard
-          :session="isPreview ? previewState.transit : null"
-          @view="showTransit = true"
+          v-for="(banner, i) in transitBanners"
+          :key="banner.taskId || i"
+          :session="banner"
+          :style="i < transitBanners.length - 1 || moreTrips ? { marginBottom: '10px' } : null"
+          @view="viewTransit(banner)"
         />
+        <button
+          v-if="moreTrips"
+          type="button"
+          class="care-more-trips"
+          :aria-expanded="showAllTrips"
+          @click="showAllTrips = !showAllTrips"
+        >
+          {{ moreTripsLabel }}
+          <i class="bi" :class="showAllTrips ? 'bi-chevron-up' : 'bi-chevron-down'" aria-hidden="true"></i>
+        </button>
         <MobileTodayTasks
           :tasks="todayTasks"
           :loading="loading"
@@ -365,3 +405,25 @@ watch(selectedFamilyId, () => {
     />
   </div>
 </template>
+
+<style>
+/* E (Chaithra): "+N more on a trip" under the live transit banner */
+.care-more-trips {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 22px;
+  padding: 6px 12px;
+  border: 1px solid var(--theme-accent-border, #cfe8d3);
+  border-radius: 999px;
+  background: var(--theme-panel, #fff);
+  color: var(--theme-green, #2f7a3f);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.care-more-trips:hover {
+  background: var(--theme-soft, #e8f5e9);
+}
+</style>

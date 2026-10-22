@@ -2,7 +2,7 @@
 // Owner: Chaithra (E). The E part of Figma "05 · Task detail" (D · Task Management + E).
 // - Live strip: latest milestone of the trip + "Update milestone" (while in transit)
 // - "Start transit mode" (claimer, claimed, needs transport) / "Open transit mode" / "View journey"
-// - "Add to Google Calendar"
+// - "Add to calendar" (pop-up: Google / Apple / Outlook)
 // D's own buttons (Mark as done, Give back task) go in the slots so the row keeps the Figma order:
 //   <TaskTransitActions :task="task" :family-id="familyId" @changed="reload">
 //     <template #middle>  ✓ Mark as done  </template>
@@ -13,7 +13,8 @@ import { useRouter } from 'vue-router'
 import { getTransitSession } from '../services/transitApi.js'
 import { startTask, getErrorMessage } from '../../my-tasks/services/myTasksApi.js'
 import { formatTime } from '../../my-tasks/utils/formatters.js'
-import { googleCalendarUrl } from '../utils/googleCalendar.js'
+import AddToCalendar from './AddToCalendar.vue'
+import { WORDS } from '../utils/wording.js'
 
 const props = defineProps({
     task: { type: Object, required: true },
@@ -23,6 +24,7 @@ const emit = defineEmits(['changed', 'error'])
 
 const router = useRouter()
 const session = ref(null)
+const calendarOpen = ref(false)
 const isBusy = ref(false)
 
 let me = {}
@@ -80,12 +82,12 @@ watch(() => [props.task?._id, props.task?.status], loadSession, { immediate: tru
     <div class="transit-actions">
         <!-- Live strip while someone is in transit -->
         <div v-if="session && latest" class="live-strip" :class="{ ended: !isLive }">
-            <span class="badge" :class="isLive ? 'badge-live' : 'badge-ended'">{{ isLive ? '● Live' : 'Ended' }}</span>
+            <span class="badge" :class="isLive ? 'badge-live' : 'badge-ended'">{{ isLive ? `● ${WORDS.live}` : WORDS.ended }}</span>
             <span class="live-text">
                 <strong>{{ latest.label }}</strong>
                 <small>{{ formatTime(latest.at) }} · {{ session.milestones.length }} update{{ session.milestones.length === 1 ? '' : 's' }}</small>
             </span>
-            <button v-if="isLive" type="button" class="btn-secondary" @click="openTransit">Update milestone</button>
+            <button v-if="isLive" type="button" class="btn-secondary" @click="openTransit">Post an update</button>
         </div>
 
         <div class="buttons">
@@ -96,24 +98,26 @@ watch(() => [props.task?._id, props.task?.status], loadSession, { immediate: tru
                 :disabled="isBusy"
                 @click="startTransit"
             >
-                Start transit mode
+                {{ WORDS.startTrip }}
             </button>
             <button v-else-if="transitButton === 'open'" type="button" class="btn-primary-lg" @click="openTransit">
-                Open transit mode
+                {{ WORDS.openTrip }}
             </button>
 
             <slot name="middle"></slot>
 
-            <a :href="googleCalendarUrl(task)" target="_blank" rel="noopener" class="btn-secondary">
-                Add to Google Calendar
-            </a>
+            <button type="button" class="btn-secondary" @click="calendarOpen = true">
+                <i class="bi bi-calendar-plus" aria-hidden="true"></i> {{ WORDS.addToCalendar }}
+            </button>
 
             <button v-if="transitButton === 'view'" type="button" class="btn-secondary" @click="openTransit">
-                View journey
+                {{ WORDS.viewTrip }}
             </button>
 
             <slot name="end"></slot>
         </div>
+
+        <AddToCalendar v-model="calendarOpen" :tasks="[task]" />
     </div>
 </template>
 
@@ -170,7 +174,7 @@ watch(() => [props.task?._id, props.task?.status], loadSession, { immediate: tru
 }
 
 .badge-live {
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
     color: white;
 }
 
@@ -191,7 +195,7 @@ watch(() => [props.task?._id, props.task?.status], loadSession, { immediate: tru
     padding: 20px;
     border: 1px solid var(--theme-accent-border, #2f7a3f);
     border-radius: 8px;
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
     color: white;
     font-size: 14px;
     line-height: 20px;

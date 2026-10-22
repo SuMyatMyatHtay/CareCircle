@@ -30,6 +30,15 @@ export async function postMilestone(familyId, taskId, milestone) {
     return response.data.transitSession
 }
 
+// Remove a step posted by mistake. `at` is the step's own time (steps have no id).
+export async function removeMilestone(familyId, taskId, at) {
+    const response = await http.delete(`${base(familyId, taskId)}/transit/milestones`, {
+        headers: authHeaders(),
+        params: { at }
+    })
+    return response.data.transitSession
+}
+
 // "End transit": stops the trip without completing the task
 export async function endTransit(familyId, taskId) {
     const response = await http.post(`${base(familyId, taskId)}/transit/end`, null, { headers: authHeaders() })

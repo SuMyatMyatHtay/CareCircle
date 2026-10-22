@@ -5,6 +5,7 @@ import { computed } from 'vue'
 import TaskProgress from './TaskProgress.vue'
 import PersonAvatar from './PersonAvatar.vue'
 import { formatDay, formatTime, recipientName } from '../utils/formatters.js'
+import { WORDS } from '../../transit/utils/wording.js'
 
 const props = defineProps({
     task: { type: Object, required: true },
@@ -60,19 +61,19 @@ const statusLabel = computed(() => {
             </RouterLink>
 
             <template v-if="task.status === 'claimed'">
-                <button type="button" class="btn-secondary" :disabled="busy" @click="emit('give-back')">Give back</button>
+                <button type="button" class="btn-secondary" :disabled="busy" @click="emit('give-back')">{{ WORDS.giveBack }}</button>
                 <button type="button" class="btn-primary-cc" :disabled="busy" @click="emit('start')">
-                    {{ task.needsTransit ? 'Start transit' : 'Start task' }}
+                    {{ task.needsTransit ? WORDS.startTrip : WORDS.startTask }}
                 </button>
             </template>
 
             <template v-else-if="task.status === 'in_progress'">
-                <button v-if="task.needsTransit" type="button" class="btn-secondary" @click="emit('open-trip')">Open transit</button>
-                <button type="button" class="btn-primary-cc" :disabled="busy" @click="emit('complete')">Mark as done</button>
+                <button v-if="task.needsTransit" type="button" class="btn-secondary" @click="emit('open-trip')">{{ WORDS.openTrip }}</button>
+                <button type="button" class="btn-primary-cc" :disabled="busy" @click="emit('complete')">{{ WORDS.markDone }}</button>
             </template>
 
             <button v-else-if="task.needsTransit" type="button" class="btn-secondary" @click="emit('open-trip')">
-                View journey
+                {{ WORDS.viewTrip }}
             </button>
         </div>
     </article>
@@ -158,7 +159,7 @@ const statusLabel = computed(() => {
 .family-purple { background: var(--theme-purple-soft, #eee8fd); color: var(--theme-purple, #4b3b8f); }
 .family-blue { background: var(--theme-blue-soft, #e3f0fb); color: var(--theme-blue, #1f5a8a); }
 .family-orange { background: var(--theme-warning-soft, #fff8e1); color: var(--theme-warning, #7a5a00); }
-.status-in_progress { background: #2f7a3f; color: white; }
+.status-in_progress { background: var(--theme-green, #2f7a3f); color: white; }
 .status-completed { background: var(--theme-page, #f3f4f6); color: var(--theme-muted, #6b7280); }
 
 .due-flag {
@@ -233,7 +234,7 @@ const statusLabel = computed(() => {
 
 .btn-primary-cc {
     border: 1px solid var(--theme-accent-border, #2f7a3f);
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
     color: white;
 }
 

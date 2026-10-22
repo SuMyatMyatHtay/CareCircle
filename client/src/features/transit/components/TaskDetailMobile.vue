@@ -1,12 +1,13 @@
 <script setup>
 // Matches Figma "Mobile prototype" → "09 · Task detail" (D · Task Management + E).
 // Phone layout of the Task detail page. TaskDetailView loads the task and runs the actions.
-// E parts here: Start the trip / Open the trip, live trip status, Open in Maps, Add to Google Calendar.
+// E parts here: Start the trip / Open the trip, live trip status, Open in Maps, Add to calendar.
 import { ref, computed, watch } from 'vue'
 import PersonAvatar from '../../my-tasks/components/PersonAvatar.vue'
 import { getTransitSession } from '../services/transitApi.js'
 import { formatTime, recipientName, TIME_ZONE } from '../../my-tasks/utils/formatters.js'
-import { googleCalendarUrl } from '../utils/googleCalendar.js'
+import AddToCalendar from './AddToCalendar.vue'
+import { WORDS } from '../utils/wording.js'
 
 const props = defineProps({
     task: { type: Object, required: true },
@@ -28,6 +29,7 @@ const CATEGORY_LABELS = {
 
 const session = ref(null)
 const menuOpen = ref(false)
+const calendarOpen = ref(false)
 
 const who = computed(() => recipientName(props.task))
 const status = computed(() => props.task.status)
@@ -73,17 +75,17 @@ const mapsUrl = computed(() => {
 // Segmented progress: Claimed / In progress / Done
 const progress = computed(() => {
     const reached = { claimed: 0, in_progress: 1, completed: 2 }[status.value] ?? -1
-    return ['Claimed', 'In progress', 'Done'].map((label, i) => ({ label, on: i <= reached }))
+    return [WORDS.claimed, WORDS.inProgress, WORDS.done].map((label, i) => ({ label, on: i <= reached }))
 })
 
 // Main green button
 const mainButton = computed(() => {
     if (status.value === 'open') return { label: "I'll take it", event: 'claim', icon: 'bi-hand-thumbs-up' }
     if (props.task.needsTransit && props.isClaimer && status.value === 'claimed') {
-        return { label: 'Start the trip', event: 'start', icon: 'bi-arrow-right' }
+        return { label: WORDS.startTrip, event: 'start', icon: 'bi-arrow-right' }
     }
     if (props.task.needsTransit && session.value) {
-        return { label: isLive.value ? 'Open the trip' : 'View journey', event: 'open-trip', icon: 'bi-geo-alt' }
+        return { label: isLive.value ? WORDS.openTrip : WORDS.viewTrip, event: 'open-trip', icon: 'bi-geo-alt' }
     }
     return null
 })
@@ -113,7 +115,7 @@ watch(() => [props.task._id, props.task.status], loadSession, { immediate: true 
                     <i class="bi bi-three-dots" aria-hidden="true"></i>
                 </button>
                 <div v-if="menuOpen" class="menu" @click="menuOpen = false">
-                    <a :href="googleCalendarUrl(task)" target="_blank" rel="noopener">Add to Google Calendar</a>
+                    <button type="button" @click="calendarOpen = true">{{ WORDS.addToCalendar }}</button>
                     <button v-if="canEdit" type="button" @click="emit('edit')">Edit</button>
                     <button v-if="canDelete" type="button" class="danger" @click="emit('delete')">Delete</button>
                 </div>
@@ -140,10 +142,10 @@ watch(() => [props.task._id, props.task.status], loadSession, { immediate: true 
 
         <!-- Live trip status (while someone is in transit) -->
         <button v-if="session && latest" type="button" class="live" @click="emit('open-trip')">
-            <span class="live-pill">{{ isLive ? 'LIVE' : 'ENDED' }}</span>
+            <span class="live-pill">{{ isLive ? WORDS.live : WORDS.ended }}</span>
             <span class="live-text">
                 <strong>{{ latest.label }}</strong>
-                <small>{{ time(latest.at) }}{{ isLive ? ' · tap to update' : '' }}</small>
+                <small>{{ time(latest.at) }}{{ isLive ? ' · tap to post an update' : '' }}</small>
             </span>
             <i class="bi bi-chevron-right" aria-hidden="true"></i>
         </button>
@@ -154,7 +156,7 @@ watch(() => [props.task._id, props.task.status], loadSession, { immediate: true 
                 <div>
                     <strong>{{ whenText }}</strong>
                     <small v-if="leaveBy">{{ leaveBy }}</small>
-                    <a :href="googleCalendarUrl(task)" target="_blank" rel="noopener" class="link">Add to Google Calendar</a>
+                    <button type="button" class="link" @click="calendarOpen = true">Add to calendar</button>
                 </div>
             </div>
             <div v-if="task.location" class="info-row">
@@ -162,7 +164,7 @@ watch(() => [props.task._id, props.task.status], loadSession, { immediate: true 
                 <div>
                     <strong>{{ task.location.name || task.location.address }}</strong>
                     <small v-if="addressLine && task.location.name">{{ addressLine }}</small>
-                    <a v-if="mapsUrl" :href="mapsUrl" target="_blank" rel="noopener" class="link">Open in Maps</a>
+                    <a v-if="mapsUrl" :href="mapsUrl" target="_blank" rel="noopener" class="link">{{ WORDS.directions }}</a>
                 </div>
             </div>
             <div class="info-row person">
@@ -184,12 +186,14 @@ watch(() => [props.task._id, props.task.status], loadSession, { immediate: true 
                 <i class="bi" :class="mainButton.icon" aria-hidden="true"></i> {{ mainButton.label }}
             </button>
             <div v-if="canUnclaim || (isClaimer && ['claimed', 'in_progress'].includes(status))" class="pair">
-                <button v-if="isClaimer" type="button" class="btn-plain" :disabled="isBusy" @click="emit('complete')">Mark as done</button>
+                <button v-if="isClaimer" type="button" class="btn-plain" :disabled="isBusy" @click="emit('complete')">{{ WORDS.markDone }}</button>
                 <button v-if="canUnclaim" type="button" class="btn-plain danger" :disabled="isBusy" @click="emit('unclaim')">
-                    Unclaim
+                    {{ WORDS.giveBack }}
                 </button>
             </div>
         </footer>
+
+        <AddToCalendar v-model="calendarOpen" :tasks="[task]" />
     </div>
 </template>
 
@@ -288,7 +292,7 @@ h1 {
 }
 
 .on .seg {
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
 }
 
 .seg-label {
@@ -331,9 +335,10 @@ h1 {
 }
 
 .live-pill {
+    text-transform: uppercase;
     padding: 3px 10px;
     border-radius: 12px;
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
     font-size: 12px;
     font-weight: 900;
     color: white;
@@ -394,6 +399,11 @@ h1 {
 }
 
 .link {
+    align-self: flex-start;
+    padding: 0;
+    border: none;
+    background: none;
+    font-family: inherit;
     margin-top: 4px;
     font-size: 14px;
     font-weight: 800;
@@ -440,7 +450,7 @@ h1 {
     height: 52px;
     border: none;
     border-radius: 14px;
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
     font-family: inherit;
     font-size: 16px;
     font-weight: 800;

@@ -5,6 +5,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import PersonAvatar from './PersonAvatar.vue'
+import GoogleCalendarSync from './GoogleCalendarSync.vue'
 import { formatTime, dayKey, recipientName, TIME_ZONE } from '../utils/formatters.js'
 
 const props = defineProps({
@@ -17,7 +18,7 @@ const props = defineProps({
     errorMessage: { type: String, default: '' },
     now: { type: Number, default: () => Date.now() }
 })
-const emit = defineEmits(['select-tab', 'retry'])
+const emit = defineEmits(['select-tab', 'retry', 'calendar'])
 
 const router = useRouter()
 
@@ -65,13 +66,20 @@ function open(task) {
 
 <template>
     <div class="m-tasks">
-        <h1>Tasks</h1>
+        <div class="title-row">
+            <h1>Tasks</h1>
+            <button type="button" class="cal-btn" aria-label="Add my tasks to calendar" @click="emit('calendar')">
+                <i class="bi bi-calendar-plus" aria-hidden="true"></i>
+            </button>
+        </div>
 
         <!-- Needs someone = D's open-tasks list; until it exists it goes to Family home -->
         <div class="segmented" role="tablist" aria-label="Task lists">
             <RouterLink to="/home" class="segment" role="tab" aria-selected="false">Needs someone</RouterLink>
             <span class="segment active" role="tab" aria-selected="true">My tasks</span>
         </div>
+
+        <GoogleCalendarSync compact />
 
         <section class="week" aria-label="This week">
             <div class="week-row">
@@ -134,6 +142,22 @@ function open(task) {
     gap: 14px;
     font-family: Nunito, Inter, system-ui, sans-serif;
     color: var(--theme-text, #2e2e2e);
+}
+
+.title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.cal-btn {
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--theme-border, #dce3dc);
+    border-radius: 12px;
+    background: var(--theme-panel, white);
+    font-size: 18px;
+    color: var(--theme-green, #2f7a3f);
 }
 
 h1 {
@@ -204,7 +228,7 @@ h1 {
     display: block;
     height: 100%;
     border-radius: 5px;
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
     transition: width 0.3s ease;
 }
 

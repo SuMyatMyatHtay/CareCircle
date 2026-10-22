@@ -199,6 +199,7 @@ taskSchema.statics.startTransitSession = async function (task) {
                 companion: task.claimedBy,
                 status: TRANSIT_STATUS.ACTIVE,
                 milestones: [],
+                path: [],
                 startedAt: new Date(),
                 endedAt: null
             },

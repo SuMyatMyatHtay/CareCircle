@@ -5,6 +5,8 @@
 import { ref, computed } from 'vue'
 import { formatTime } from '../../my-tasks/utils/formatters.js'
 import OneMapTiles from './OneMapTiles.vue'
+import PersonAvatar from '../../my-tasks/components/PersonAvatar.vue'
+import { WORDS, TRIP_STEPS, extraUpdates } from '../utils/wording.js'
 
 const props = defineProps({
     task: { type: Object, required: true },
@@ -19,25 +21,25 @@ const props = defineProps({
     liveSpot: { type: Object, default: null },    // { lat, lng, at } while the trip is live
     locationNote: { type: String, default: '' },  // companion only: "Sharing your location…"
     liveCaption: { type: String, default: '' },   // "Live · updated 1:42 PM" or "Location paused · …"
-    canResume: { type: Boolean, default: false }  // companion, after an accidental End transit
+    canResume: { type: Boolean, default: false }, // companion, after an accidental End transit
+    liveTime: { type: String, default: '' },       // photo-pin bubble: "12:25 AM Tue"
+    liveNote: { type: String, default: '' },       // photo-pin bubble: "Heading home"
+    otherTrips: { type: Array, default: () => [] } // other family members on a trip right now
 })
-const emit = defineEmits(['back', 'post', 'start', 'dismiss', 'resume'])
+const emit = defineEmits(['back', 'post', 'start', 'dismiss', 'resume', 'open-trip', 'remove'])
 
 // The fixed steps in order, with the labels used on the phone design
-const PRESETS = [
-    { type: 'departed', label: 'Departed home' },
-    { type: 'arrived', label: 'Arrived at clinic' },
-    { type: 'consultation_done', label: 'Consultation done' },
-    { type: 'heading_home', label: 'Heading home' },
-    { type: 'home', label: 'Safely home' }
-]
-const EXTRA_CHIPS = ['Getting medicine', 'Going for lunch']
+// Same steps and quick updates as the laptop layout (utils/wording.js)
+const PRESETS = TRIP_STEPS
+const EXTRA_CHIPS = computed(() => extraUpdates(props.who))
 
 const customText = ref('')
 
 const milestones = computed(() => props.session?.milestones || [])
 const isActive = computed(() => props.session?.status === 'active')
 const isEnded = computed(() => props.session?.status === 'ended')
+const trail = computed(() => props.session?.path || [])
+const hasPlace = computed(() => Number.isFinite(props.task.location?.lat) && Number.isFinite(props.task.location?.lng))
 const placeName = computed(() => props.task.location?.name || 'the clinic')
 
 // Done steps (as posted) followed by the preset steps still to come
@@ -56,7 +58,7 @@ const chips = computed(() => {
     const upcoming = steps.value.filter((s) => !s.done && s.type !== 'home')
     const list = []
     if (upcoming[0]) list.push({ type: upcoming[0].type, label: upcoming[0].label, suggested: true })
-    for (const label of EXTRA_CHIPS) {
+    for (const label of EXTRA_CHIPS.value) {
         if (!posted.has(label.toLowerCase())) list.push({ type: 'custom', label })
     }
     for (const step of upcoming.slice(1)) list.push({ type: step.type, label: step.label })
@@ -66,7 +68,7 @@ const chips = computed(() => {
 const subtitle = computed(() => {
     if (!props.session) return 'Transit not started yet'
     const withWho = props.who ? `With ${props.who}` : props.companionFirst ? `With ${props.companionFirst}` : ''
-    return [withWho, isActive.value ? 'family can see this live' : 'transit ended'].filter(Boolean).join(' · ')
+    return [withWho, isActive.value ? 'family can see this live' : 'trip ended'].filter(Boolean).join(' · ')
 })
 
 const time = (value) => formatTime(value).toUpperCase().replace(/(AM|PM)$/, ' $1')
@@ -83,8 +85,8 @@ function postCustom() {
 }
 
 function safelyHome() {
-    if (window.confirm(`Is ${props.who || 'everyone'} safely home? This finishes the task and tells the family.`)) {
-        emit('post', { type: 'home', label: 'Safely home' })
+    if (window.confirm(`Is ${props.who || 'everyone'} safely back home? This finishes the task and tells the family.`)) {
+        emit('post', { type: 'home', label: WORDS.safelyHome })
     }
 }
 </script>
@@ -100,32 +102,44 @@ function safelyHome() {
                 <strong>{{ task.title }}</strong>
                 <span>{{ subtitle }}</span>
             </div>
-            <span v-if="isActive" class="live">LIVE</span>
-            <span v-else-if="isEnded" class="live ended">ENDED</span>
+            <span v-if="isActive" class="live">{{ WORDS.live }}</span>
+            <span v-else-if="isEnded" class="live ended">{{ WORDS.ended }}</span>
         </header>
+
+        <div v-if="otherTrips.length" class="also-live body">
+            <span>{{ WORDS.alsoOnTrip }}</span>
+            <button v-for="trip in otherTrips" :key="trip.taskId" type="button" class="also-live-chip" @click="emit('open-trip', trip)">
+                <PersonAvatar :name="trip.companion?.name || ''" :size="24" tone="peach" />
+                {{ (trip.companion?.name || 'Someone').split(' ')[0] }} · {{ trip.mobileHeadline }}
+                <span class="also-live-dot" aria-hidden="true"></span>
+            </button>
+        </div>
 
         <div v-if="notice" class="msg" role="status" @click="emit('dismiss')">{{ notice }}</div>
         <div v-if="actionError" class="msg is-error" role="alert">{{ actionError }}</div>
 
         <!-- Not started -->
         <div v-if="!session" class="body">
-            <p class="hint">Transit starts when {{ companionFirst || 'the person who claimed this task' }} taps "Start the trip".</p>
+            <p class="hint">Transit starts when {{ companionFirst || 'the person who claimed this task' }} taps "{{ WORDS.startTrip }}".</p>
             <button v-if="canStart" type="button" class="btn-start" :disabled="isPosting" @click="emit('start')">
-                <i class="bi bi-arrow-right" aria-hidden="true"></i> Start the trip
+                <i class="bi bi-arrow-right" aria-hidden="true"></i> {{ WORDS.startTrip }}
             </button>
         </div>
 
         <template v-else>
-            <!-- Live map: only once there's a live position to show -->
-            <section v-if="liveSpot" class="live-map body" aria-label="Live map">
+            <!-- Map: always on a trip with a place (the clinic pin), plus the person once they share location -->
+            <section v-if="liveSpot || trail.length > 1 || hasPlace" class="live-map body" aria-label="Live map">
                 <OneMapTiles
                     :lat="task.location?.lat ?? null"
                     :lng="task.location?.lng ?? null"
-                    :live-lat="liveSpot.lat"
-                    :live-lng="liveSpot.lng"
+                    :live-lat="liveSpot?.lat ?? null"
+                    :live-lng="liveSpot?.lng ?? null"
                     :live-label="companionFirst"
-                    :label="liveCaption || `Live · updated ${time(liveSpot.at)}`"
-                    :height="200"
+                    :trail="trail"
+                    :live-time="liveTime"
+                    :live-note="liveNote"
+                    :label="liveSpot ? (liveCaption || `Live · updated ${time(liveSpot.at)}`) : trail.length > 1 ? 'Route travelled' : (task.location?.name || 'Destination')"
+                    :height="260"
                     :fit-width="320"
                 />
             </section>
@@ -143,6 +157,16 @@ function safelyHome() {
                         <small v-if="step.done">{{ time(step.at) }}</small>
                         <small v-else-if="index === nextIndex && isActive">Next</small>
                     </span>
+                    <button
+                        v-if="step.done && isCompanion && step.type !== 'home'"
+                        type="button"
+                        class="remove-step"
+                        :disabled="isPosting"
+                        :aria-label="`Remove ${step.label}`"
+                        @click="emit('remove', step)"
+                    >
+                        <i class="bi bi-x-lg" aria-hidden="true"></i>
+                    </button>
                 </li>
             </ol>
 
@@ -175,11 +199,11 @@ function safelyHome() {
                 You're following live. Only {{ companionFirst || 'the companion' }} can post updates.
             </p>
             <p v-else-if="isEnded" class="hint body done-note">
-                {{ task.status === 'completed' ? `${who || 'Everyone'} is safely home. The task is done.` : 'Transit ended. The task is still in progress.' }}
+                {{ task.status === 'completed' ? `${who || 'Everyone'} is safely back home. The task is done.` : WORDS.tripEnded }}
             </p>
             <div v-if="canResume" class="body">
                 <button type="button" class="btn-resume" :disabled="isPosting" @click="emit('resume')">
-                    <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Resume transit
+                    <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> {{ WORDS.resumeTrip }}
                 </button>
             </div>
         </template>
@@ -188,7 +212,7 @@ function safelyHome() {
         <footer v-if="isActive && isCompanion" class="footer">
             <button type="button" class="btn-home" :disabled="isPosting" @click="safelyHome">
                 <i class="bi bi-house" aria-hidden="true"></i>
-                {{ who || 'Everyone' }} is safely home
+                {{ who || 'Everyone' }} is safely back home
             </button>
             <small>This finishes the task and tells the family.</small>
         </footer>
@@ -196,6 +220,40 @@ function safelyHome() {
 </template>
 
 <style scoped>
+/* Other family members on a trip right now */
+.also-live {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--theme-muted, #6b7280);
+}
+
+.also-live-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px 4px 4px;
+    border: 1px solid var(--theme-accent-border, #cfe8d3);
+    border-radius: 999px;
+    background: var(--theme-soft, #e8f5e9);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--theme-text, #2e2e2e);
+    cursor: pointer;
+}
+
+.also-live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #e46f5c;
+}
+
 .live-map {
     margin-top: 12px;
 }
@@ -241,7 +299,7 @@ function safelyHome() {
     gap: 14px;
     height: 60px;
     padding: 0 16px 0 18px;
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
 }
 
 .back {
@@ -273,6 +331,7 @@ function safelyHome() {
 }
 
 .live {
+    text-transform: uppercase;
     padding: 3px 10px;
     border-radius: 12px;
     background: var(--theme-panel, white);
@@ -334,20 +393,20 @@ function safelyHome() {
 
 .done .dot {
     border: none;
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
 }
 
 .current .dot {
     width: 22px;
     height: 22px;
     border: 6px solid var(--theme-accent-border, #b8ddbe);
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
 }
 
 .line {
     flex: 1;
     width: 2px;
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
 }
 
 .current .line,
@@ -357,6 +416,23 @@ function safelyHome() {
 
 .steps li:last-child .line {
     display: none;
+}
+
+.remove-step {
+    align-self: flex-start;
+    margin-left: auto;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--theme-muted, #6b7280);
+}
+
+.remove-step:active:not(:disabled) {
+    background: #ffe9e4;
+    color: #a33a26;
 }
 
 .step-text {
@@ -445,7 +521,7 @@ h2 {
     height: 48px;
     border: none;
     border-radius: 14px;
-    background: #2e2e2e;
+    background: var(--theme-text, #2e2e2e);
     color: white;
     font-size: 20px;
 }
@@ -471,7 +547,7 @@ h2 {
     margin-top: 16px;
     border: none;
     border-radius: 14px;
-    background: #2f7a3f;
+    background: var(--theme-green, #2f7a3f);
     font-family: inherit;
     font-size: 16px;
     font-weight: 800;
