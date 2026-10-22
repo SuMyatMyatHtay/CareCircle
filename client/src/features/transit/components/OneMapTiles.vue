@@ -40,6 +40,9 @@ const MAX_ZOOM = 19
 const COLS = 7 // enough tiles to fill wide cards
 const ROWS = 5
 const FIT_MARGIN = 50 // keep both points at least this far from the card's edges
+// OneMap only has map pictures for Singapore. Tiles outside this box aren't requested
+// (they'd fail and show broken images), and the map can't be dragged far out of it.
+const SG = { north: 1.48, south: 1.15, west: 103.59, east: 104.1 }
 
 const failedTiles = ref(0)
 const styleIndex = ref(0)
@@ -113,6 +116,22 @@ const autoView = computed(() => {
 // pixels) until they press Recentre. Live updates still move the pins and trail.
 const manual = ref(null)
 const view = computed(() => manual.value || autoView.value)
+
+// Singapore's box in pixels at zoom z
+function sgBox(z) {
+    const nw = toPixels({ lat: SG.north, lng: SG.west }, z)
+    const se = toPixels({ lat: SG.south, lng: SG.east }, z)
+    return { minX: nw.x, maxX: se.x, minY: nw.y, maxY: se.y }
+}
+// Keep the centre of a moved map inside Singapore
+function clampView(v) {
+    const box = sgBox(v.z)
+    return {
+        z: v.z,
+        cx: Math.min(box.maxX, Math.max(box.minX, v.cx)),
+        cy: Math.min(box.maxY, Math.max(box.minY, v.cy))
+    }
+}
 const isMoved = computed(() => Boolean(manual.value))
 
 const grid = computed(() => {
@@ -122,8 +141,13 @@ const grid = computed(() => {
     const firstX = Math.floor(cx / TILE) - Math.floor(COLS / 2)
     const firstY = Math.floor(cy / TILE) - Math.floor(ROWS / 2)
     const tiles = []
+    const sg = sgBox(z)
     for (let row = 0; row < ROWS; row++) {
         for (let col = 0; col < COLS; col++) {
+            const tx = (firstX + col) * TILE
+            const ty = (firstY + row) * TILE
+            // Outside Singapore: OneMap has no picture, so don't ask for one
+            if (tx + TILE < sg.minX || tx > sg.maxX || ty + TILE < sg.minY || ty > sg.maxY) continue
             tiles.push({
                 key: `${z}-${firstX + col}-${firstY + row}`,
                 src: `${TILE_BASE}/${STYLES[styleIndex.value]}/${z}/${firstX + col}/${firstY + row}.png`,
@@ -180,9 +204,11 @@ const showMap = computed(() => Boolean(grid.value))
 const tilesFailed = computed(() => styleIndex.value >= STYLES.length)
 
 // If most tiles of a style fail, try the next style; after the last, show the placeholder
-function onTileError() {
+function onTileError(event) {
+    // Hide the broken picture (otherwise it draws a white outline)
+    if (event?.target) event.target.style.visibility = 'hidden'
     failedTiles.value++
-    if (failedTiles.value >= (COLS * ROWS) / 2) {
+    if (failedTiles.value >= Math.max(1, (grid.value?.tiles.length || 0) / 2)) {
         failedTiles.value = 0
         styleIndex.value++
     }
@@ -212,7 +238,7 @@ function zoomBy(step, anchor = { x: 0, y: 0 }) {
     if (z === m.z) return
     const f = 2 ** (z - m.z)
     noGlide()
-    manual.value = { z, cx: (m.cx + anchor.x) * f - anchor.x, cy: (m.cy + anchor.y) * f - anchor.y }
+    manual.value = clampView({ z, cx: (m.cx + anchor.x) * f - anchor.x, cy: (m.cy + anchor.y) * f - anchor.y })
 }
 
 function recentre() {
@@ -252,7 +278,7 @@ function onPointerMove(event) {
         const dy = now.y - last.y
         if (!dx && !dy) return
         takeOver()
-        manual.value = { ...manual.value, cx: manual.value.cx - dx, cy: manual.value.cy - dy }
+        manual.value = clampView({ ...manual.value, cx: manual.value.cx - dx, cy: manual.value.cy - dy })
     } else if (pointers.size === 2 && pinchStart) {
         const [a, b] = [...pointers.values()]
         const distance = Math.hypot(a.x - b.x, a.y - b.y)
@@ -303,7 +329,7 @@ watch(() => grid.value?.tiles[0]?.key, () => {
     <div
         ref="mapEl"
         class="onemap"
-        :class="{ interactive: showMap, dragging, instant }"
+        :class="{ interactive: showMap, dragging, instant, 'no-tiles': tilesFailed }"
         :style="{ height: `${height}px` }"
         @pointerdown="onPointerDown"
         @pointermove="onPointerMove"
@@ -406,8 +432,13 @@ watch(() => grid.value?.tiles[0]?.key, () => {
     overflow: hidden;
     width: 100%;
     border-radius: 12px;
+    /* Same colour as OneMap's land, so the part outside Singapore (no pictures) looks plain */
+    background: #f2efe9;
+}
+
+/* Faint grid, only when OneMap's pictures can't load at all */
+.onemap.no-tiles {
     background: var(--theme-soft, #e8f5e9);
-    /* faint grid, seen only when OneMap's pictures can't load */
     background-image:
         linear-gradient(rgba(47, 122, 63, 0.08) 1px, transparent 1px),
         linear-gradient(90deg, rgba(47, 122, 63, 0.08) 1px, transparent 1px);
