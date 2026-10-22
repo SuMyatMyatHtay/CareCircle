@@ -32,12 +32,13 @@ export async function getLog(familyId, logId) {
 export const TRANSLATION_NOT_CONNECTED = "Translation isn't connected yet."
 
 export async function translateLog(familyId, logId, lang) {
-    const response = await http.get(logsUrl(familyId, logId), {
-        headers: authHeaders(),
-        params: { lang }
-    })
+    const response = await http.post(
+        `${logsUrl(familyId, logId)}/translate`,
+        { lang },
+        { headers: authHeaders() }
+    )
 
-    const text = response.data.log?.translatedContent
+    const text = response.data.log?.translations
     if (!text) throw new Error(TRANSLATION_NOT_CONNECTED)
     return text
 }
