@@ -20,6 +20,7 @@ import MobileTodayTasks from '../components/MobileTodayTasks.vue'
 import MobileHomeNavigation from '../components/MobileHomeNavigation.vue'
 import CareAvatar from '../../../components/common/CareAvatar.vue'
 import '../styles/mobileFamilyHome.css'
+import { useActiveTransit } from '../../transit/utils/useActiveTransit.js' // E: live trip banner
 
 const router = useRouter()
 const {
@@ -54,6 +55,12 @@ const {
   createTask,
   onTaskCreated,
 } = useFamilyDashboard()
+// E (Chaithra): the family's live trip for the banner; preview mode keeps its sample
+const { liveTransit, openLiveTransit } = useActiveTransit(selectedFamilyId, { enabled: !isPreview })
+function viewTransit() {
+  if (isPreview) showTransit.value = true
+  else openLiveTransit()
+}
 const firstName = computed(() => user.value.name?.split(/\s+/)[0] || 'friend')
 const greeting = computed(() => {
   const hour = Number(
@@ -174,8 +181,8 @@ watch(selectedFamilyId, () => {
       />
       <template v-else-if="selectedFamily">
         <TransitBanner
-          :session="isPreview ? previewState.transit : null"
-          @view="showTransit = true"
+          :session="isPreview ? previewState.transit : liveTransit"
+          @view="viewTransit"
         />
         <RecipientOverview
           :recipients="recipients"
@@ -203,10 +210,6 @@ watch(selectedFamilyId, () => {
           />
           <RecentUpdates :updates="activity" :preview="isPreview" />
         </div>
-        <p v-if="!isPreview" class="care-integration-note">
-          <i class="bi bi-info-circle" aria-hidden="true"></i>
-          Live transit will appear here when transit tracking is connected.
-        </p>
       </template>
     </div>
     <div class="care-home-mobile">
@@ -228,8 +231,8 @@ watch(selectedFamilyId, () => {
       />
       <template v-else-if="selectedFamily">
         <MobileTransitCard
-          :session="isPreview ? previewState.transit : null"
-          @view="showTransit = true"
+          :session="isPreview ? previewState.transit : liveTransit"
+          @view="viewTransit"
         />
         <MobileTodayTasks
           :tasks="todayTasks"

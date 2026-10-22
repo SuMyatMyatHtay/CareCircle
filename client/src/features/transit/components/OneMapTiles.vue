@@ -8,6 +8,8 @@
 //   Route ahead:      :route="[{ lat, lng }, ...]"  (road route to the destination, green, optional)
 // Anything put inside <OneMapTiles>...</OneMapTiles> floats on top (e.g. the ETA card).
 // The map zooms out until everything fits. With nothing to show, it shows the green Figma placeholder.
+// People can drag to move around, zoom with the +/- buttons, pinch (phone/trackpad) or
+// double-click, and "Recentre" brings the map back to the person on the trip.
 //   <OneMapTiles :lat="1.3214" :lng="103.8458" label="OneMap · TTSH Eye Centre" :height="220" />
 import { ref, computed, watch } from 'vue'
 import PersonAvatar from '../../my-tasks/components/PersonAvatar.vue'
@@ -34,6 +36,7 @@ const TILE = 256
 const TILE_BASE = 'https://www.onemap.gov.sg/maps/tiles'
 const STYLES = ['Default', 'Grey_HD']
 const MIN_ZOOM = 12 // OneMap has no map pictures below zoom 12
+const MAX_ZOOM = 19
 const COLS = 7 // enough tiles to fill wide cards
 const ROWS = 5
 const FIT_MARGIN = 50 // keep both points at least this far from the card's edges
@@ -87,7 +90,8 @@ const zoomLevel = computed(() => {
     return MIN_ZOOM
 })
 
-const grid = computed(() => {
+// Where the map looks when nobody has moved it: everything in view (see zoomLevel)
+const autoView = computed(() => {
     if (!allPoints.value.length) return null
     const z = zoomLevel.value
     // Centre of everything (or the only point)
@@ -102,6 +106,18 @@ const grid = computed(() => {
     // Shift so the points sit in the free part of the card: above the bottom card and
     // below the room kept for the photo pin and its bubble
     const cy = (focus ? focus.y : (box.minY + box.maxY) / 2) + (props.bottomSpace - topSpace.value) / 2
+    return { z, cx, cy }
+})
+
+// Once someone drags or zooms, the map stays where they put it ({ z, cx, cy } in world
+// pixels) until they press Recentre. Live updates still move the pins and trail.
+const manual = ref(null)
+const view = computed(() => manual.value || autoView.value)
+const isMoved = computed(() => Boolean(manual.value))
+
+const grid = computed(() => {
+    if (!view.value) return null
+    const { z, cx, cy } = view.value
 
     const firstX = Math.floor(cx / TILE) - Math.floor(COLS / 2)
     const firstY = Math.floor(cy / TILE) - Math.floor(ROWS / 2)
@@ -172,6 +188,109 @@ function onTileError() {
     }
 }
 
+// ---------- Moving the map ----------
+const mapEl = ref(null)
+const dragging = ref(false)
+const instant = ref(false) // switches off the pins' glide while the map itself moves
+let instantTimer = null
+function noGlide() {
+    instant.value = true
+    clearTimeout(instantTimer)
+    instantTimer = setTimeout(() => { instant.value = dragging.value }, 80)
+}
+
+function takeOver() {
+    if (!manual.value && autoView.value) manual.value = { ...autoView.value }
+}
+
+// Zoom in (+1) or out (-1), keeping the spot under `anchor` (px from the card's centre) still
+function zoomBy(step, anchor = { x: 0, y: 0 }) {
+    takeOver()
+    const m = manual.value
+    if (!m) return
+    const z = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, m.z + step))
+    if (z === m.z) return
+    const f = 2 ** (z - m.z)
+    noGlide()
+    manual.value = { z, cx: (m.cx + anchor.x) * f - anchor.x, cy: (m.cy + anchor.y) * f - anchor.y }
+}
+
+function recentre() {
+    noGlide()
+    manual.value = null
+}
+
+function fromCentre(event) {
+    const rect = mapEl.value.getBoundingClientRect()
+    return { x: event.clientX - rect.left - rect.width / 2, y: event.clientY - rect.top - rect.height / 2 }
+}
+
+// Drag with one finger/mouse, pinch with two fingers
+const pointers = new Map()
+let pinchStart = 0
+function isControl(event) {
+    return Boolean(event.target.closest?.('.map-controls, .map-overlay, a, button'))
+}
+function onPointerDown(event) {
+    if (!autoView.value || isControl(event) || (event.pointerType === 'mouse' && event.button !== 0)) return
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
+    mapEl.value.setPointerCapture?.(event.pointerId)
+    dragging.value = true
+    instant.value = true
+    if (pointers.size === 2) {
+        const [a, b] = [...pointers.values()]
+        pinchStart = Math.hypot(a.x - b.x, a.y - b.y)
+    }
+}
+function onPointerMove(event) {
+    const last = pointers.get(event.pointerId)
+    if (!last) return
+    const now = { x: event.clientX, y: event.clientY }
+    pointers.set(event.pointerId, now)
+    if (pointers.size === 1) {
+        const dx = now.x - last.x
+        const dy = now.y - last.y
+        if (!dx && !dy) return
+        takeOver()
+        manual.value = { ...manual.value, cx: manual.value.cx - dx, cy: manual.value.cy - dy }
+    } else if (pointers.size === 2 && pinchStart) {
+        const [a, b] = [...pointers.values()]
+        const distance = Math.hypot(a.x - b.x, a.y - b.y)
+        const mid = fromCentre({ clientX: (a.x + b.x) / 2, clientY: (a.y + b.y) / 2 })
+        if (distance / pinchStart > 1.5) { zoomBy(1, mid); pinchStart = distance }
+        else if (distance / pinchStart < 0.66) { zoomBy(-1, mid); pinchStart = distance }
+    }
+}
+function onPointerUp(event) {
+    pointers.delete(event.pointerId)
+    if (pointers.size < 2) pinchStart = 0
+    if (!pointers.size) {
+        dragging.value = false
+        noGlide()
+    }
+}
+
+// Trackpad pinch (and Ctrl + scroll) zooms; plain scrolling still scrolls the page
+let wheelSum = 0
+function onWheel(event) {
+    if (!event.ctrlKey && !event.metaKey) return
+    event.preventDefault()
+    wheelSum += event.deltaY
+    if (Math.abs(wheelSum) >= 60) {
+        zoomBy(wheelSum < 0 ? 1 : -1, fromCentre(event))
+        wheelSum = 0
+    }
+}
+function onDoubleClick(event) {
+    if (!autoView.value || isControl(event)) return
+    zoomBy(1, fromCentre(event))
+}
+
+// A different place (new task): start from the automatic view again
+watch(() => [props.lat, props.lng], () => { manual.value = null })
+
+const recentreLabel = computed(() => (props.liveLabel && live.value ? `Recentre on ${props.liveLabel}` : 'Recentre map'))
+
 // The map moved to a different area (new place, or the live dot moved far): try the tiles again.
 // OneMap only has tiles for Singapore, so a point outside Singapore shows the placeholder.
 watch(() => grid.value?.tiles[0]?.key, () => {
@@ -181,7 +300,18 @@ watch(() => grid.value?.tiles[0]?.key, () => {
 </script>
 
 <template>
-    <div class="onemap" :style="{ height: `${height}px` }">
+    <div
+        ref="mapEl"
+        class="onemap"
+        :class="{ interactive: showMap, dragging, instant }"
+        :style="{ height: `${height}px` }"
+        @pointerdown="onPointerDown"
+        @pointermove="onPointerMove"
+        @pointerup="onPointerUp"
+        @pointercancel="onPointerUp"
+        @wheel="onWheel"
+        @dblclick="onDoubleClick"
+    >
         <template v-if="showMap">
             <div
                 v-if="!tilesFailed"
@@ -235,7 +365,37 @@ watch(() => grid.value?.tiles[0]?.key, () => {
             </div>
 
             <span v-if="label" class="label">{{ label }}</span>
-            <slot></slot>
+
+            <!-- Zoom and recentre -->
+            <div class="map-controls">
+                <button type="button" class="map-btn" aria-label="Zoom in" title="Zoom in" :disabled="view.z >= 19" @click="zoomBy(1)">
+                    <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="map-btn" aria-label="Zoom out" title="Zoom out" :disabled="view.z <= 12" @click="zoomBy(-1)">
+                    <i class="bi bi-dash-lg" aria-hidden="true"></i>
+                </button>
+                <button
+                    type="button"
+                    class="map-btn recentre"
+                    :class="{ highlight: isMoved }"
+                    :aria-label="recentreLabel"
+                    :title="recentreLabel"
+                    @click="recentre"
+                >
+                    <i class="bi bi-crosshair" aria-hidden="true"></i>
+                </button>
+            </div>
+            <button
+                v-if="isMoved && live"
+                type="button"
+                class="recentre-pill"
+                :style="{ bottom: `${bottomSpace + 26}px` }"
+                @click="recentre"
+            >
+                <i class="bi bi-crosshair" aria-hidden="true"></i> {{ recentreLabel }}
+            </button>
+
+            <div class="map-overlay"><slot></slot></div>
             <span v-if="tilesFailed" class="credit">Map pictures unavailable right now</span>
             <span v-else class="credit">New OneMap | Map data © contributors, Singapore Land Authority</span>
         </template>
@@ -429,6 +589,81 @@ watch(() => grid.value?.tiles[0]?.key, () => {
     .pulse { animation: none; }
     .live-dot,
     .person-pin { transition: none; }
+}
+
+.onemap.interactive {
+    cursor: grab;
+    touch-action: none; /* the map handles dragging and pinching itself */
+    user-select: none;
+}
+
+.onemap.dragging {
+    cursor: grabbing;
+}
+
+.onemap.instant .person-pin,
+.onemap.instant .live-dot {
+    transition: none;
+}
+
+.map-controls {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transform: translateY(-50%);
+}
+
+.map-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--theme-border, #e5e7eb);
+    border-radius: 10px;
+    background: var(--theme-panel, white);
+    color: var(--theme-text, #2e2e2e);
+    font-size: 16px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+}
+
+.map-btn:hover:not(:disabled) {
+    background: var(--theme-soft, #e8f5e9);
+}
+
+.map-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.map-btn.recentre.highlight {
+    border-color: var(--theme-green, #2f7a3f);
+    color: var(--theme-green, #2f7a3f);
+}
+
+.recentre-pill {
+    position: absolute;
+    left: 50%;
+    z-index: 4;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 999px;
+    background: var(--theme-green, #2f7a3f);
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transform: translateX(-50%);
+    cursor: pointer;
 }
 
 .label {
