@@ -92,11 +92,36 @@ export async function generateReply({ messages, context, fetchImpl = fetch }) {
     throw assistantError(503, error.name === 'TimeoutError' ? 'The assistant took too long. Please try again.' : 'Unable to reach Gemini. Please try again.')
   }
   // Never return or log provider bodies: they may echo prompts or API credentials.
+  
   if (!response.ok) {
-    if (response.status === 429) throw assistantError(429, 'Gemini has reached its usage limit. Please wait a little and try again.')
-    if ([400, 401, 403, 404].includes(response.status)) throw assistantError(503, 'Check the Gemini API key, model and API access in your backend settings.')
-    throw assistantError(503, 'Gemini is temporarily unavailable. Please try again.')
+    const errorBody = await response.text();
+
+    console.error('Gemini API failed:', {
+      status: response.status,
+      statusText: response.statusText,
+      error: errorBody
+    });
+
+    if (response.status === 429) {
+      throw assistantError(
+        429,
+        'Gemini has reached its usage limit. Please wait a little and try again.'
+      );
+    }
+
+    if ([400, 401, 403, 404].includes(response.status)) {
+      throw assistantError(
+        503,
+        'Check the Gemini API key, model and API access in your backend settings.'
+      );
+    }
+
+    throw assistantError(
+      503,
+      'Gemini is temporarily unavailable. Please try again.'
+    );
   }
+
   try {
     const data = await response.json()
     const candidate = data.candidates?.[0]
