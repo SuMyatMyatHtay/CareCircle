@@ -127,3 +127,7 @@ A user may belong to **multiple families**. Family-specific records must be scop
 ## 📌 Status & attribution
 
 CareCircle is an ongoing student project. We will be updating the details of the finished individual features along the line by documenting AI-assisted work and external assets according to the course requirements. We will not be treating mock screens or proposed API integrations as live functionality until tested.
+
+## Automated tests
+
+Run `npm run test:all` after installing the root, client and server dependencies and Chromium (`pnpm exec playwright install chromium`). The suite includes existing regressions, Vitest/Vue Test Utils, API integration with an isolated real MongoDB, and Playwright desktop/mobile workflows. It never uses the shared seed script or server `.env`. See [the testing guide](docs/TESTING.md) for individual commands, setup and scope.

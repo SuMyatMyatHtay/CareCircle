@@ -36,9 +36,10 @@ export function getConnectUrl(req, res) {
 
 // GET /api/google/callback?code=...&state=...   (public: Google sends the browser here)
 export async function oauthCallback(req, res) {
+    // There may be no redirect URI at all when this optional integration is off.
+    if (!isConfigured()) return res.status(503).json({ error: 'Google Calendar sync is not set up on this server' })
     const back = (result) => res.redirect(`${appOrigin()}/my-tasks?calendar=${result}`)
     try {
-        if (!isConfigured()) return back('error')
         if (req.query.error) return back('cancelled') // they clicked Cancel on Google's page
 
         const payload = jwt.verify(String(req.query.state || ''), process.env.JWT_SECRET, { algorithms: ['HS256'] })

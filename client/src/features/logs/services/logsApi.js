@@ -38,8 +38,8 @@ export async function translateLog(familyId, logId, lang) {
         { headers: authHeaders() }
     )
 
-    const text = response.data.log?.translations
-    if (!text) throw new Error(TRANSLATION_NOT_CONNECTED)
+    const text = response.data?.translation
+    if (typeof text !== 'string' || !text.trim()) throw new Error(TRANSLATION_NOT_CONNECTED)
     return text
 }
 

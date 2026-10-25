@@ -77,12 +77,13 @@ export function useActiveTransit(familyIdRef, { enabled = true } = {}) {
     let version = 0
 
     async function load() {
+        // Clearing the selected family also invalidates a request already in flight.
+        const current = ++version
         const familyId = unref(familyIdRef)
         if (!enabled || !familyId) {
             sessions.value = []
             return
         }
-        const current = ++version
         try {
             const list = await getActiveTransitSessions(familyId)
             if (current === version) sessions.value = list || []
@@ -111,7 +112,7 @@ export function useActiveTransit(familyIdRef, { enabled = true } = {}) {
             if (document.visibilityState === 'visible') load()
         }, POLL_MS)
     })
-    onUnmounted(() => clearInterval(timer))
+    onUnmounted(() => { version++; clearInterval(timer) })
 
     return { liveTransits, liveTransit, openLiveTransit, reload: load }
 }

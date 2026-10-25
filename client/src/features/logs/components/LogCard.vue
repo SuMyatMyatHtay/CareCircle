@@ -1,6 +1,6 @@
 <script setup>
 // Owner: SeungHak (F)
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onUnmounted } from 'vue'
 import { logTypeLabel, MEDICATION_CHANGE_LABELS, LANGUAGE_LABELS, languageLabel } from '../logTypes.js'
 
 const props = defineProps({
@@ -51,11 +51,17 @@ const shownLanguage = ref('')
 const menuOpen = ref(false)
 const translatingTo = ref('')
 const translateError = ref('')
+let translationVersion = 0
 
-watch(() => props.log.content, () => {
+watch([() => props.log._id, () => props.log.content], () => {
+    translationVersion++
     fetchedTranslations.value = {}
     shownLanguage.value = ''
+    translatingTo.value = ''
+    translateError.value = ''
+    menuOpen.value = false
 })
+onUnmounted(() => { translationVersion++ })
 
 const translations = computed(() => ({ ...(props.log.translations || {}), ...fetchedTranslations.value }))
 
@@ -75,6 +81,7 @@ function onTranslateButton() {
 }
 
 async function chooseLanguage(code) {
+    const current = ++translationVersion
     menuOpen.value = false
     translateError.value = ''
 
@@ -88,12 +95,14 @@ async function chooseLanguage(code) {
     translatingTo.value = code
     try {
         const text = await props.translate(props.log, code)
+        if (current !== translationVersion) return
         fetchedTranslations.value = { ...fetchedTranslations.value, [code]: text }
         shownLanguage.value = code
     } catch (error) {
-        translateError.value = error.message || 'Could not translate this note. Please try again.'
+        if (current === translationVersion)
+            translateError.value = error.message || 'Could not translate this note. Please try again.'
     } finally {
-        translatingTo.value = ''
+        if (current === translationVersion) translatingTo.value = ''
     }
 }
 

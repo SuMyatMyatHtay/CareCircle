@@ -4,4 +4,7 @@ node_modules/
 dist/
 .DS_Store
 coverage/
+.test-runtime/
+playwright-report/
+test-results/
 server/seed.js

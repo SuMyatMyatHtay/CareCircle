@@ -127,19 +127,19 @@ Base: `/api/families/:familyId/recipients`
 
 ## D: Task Management (Marcus)
 
-Base: `/api/families/:familyId/tasks`. **Planned.**
-- **Done:** the routes are mounted in `server/src/routes/taskRoute.js`, and `server/src/models/TaskModel.js` is ready.
-- **Still to do:** every handler in `server/src/controllers/taskController.js` currently returns `501`. The table below describes the intended behaviour.
+Base: `/api/families/:familyId/tasks`. **Implemented.**
+- Routes, model and handlers live in `server/src/features/tasks/`.
+- Local API integration tests exercise persistence, creator-only writes, concurrent claims and transit completion. Deployment and external notifications are separate validation work.
 
 | Method | Path | Who | Body / query | Response |
 |---|---|---|---|---|
 | GET | `/` | member | Query (all optional): `status=open,claimed`, `recipient=<id>` or `none` (household tasks), `claimedBy=me` or `<userId>`, `from=<date>`, `to=<date>` (on `startAt`) | `{ tasks }`, sorted by `startAt` |
 | GET | `/:taskId` | member | none | `{ task }` |
 | POST | `/` | member | `{ title, startAt, endAt?, description?, category?, recipient?, location?, needsTransit? }` | `201 { task }`, always `open`. Sends `task.created`. |
-| PATCH | `/:taskId` | creator or admin | any subset of the fields above | `{ task }`. `status` and `claimedBy` are ignored. `409` once a task is completed or cancelled. |
-| DELETE | `/:taskId` | creator or admin | none | `{ message, taskId }`. `409` for `in_progress` and `completed` tasks; cancel those instead. |
+| PATCH | `/:taskId` | creator only | any subset of the fields above | `{ task }`. `status` and `claimedBy` are ignored. `409` once a task is completed or cancelled. |
+| DELETE | `/:taskId` | creator only | none | `200 { message, taskId }`. `409` for `in_progress` and `completed` tasks; cancel those instead. |
 | POST | `/:taskId/claim` | member | none | open → claimed. `409 { error: 'Task already claimed' }` if someone got there first. Sends `task.claimed`. |
-| POST | `/:taskId/unclaim` | claimer or admin | none | claimed → open. Sends `task.unclaimed`. |
+| POST | `/:taskId/unclaim` | creator or claimer | none | claimed → open. Sends `task.unclaimed`. |
 | POST | `/:taskId/start` | claimer | none | claimed → in_progress, `{ task, transitSession }`. A transit session is created only when `needsTransit` is true. |
 | POST | `/:taskId/complete` | claimer | none | claimed or in_progress → completed. Ends any transit session. Sends `task.completed`. |
 | POST | `/:taskId/cancel` | creator or admin | none | open, claimed or in_progress → cancelled. Ends any transit session. Sends `task.cancelled`. |
