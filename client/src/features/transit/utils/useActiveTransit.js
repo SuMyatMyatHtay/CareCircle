@@ -31,7 +31,8 @@ function withPicture(person) {
 
 const idOf = (value) => (value && typeof value === 'object' ? value._id : value)
 
-function toBanner(session, familyId) {
+// Exported for the unit tests (__tests__/activeTransitBanner.spec.js)
+export function toBanner(session, familyId) {
     if (!session) return null
     const task = session.task || {}
     const recipient = task.recipient && typeof task.recipient === 'object' ? task.recipient : null
