@@ -4,7 +4,7 @@ import mongoose from 'mongoose'
 import LogEntry from './CareLog.model.js'
 import { EVENTS, LOG_TYPES } from '../../constants.js'
 import { translateText, isSupportedLanguage, SUPPORTED_LANGUAGES } from '../integrations/azureTranslate.js'
-
+import { notify } from '../../utils/notify.js'
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 50
 
@@ -44,7 +44,10 @@ function populateRefs(query) {
     return query
 }
 
-function announce(_eventType, _log) {}
+// replaced
+async function announce(eventType, log) {
+    await notify(log.family, eventType, log)
+}
 
 function parseLogInput(body, { partial }) {
     const input = body && typeof body === 'object' ? body : {}
@@ -190,8 +193,8 @@ export async function createLog(req, res, next) {
 
         const populated = await populateRefs(LogEntry.findById(log._id))
         if (req.body?.notify !== false) {
-            announce(EVENTS.LOG_CREATED, populated)
-            if (populated.medicationChanges.length) announce(EVENTS.MEDICATION_CHANGED, populated)
+            await announce(EVENTS.LOG_CREATED, populated)
+            if (populated.medicationChanges.length) await announce(EVENTS.MEDICATION_CHANGED, populated)
         }
 
         return res.status(201).json({ log: populated })

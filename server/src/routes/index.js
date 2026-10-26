@@ -12,6 +12,7 @@
     import googleCalendar, { googleCallback } from '../features/calendar-sync/routes.js'
     import { calendarAutoSync } from '../features/calendar-sync/autoSync.js'
     import assistant from '../features/assistant/routes.js'
+    import notifications, { notifySettings } from '../features/notifications/routes.js'
 
     const router = Router()
 
@@ -39,6 +40,7 @@
     router.use('/families/:familyId/assistant', assistant)
     router.use('/families/:familyId/transit', familyTransit) // E: live banner
     router.use('/families/:familyId/logs', logs)
-    // router.use('/families/:familyId/notifications', notifications) // F (add when built)
+    router.use('/families/:familyId/notifications', notifications) // F (add when built)
+    router.use('/families/:familyId/notify-settings', notifySettings)
 
     export default router

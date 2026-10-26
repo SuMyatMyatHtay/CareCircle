@@ -9,7 +9,7 @@
 import mongoose from 'mongoose'
 import Task, { LOCKED_STATUSES, UNDELETABLE_STATUSES } from './TaskModel.js'
 import { TASK_CATEGORIES, TASK_STATUS, TASK_STATUSES, EVENTS } from '../../constants.js'
-
+import { notify } from '../../utils/notify.js'
 // ---------- Helpers ----------
 
 function httpError(status, message, errors) {
@@ -36,7 +36,11 @@ function handleError(error, res, next) {
 
 // Placeholder until F adds utils/notify.js and D adds Socket.IO.
 // Every task write already calls this, so wiring them up is a one-line change.
-function announce(_eventType, _task) {}
+// replaced 
+async function announce(eventType, task) {
+    const familyId = task?.family?._id ?? task?.family
+    await notify(familyId, eventType, task)
+}
 
 function isCreatorOrAdmin(task, userId, memberRole) {
     return memberRole === 'admin' || task.createdBy.toString() === userId
@@ -247,7 +251,7 @@ export async function completeTask({ familyId, taskId, userId, memberRole = 'mem
     const task = await changeStatus('complete', { familyId, taskId, userId, memberRole })
     await Task.endTransitSession(task)
     const populated = await Task.getPopulatedTaskById(task._id)
-    announce(EVENTS.TASK_COMPLETED, populated)
+    await announce(EVENTS.TASK_COMPLETED, populated)
     return populated
 }
 
@@ -282,7 +286,7 @@ function statusHandler(actionName) {
             }
 
             const populated = await Task.getPopulatedTaskById(task._id)
-            if (ACTIONS[actionName].event) announce(ACTIONS[actionName].event, populated)
+            if (ACTIONS[actionName].event) await announce(ACTIONS[actionName].event, populated)
 
             return actionName === 'start'
                 ? res.json({ task: populated, transitSession })
@@ -391,7 +395,7 @@ export async function createFamilyTask({ body, familyId, userId, taskId }) {
     const task = await Task.createTask({ ...data, ...(taskId ? { _id: taskId } : {}),
         family: familyId, createdBy: userId, status: TASK_STATUS.OPEN })
     const populated = await Task.getPopulatedTaskById(task._id)
-    announce(EVENTS.TASK_CREATED, populated)
+    await announce(EVENTS.TASK_CREATED, populated)
     return populated
 }
 

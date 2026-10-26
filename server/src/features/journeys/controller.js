@@ -8,7 +8,7 @@ import TransitSession, { MILESTONE_LABELS, PATH_LIMIT } from './Journey.model.js
 import { completeTask } from '../tasks/controller.js'
 import { syncInBackground } from '../calendar-sync/sync.js'
 import { MILESTONE_TYPES, TRANSIT_STATUS, EVENTS } from '../../constants.js'
-
+import { notify } from '../../utils/notify.js'
 // ---------- Helpers ----------
 
 function httpError(status, message, errors) {
@@ -32,7 +32,10 @@ function handleError(error, res, next) {
 
 // Placeholder until F adds utils/notify.js and Socket.IO exists.
 // Replace the body with: notify(familyId, eventType, payload)
-function announce(_eventType, _transitSession) {}
+// replaced
+async function announce(eventType, transitSession) {
+     await notify(transitSession.family, eventType, transitSession)
+}
 
 const USER_FIELDS = 'name telegramUsername profilePicture'
 const TASK_FIELDS = 'title startAt endAt location status category recipient claimedBy'
@@ -156,7 +159,7 @@ export async function addMilestone(req, res, next) {
         }
 
         const transitSession = await populateSession(TransitSession.findById(session._id))
-        announce(EVENTS.TRANSIT_MILESTONE, transitSession)
+        await announce(EVENTS.TRANSIT_MILESTONE, transitSession)
         return res.status(201).json({ transitSession })
     } catch (error) {
         return handleError(error, res, next)

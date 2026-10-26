@@ -43,3 +43,8 @@ export const EVENTS = {
   MEDICATION_CHANGED: 'medication.changed',
 }
 export const EVENT_TYPES = Object.values(EVENTS)
+
+export const NOTIFICATION_STATUS = { PENDING: 'pending', SENT: 'sent', FAILED: 'failed', SKIPPED: 'skipped' }
+export const NOTIFICATION_STATUSES = Object.values(NOTIFICATION_STATUS)
+export const NOTIFICATION_REF_TYPES = ['task', 'careRecipient']
+export const NOTIFY_NONE = 'none'

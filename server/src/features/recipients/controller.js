@@ -10,7 +10,7 @@ import mongoose from 'mongoose'
 import { validProfilePicture } from '../../utils/profilePicture.js'
 import CareRecipient from './CareRecipient.model.js'
 import { CARE_TYPES, EVENTS } from '../../constants.js'
-
+import { notify } from '../../utils/notify.js'
 // ---------- Helpers ----------
 
 function httpError(status, message, errors) {
@@ -44,7 +44,10 @@ function handleError(error, res, next) {
 
 // Placeholder until F adds utils/notify.js and D adds Socket.IO.
 // Every medication change already calls this, so wiring them up is a one-line change.
-function announce(_eventType, _recipient) {}
+// replaced
+async function announce(eventType, recipient) {
+    await notify(recipient.family, eventType, recipient)
+}
 
 async function findRecipientInFamily(familyId, recipientId) {
     // A malformed id is treated as not found, same as requireFamilyMember
@@ -355,7 +358,7 @@ export async function updateRecipient(req, res, next) {
         if (!updated) throw httpError(404, 'Care recipient not found')
 
         const populated = await CareRecipient.getPopulatedRecipientById(updated._id)
-        if (medicationsChanged) announce(EVENTS.MEDICATION_CHANGED, populated)
+        if (medicationsChanged) await announce(EVENTS.MEDICATION_CHANGED, populated)
         return res.json({ recipient: populated })
     } catch (error) {
         return handleError(error, res, next)
