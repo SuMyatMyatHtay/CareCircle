@@ -185,6 +185,10 @@ async function copyInviteCode(inviteCode) {
             Calendar <span class="coming-tag">Soon</span>
             </div>
 
+            <RouterLink v-if="!preview" to="/contributions" class="nav-item" active-class="active" @click="emit('navigate')">
+                <i class="bi bi-trophy"></i> Contributions
+            </RouterLink>
+
             <div class="nav-heading">CARE RECIPIENTS</div>
             <div class="sidebar-recipients" role="region" aria-label="Care recipients" tabindex="0">
             <p v-if="recipientsLoading && !recipients.length" class="empty-recipients">Loading care recipients…</p>
@@ -201,6 +205,10 @@ async function copyInviteCode(inviteCode) {
             </div>
             </div>
         </template>
+        <div v-if="!selectedFamily && !preview" class="nav-item contributions-locked" role="link" aria-disabled="true" tabindex="0" aria-describedby="contributions-lock-hint">
+            <i class="bi bi-trophy" aria-hidden="true"></i> Contributions <i class="bi bi-lock ms-auto" aria-hidden="true"></i>
+            <span id="contributions-lock-hint" role="tooltip">Join a family first to view contributions.</span>
+        </div>
         </nav>
 
         <!-- BOTTOM AREA -->

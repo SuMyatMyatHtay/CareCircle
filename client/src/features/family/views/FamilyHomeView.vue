@@ -282,6 +282,8 @@ watch(selectedFamilyId, () => {
         />
       </template>
       <MobileHomeNavigation
+        :contributions-enabled="Boolean(selectedFamily)"
+        :preview="isPreview"
         :home-path="homePath"
         :settings-path="settingsPath"
         :active="mobilePanel || 'home'"

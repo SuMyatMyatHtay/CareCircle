@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto'
 import mongoose from 'mongoose'
 import Family from './Family.model.js'
 import User from '../auth/User.model.js'
+import { syncAccountRecipientInFamily } from '../recipients/syncAccountRecipient.js'
 
 // This function is to generate a random invitation code
 function generateInviteCode() {
@@ -64,6 +65,7 @@ export async function createFamilyForUser(name, userId) {
         })
 
         // 4. Return the created family
+        if (user.isCaretaker) await syncAccountRecipientInFamily(user, family._id)
         return formatFamily(family)
 
         } catch (error) {
@@ -166,5 +168,6 @@ export async function joinFamilyForUser(inviteCode, userId) {
     )
   }
 
+  if (user.isCaretaker) await syncAccountRecipientInFamily(user, updatedFamily._id)
   return formatFamily(updatedFamily)
 }
