@@ -1,5 +1,5 @@
 <script setup>
-import CareAvatar from '../../../components/common/CareAvatar.vue'
+import ProfileAvatar from '../../../components/common/ProfileAvatar.vue'
 defineProps({ session: { type: Object, default: null } })
 defineEmits(['view'])
 </script>
@@ -10,8 +10,8 @@ defineEmits(['view'])
     aria-label="Active transit"
   >
     <div class="care-avatar-pair">
-      <CareAvatar :person="session.recipient" />
-      <CareAvatar :person="session.companion" />
+      <ProfileAvatar :person="session.recipient" recipient />
+      <ProfileAvatar :person="session.companion" />
     </div>
     <div class="care-transit-text">
       <span class="care-transit-label">LIVE · TRANSIT MODE</span>

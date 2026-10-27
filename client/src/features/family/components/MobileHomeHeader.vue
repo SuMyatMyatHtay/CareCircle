@@ -32,9 +32,9 @@ defineEmits(['switch-family'])
       <h1>{{ greeting }}</h1>
     </div>
     <RouterLink
-      :to="settingsPath"
+      :to="preview ? settingsPath : '/profile'"
       class="care-mobile-account"
-      aria-label="Open family settings"
+      aria-label="Open my profile"
     >
       <CareAvatar :person="user" size="small" />
     </RouterLink>

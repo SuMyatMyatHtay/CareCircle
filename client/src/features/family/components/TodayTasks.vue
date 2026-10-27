@@ -1,6 +1,8 @@
 <script setup>
 import SectionCard from '../../../components/common/SectionCard.vue'
 import TaskList from '../../tasks/components/TaskList.vue'
+import { useTaskClock, isTaskOverdue } from '../../tasks/composables/useTaskOverdue.js'
+const now = useTaskClock()
 defineProps({
   tasks: { type: Array, default: () => [] },
   loading: Boolean,
@@ -39,8 +41,9 @@ defineEmits(['retry', 'claim', 'clear-filter', 'filter'])
       @retry="$emit('retry')"
     >
       <template #actions="{ task }">
+        <span v-if="task.status === 'open' && isTaskOverdue(task, now)" class="care-muted care-small">Overdue · Claiming closed</span>
         <button
-          v-if="task.status === 'open'"
+          v-else-if="task.status === 'open'"
           class="care-button care-button--coral care-claim-button"
           :disabled="Boolean(busyId)"
           @click="$emit('claim', task)"

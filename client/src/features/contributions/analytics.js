@@ -42,6 +42,6 @@ export function analyzeContributions(tasks, members, familyId, period = 'month',
     row.badges = [row.appointments >= 3 && 'Appointment hero', row.quick >= 3 && 'Quick to help', row.evenings >= 5 && 'Night owl'].filter(Boolean)
   }
   const rows = [...people.values()].sort((a, b) => b.points - a.points || b.count - a.count || (a.person.name || '').localeCompare(b.person.name || '') || a.id.localeCompare(b.id))
-  rows.forEach((row, i) => { row.rank = i && row.points === rows[i - 1].points && row.count === rows[i - 1].count ? rows[i - 1].rank : i + 1 })
+  rows.forEach((row, i) => { row.rank = row.count > 0 ? i + 1 : null })
   return { rows, recent, total: recent.length, points: rows.reduce((sum, row) => sum + row.points, 0), helpers: rows.filter(row => row.count > 0).length }
 }
