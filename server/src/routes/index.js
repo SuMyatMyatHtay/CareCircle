@@ -13,6 +13,7 @@
     import { calendarAutoSync } from '../features/calendar-sync/autoSync.js'
     import assistant from '../features/assistant/routes.js'
     import notifications, { notifySettings } from '../features/notifications/routes.js'
+    import search from '../features/search/routes.js'
 
     const router = Router()
 
@@ -42,5 +43,6 @@
     router.use('/families/:familyId/logs', logs)
     router.use('/families/:familyId/notifications', notifications) // F (add when built)
     router.use('/families/:familyId/notify-settings', notifySettings)
+    router.use('/families/:familyId/search', search)          // D: tasks, care log, people and places
 
     export default router
