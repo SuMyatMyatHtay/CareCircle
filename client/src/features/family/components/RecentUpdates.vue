@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue'
 import SectionCard from '../../../components/common/SectionCard.vue'
 import CareAvatar from '../../../components/common/CareAvatar.vue'
 import { useFamilyWorkspace } from '../composables/useFamilyWorkspace.js'

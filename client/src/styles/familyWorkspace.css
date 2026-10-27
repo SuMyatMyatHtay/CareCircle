@@ -84,7 +84,19 @@
   color: var(--care-muted);
 }
 .app-layout .profile-row {
+  color: var(--care-text);
+}
+.app-layout .profile-row::before {
   border-color: var(--care-border);
+}
+.app-layout .profile-row:hover {
+  background: var(--care-neutral);
+}
+.app-layout .profile-row.active {
+  background: var(--care-soft);
+}
+.app-layout .profile-row.active strong {
+  color: var(--care-green);
 }
 .app-layout .profile-avatar {
   background: var(--care-soft);
