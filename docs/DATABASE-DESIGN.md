@@ -276,6 +276,8 @@ Events are the only way modules talk to each other. A module calls `notify()` an
 | `task.cancelled` | Tasks | Cancelled: physio session on Fri. |
 | `transit.milestone` | Transit | Grandpa has arrived at the clinic, with Wei Ling. |
 | `log.created` | Logs | New consultation note for Grandpa. |
+| `log.updated` | Logs | Alex edited a consultation note for Grandpa. |
+| `log.deleted` | Logs | Alex deleted a care note for Grandpa. |
 | `medication.changed` | Logs and care profiles | Grandpa's medication was updated. Check the app. |
 
 Every Telegram message ends with a deep link to the related page, built from `refType` and `refId`. Keep health details out of the Telegram text itself (say "medication was updated", not the drug and dose), since group chats get forwarded.

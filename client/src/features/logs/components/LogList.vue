@@ -10,6 +10,7 @@ defineProps({
     emptyMessage: { type: String, default: 'No notes yet. Add the first update above.' },
     canChange: { type: Function, default: () => false },
     translate: { type: Function, default: null },
+    compact: { type: Boolean, default: false },
     hasMore: { type: Boolean, default: false },
     isLoadingMore: { type: Boolean, default: false },
     editingId: { type: String, default: '' },
@@ -53,6 +54,7 @@ const emit = defineEmits(['retry', 'edit', 'delete', 'load-more', 'save-edit', '
                 :log="log"
                 :can-change="canChange(log)"
                 :translate="translate"
+                :compact="compact"
                 @edit="emit('edit', $event)"
                 @delete="emit('delete', $event)"
             />

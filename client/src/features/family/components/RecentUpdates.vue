@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue'
 import SectionCard from '../../../components/common/SectionCard.vue'
 import CareAvatar from '../../../components/common/CareAvatar.vue'
 import { useFamilyWorkspace } from '../composables/useFamilyWorkspace.js'
@@ -15,7 +16,7 @@ const shown = computed(() => (feed.items.value.length ? feed.items.value : props
 <template>
   <SectionCard title="Recent updates" class="care-recent-updates">
     <ol v-if="shown.length" class="care-activity-list">
-+      <li v-for="update in shown.slice(0, 8)" :key="update._id">
+      <li v-for="update in shown.slice(0, 8)" :key="update._id">
         <CareAvatar
           :person="{ name: update.actor || 'Family', avatar: update.avatar }"
           size="small"

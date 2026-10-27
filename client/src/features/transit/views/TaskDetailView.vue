@@ -17,6 +17,9 @@ import { startTask } from '../../my-tasks/services/myTasksApi.js'
 import { getTask } from '../services/transitApi.js'
 import { claimTask, unclaimTask, completeTask, deleteTask, getErrorMessage } from '../../my-tasks/services/myTasksApi.js'
 import { formatTime, recipientName, TIME_ZONE } from '../../my-tasks/utils/formatters.js'
+import ConsultationNoteModal from '../../logs/components/ConsultationNoteModal.vue'
+import VisitNotes from '../../logs/components/VisitNotes.vue'
+import SavedToast from '../../logs/components/SavedToast.vue'
 
 const props = defineProps({
     familyId: { type: String, required: true },
@@ -88,6 +91,27 @@ const activity = computed(() => {
     if (t.createdBy) items.push({ name: t.createdBy.name, text: `${t.createdBy.name} created this · ${shortDate(t.createdAt)}` })
     return items
 })
+
+// F (SeungHak): care log notes saved against this task
+const recipientId = computed(() => idOf(task.value?.recipient) || '')
+const visitNotes = ref(null)
+const savedMessage = ref('')
+
+const isNoteOpen = ref(false)
+
+function addConsultationNote() {
+    if (!recipientId.value) {
+        notice.value = 'Consultation notes are kept in a care recipient\'s log, and this task is not for a care recipient.'
+        return
+    }
+    isNoteOpen.value = true
+}
+
+function noteSaved(log) {
+    isNoteOpen.value = false
+    visitNotes.value?.add(log)
+    savedMessage.value = `Note saved to ${who.value ? `${who.value}'s` : 'the care'} log`
+}
 
 async function load() {
     isLoading.value = true
@@ -308,10 +332,20 @@ watch(() => [props.familyId, props.taskId], load)
                 <!-- F (SeungHak): consultation notes -->
                 <section class="card">
                     <h2>Notes from this visit</h2>
-                    <p class="muted">No notes yet. Whoever goes can add what the doctor said, so the family doesn't need to ask.</p>
-                    <button type="button" class="btn-secondary" @click="notice = 'Consultation notes are part of Care Logs, which is coming soon.'">
+                    <VisitNotes ref="visitNotes" :family-id="familyId" :task-id="taskId" empty-text="No notes yet. Whoever goes can add what the doctor said, so the family doesn't need to ask." />
+                    <button type="button" class="btn-secondary" data-testid="task-add-note" @click="addConsultationNote">
                         + Add consultation note
                     </button>
+                    <ConsultationNoteModal
+                        v-if="isNoteOpen"
+                        :family-id="familyId"
+                        :recipient-id="recipientId"
+                        :recipient-name="who"
+                        :task-id="taskId"
+                        @close="isNoteOpen = false"
+                        @saved="noteSaved"
+                    />
+                    <SavedToast :message="savedMessage" @close="savedMessage = ''" />
                 </section>
 
                 <section class="card">
