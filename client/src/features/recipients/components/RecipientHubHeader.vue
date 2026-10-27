@@ -6,6 +6,7 @@ import CareAvatar from '../../../components/common/CareAvatar.vue'
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import NewTaskButton from '../../tasks/components/NewTaskButton.vue'
+import { useTabIndicator } from '../../../composables/useTabIndicator.js'
 import RecipientFormModal from './RecipientFormModal.vue'
 import { displayName, initials, ageLabel, careTypeChip, mobilityChip } from '../recipientLabels.js'
 
@@ -38,6 +39,10 @@ const subtitle = computed(() => {
 const mobility = computed(() => mobilityChip(props.recipient.mobility?.level))
 
 const editing = ref(false)
+
+// One underline that slides to the active tab
+const tabBar = ref(null)
+const indicator = useTabIndicator(tabBar, () => route.name)
 </script>
 
 <template>
@@ -67,13 +72,15 @@ const editing = ref(false)
             </div>
         </div>
 
-        <nav class="hub-tabs" aria-label="Recipient sections">
+        <nav ref="tabBar" class="hub-tabs" aria-label="Recipient sections">
             <RouterLink v-for="tab in TABS" :key="tab.name" class="hub-tab"
                 :class="{ active: route.name === tab.name }"
                 :aria-current="route.name === tab.name ? 'page' : null"
                 :to="{ name: tab.name, params: { recipientId: recipient._id } }">
                 {{ tab.label }}
             </RouterLink>
+            <span class="care-tab-indicator" :class="{ 'is-ready': indicator.ready }" :style="indicator.style"
+                aria-hidden="true"></span>
         </nav>
 
         <RecipientFormModal v-if="editing" :recipient="recipient" @updated="emit('updated', $event)"
@@ -188,6 +195,7 @@ const editing = ref(false)
 }
 
 .hub-tabs {
+    position: relative;
     display: flex;
     gap: 28px;
     border-bottom: 1px solid var(--theme-border, #E4ECE5);
@@ -211,7 +219,6 @@ const editing = ref(false)
 }
 
 .hub-tab.active {
-    border-bottom-color: var(--theme-accent-border, #2E7D43);
     color: var(--theme-green, #2E7D43);
     font-weight: 700;
 }

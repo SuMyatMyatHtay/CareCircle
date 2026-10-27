@@ -282,13 +282,39 @@
     margin-top: auto;
 }
 
+/* The name row doubles as the My profile link */
 .profile-row {
+    position: relative;
     display: flex;
     gap: 10px;
     align-items: center;
-    padding: 15px 10px 0;
-    margin-top: 10px;
+    padding: 9px 10px;
+    margin-top: 21px;
+    border-radius: 10px;
+    color: var(--theme-text, #2F2F2F);
+}
+
+/* Divider above the row, kept outside the highlight */
+.profile-row::before {
+    content: '';
+    position: absolute;
+    top: -11px;
+    left: 0;
+    right: 0;
     border-top: 1px solid var(--theme-border, #E5E7EB);
+}
+
+.profile-row:hover {
+    background: var(--theme-neutral, #F3F4F2);
+    color: inherit;
+}
+
+.profile-row.active {
+    background: var(--theme-soft, #E8F5E9);
+}
+
+.profile-row.active strong {
+    color: var(--theme-green, #2D7E42);
 }
 
 .profile-avatar {

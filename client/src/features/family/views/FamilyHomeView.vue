@@ -49,6 +49,8 @@ const {
   loading,
   error,
   busyId,
+  claimedId,
+  flashIds,
   toast,
   toastError,
   openTaskCount,
@@ -248,6 +250,8 @@ watch(selectedFamilyId, () => {
             :loading="loading"
             :error="error"
             :busy-id="busyId"
+            :claimed-id="claimedId"
+            :flash-ids="flashIds"
             :filter-label="
               filterRecipient?.nickname || filterRecipient?.name || ''
             "
