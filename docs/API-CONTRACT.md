@@ -92,7 +92,8 @@ Always filter queries by `family: req.family._id`. Never take a family ID, user 
 | GET | `/api/families/:familyId/members` | member | none | `{ members: [{ user: { _id, name, email, preferredLang, telegramUsername }, role, joinedAt }] }` | Code + local HTTP tests; live DB pending |
 | PATCH | `/api/families/:familyId/members/:userId` | admin | `{ role }` | `{ member }`. `409` if it would remove the last admin or access changed during the request. | Code + local HTTP tests; live DB pending |
 | DELETE | `/api/families/:familyId/members/:userId` | admin, or the user themself (leaving) | none | `204`. `409` if it would remove the last admin or access changed during the request. | Code + local HTTP tests; live DB pending |
-| PATCH | `/api/families/:familyId` | admin | `{ name }` | `{ family }` | Planned |
+
+Family names are set at creation and cannot be changed. There is no family-renaming endpoint.
 | POST | `/api/families/:familyId/invite-code` | admin | none | `{ inviteCode }` (10 hexadecimal characters; the old one stops working) | Code + local HTTP tests; live DB pending |
 | PATCH | `/api/users/me` | logged in | `{ name?, phone?, preferredLang?, telegramUsername? }` | `{ user }` | Planned |
 
@@ -142,7 +143,7 @@ Base: `/api/families/:familyId/tasks`. **Implemented.**
 | POST | `/:taskId/unclaim` | creator or claimer | none | claimed → open. Sends `task.unclaimed`. |
 | POST | `/:taskId/start` | claimer | none | claimed → in_progress, `{ task, transitSession }`. A transit session is created only when `needsTransit` is true. |
 | POST | `/:taskId/complete` | claimer | none | claimed or in_progress → completed. Ends any transit session. Sends `task.completed`. |
-| POST | `/:taskId/cancel` | creator or admin | none | open, claimed or in_progress → cancelled. Ends any transit session. Sends `task.cancelled`. |
+| POST | `/:taskId/cancel` | creator, claimer or admin | none | open, claimed or in_progress → cancelled. Ends any transit session. Sends `task.cancelled`. |
 
 **Task shape**
 
@@ -303,6 +304,22 @@ Optional: `GET /api/families/:familyId/calendar.ics` exports the tasks for Googl
 - **Reminders:** a scheduled job sends reminders for tasks starting soon.
 
 ---
+
+## Assistant task proposals
+
+All assistant routes require authentication and membership of `:familyId`.
+
+| Method | Path | Body | Response |
+| --- | --- | --- | --- |
+| POST | `/api/families/:familyId/assistant/chat` | `{ messages, selectedTaskId?, selectTask?, editField? }` | `{ message, suggestions, tasks?, proposal?, editField? }` |
+| POST | `/api/families/:familyId/assistant/proposals/:proposalId/confirm` | none | `{ task }`, `{ deleted, taskId }`, or `{ requiresSecondConfirmation, message }` |
+| POST | `/api/families/:familyId/assistant/proposals/:proposalId/cancel` | none | Dismisses a pending proposal without changing a task |
+
+Supported proposal actions: `create`, `update`, `claim`, `assign`, `unclaim`, `start`, `complete`, `cancel`, `delete`. All writes require confirmation. Deletion requires two confirmations. Confirmation accepts a proposal ID, never a replacement task payload.
+
+Claim acts for the signed-in person. Assign requires task-creator ownership and a current family-member assignee. Claim/assign require an open task before its start time. Start/complete require the current claimer. Assistant cancellation requires creator or claimer ownership; admin status alone does not qualify. Unclaim requires creator or claimer and claimed status. Update/delete remain creator-only. Confirmation rechecks current state and the original task version, returning a conflict for stale proposals. Status actions share the manual task/transit lifecycle.
+
+`selectedTaskId` explicitly anchors a follow-up to a family task. `selectTask: true` returns a clarification without a provider call. Change time/location follow-ups also ask for the new value directly. Empty model edits never create a proposal.
 
 ## Cross-module events
 

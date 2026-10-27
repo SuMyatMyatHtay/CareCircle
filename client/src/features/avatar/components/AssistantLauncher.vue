@@ -13,7 +13,7 @@ watch([messages, busy, error, opened], async () => {
   await nextTick()
   if (thread.value) thread.value.scrollTop = thread.value.scrollHeight
 }, { deep: true })
-function chooseTask(task) { chat.send(`I want to update this task: ${task.title} (task ID: ${task.id}, starting ${task.startAt}). Ask me what to change.`) }
+function chooseTask(task) { chat.selectTask(task) }
 async function toggle() {
   opened.value = !opened.value
   await nextTick()

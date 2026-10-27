@@ -213,17 +213,20 @@ const ACTIONS = {
     },
     cancel: {
         from: [TASK_STATUS.OPEN, TASK_STATUS.CLAIMED, TASK_STATUS.IN_PROGRESS],
-        allowed: (task, userId, role) => isCreatorOrAdmin(task, userId, role),
-        forbidden: 'Only the task creator or an admin can cancel this task',
+        allowed: (task, userId, role) => isCreatorOrAdmin(task, userId, role) || isClaimer(task, userId),
+        forbidden: 'Only the task creator, assigned person or an admin can cancel this task',
         conflict: (task) => `Task is ${task.status} and cannot be cancelled`,
         set: () => ({ status: TASK_STATUS.CANCELLED, cancelledAt: new Date() }),
         event: EVENTS.TASK_CANCELLED
     }
 }
 
-async function changeStatus(actionName, { familyId, taskId, userId, memberRole }) {
+async function changeStatus(actionName, { familyId, taskId, userId, memberRole, expectedUpdatedAt }) {
     const action = ACTIONS[actionName]
     const task = await findTaskInFamily(familyId, taskId)
+    if (expectedUpdatedAt && +new Date(task.updatedAt) !== +new Date(expectedUpdatedAt)) {
+        throw httpError(409, 'This task changed. Please prepare a new proposal.')
+    }
 
     // Status first: an open task has no claimer, so "not allowed" would be misleading
     if (!action.from.includes(task.status)) {
@@ -251,12 +254,31 @@ async function changeStatus(actionName, { familyId, taskId, userId, memberRole }
 
 // Shared completion function for E's "home" milestone (see docs/OWNERSHIP.md).
 // Same rules as POST /:taskId/complete. Throws errors with .status on failure.
-export async function completeTask({ familyId, taskId, userId, memberRole = 'member' }) {
-    const task = await changeStatus('complete', { familyId, taskId, userId, memberRole })
+export async function completeTask({ familyId, taskId, userId, memberRole = 'member', expectedUpdatedAt }) {
+    const task = await changeStatus('complete', { familyId, taskId, userId, memberRole, expectedUpdatedAt })
     await Task.endTransitSession(task)
     const populated = await Task.getPopulatedTaskById(task._id)
     await announce(EVENTS.TASK_COMPLETED, populated)
     return populated
+}
+
+// Used by both HTTP actions and confirmed assistant proposals.
+export async function performFamilyTaskAction(actionName, context) {
+    if (!Object.hasOwn(ACTIONS, actionName)) throw httpError(400, 'Unsupported task action')
+    if (actionName === 'complete') return { task: await completeTask(context) }
+    const task = await changeStatus(actionName, context)
+    if (actionName === 'cancel') await Task.endTransitSession(task)
+    let transitSession = null
+    if (actionName === 'start') {
+        try { transitSession = await Task.startTransitSession(task) }
+        catch (error) {
+            await Task.updateTaskStatus(task, { status: TASK_STATUS.CLAIMED })
+            throw error
+        }
+    }
+    const populated = await Task.getPopulatedTaskById(task._id)
+    if (ACTIONS[actionName].event) await announce(ACTIONS[actionName].event, populated)
+    return actionName === 'start' ? { task: populated, transitSession } : { task: populated }
 }
 
 function statusHandler(actionName) {
@@ -269,32 +291,7 @@ function statusHandler(actionName) {
                 memberRole: req.memberRole
             }
 
-            if (actionName === 'complete') {
-                const task = await completeTask(context)
-                return res.json({ task })
-            }
-
-            const task = await changeStatus(actionName, context)
-
-            if (actionName === 'cancel') await Task.endTransitSession(task)
-
-            let transitSession = null
-            if (actionName === 'start') {
-                try {
-                    transitSession = await Task.startTransitSession(task)
-                } catch (error) {
-                    // Put the task back so the claimer can try again
-                    await Task.updateTaskStatus(task, { status: TASK_STATUS.CLAIMED })
-                    throw error
-                }
-            }
-
-            const populated = await Task.getPopulatedTaskById(task._id)
-            if (ACTIONS[actionName].event) await announce(ACTIONS[actionName].event, populated)
-
-            return actionName === 'start'
-                ? res.json({ task: populated, transitSession })
-                : res.json({ task: populated })
+            return res.json(await performFamilyTaskAction(actionName, context))
         } catch (error) {
             return handleError(error, res, next)
         }

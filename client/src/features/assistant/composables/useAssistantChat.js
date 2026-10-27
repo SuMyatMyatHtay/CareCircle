@@ -1,4 +1,6 @@
 import { ref, computed, watch, onBeforeUnmount, toValue } from 'vue'
+import { useQueryClient } from '@tanstack/vue-query'
+import { queryKeys } from '../../../services/queryClient.js'
 import { useFamilyWorkspace } from '../../family/composables/useFamilyWorkspace.js'
 import { useTaskCache } from '../../../composables/useFamilyTasks.js'
 import { sendAssistantMessage, confirmAssistantProposal, cancelAssistantProposal, assistantErrorMessage } from '../services/assistantApi.js'
@@ -22,12 +24,17 @@ export function conversationPayload(messages) {
 export function useAssistantChat(user) {
   const { selectedFamilyId, selectedFamily } = useFamilyWorkspace()
   const { upsertTask, removeTask, invalidateTasks } = useTaskCache()
+  const queryClient = useQueryClient()
   const messages = ref([]), input = ref(''), busy = ref(false), error = ref(''), retryable = ref(false)
+  const selectedTaskId = ref('')
+  const editField = ref('')
+  let selectingTask = false
   let version = 0, controller
   const canSend = computed(() => Boolean(selectedFamilyId.value && input.value.trim() && !busy.value))
   function reset() {
     version++; controller?.abort()
     messages.value = []; input.value = ''; error.value = ''; busy.value = false; retryable.value = false
+    selectedTaskId.value = ''; editField.value = ''; selectingTask = false
   }
   watch([selectedFamilyId, () => toValue(user)?.id], reset)
   onBeforeUnmount(() => { version++; controller?.abort() })
@@ -50,12 +57,25 @@ export function useAssistantChat(user) {
   async function ask() {
     const request = begin()
     try {
-      const result = await sendAssistantMessage(request.familyId, conversationPayload(messages.value), request.signal)
+      const result = await sendAssistantMessage(request.familyId, conversationPayload(messages.value), request.signal,
+        selectedTaskId.value ? { selectedTaskId: selectedTaskId.value, selectTask: selectingTask, ...(editField.value ? { editField: editField.value } : {}) } : {})
       if (!request.current()) return
+      selectingTask = false
+      editField.value = result.editField || ''
       messages.value.push({ role: 'assistant', content: result.message, suggestions: result.suggestions || [],
         tasks: result.tasks || [], hasMore: result.hasMore, proposal: result.proposal, proposalState: result.proposal ? 'pending' : undefined })
     } catch (e) {
-      if (request.current()) { error.value = assistantErrorMessage(e); retryable.value = true }
+      if (request.current()) {
+        const status = e.response?.status
+        if ([400, 403, 404, 409, 410].includes(status)) {
+          editField.value = ''
+          messages.value.push({ role: 'assistant', content: assistantErrorMessage(e), suggestions: [] })
+          retryable.value = false
+        } else {
+          error.value = assistantErrorMessage(e)
+          retryable.value = e.code !== 'ERR_CANCELED' && (!status || status === 429 || status >= 500)
+        }
+      }
     } finally { request.finish() }
   }
   async function send(text = input.value) {
@@ -65,6 +85,11 @@ export function useAssistantChat(user) {
     messages.value.push({ role: 'user', content: text.trim().slice(0, 2000) })
     input.value = ''
     await ask()
+  }
+  async function selectTask(task) {
+    if (busy.value || !task?.id) return
+    selectedTaskId.value = task.id; editField.value = ''; selectingTask = true
+    await send(`Selected task: ${task.title}. What can I do with this task?`)
   }
   async function confirm(message) {
     if (busy.value || message.proposalState !== 'pending') return
@@ -78,12 +103,14 @@ export function useAssistantChat(user) {
         return
       }
       message.proposalState = 'saved'
+      await queryClient.cancelQueries({ queryKey: queryKeys.tasks(request.familyId) })
+      if (!request.current()) return
       if (result.deleted) removeTask(request.familyId, result.taskId)
       else upsertTask(request.familyId, result.task)
       // Reconcile any in-flight fetch and refresh all visible task boards.
       void invalidateTasks(request.familyId)
       window.dispatchEvent(new CustomEvent('carecircle:task-updated', { detail: { familyId: request.familyId, task: result.task, taskId: result.taskId, deleted: result.deleted, action: message.proposal.action, title: message.proposal.task.title } }))
-      const action = { create: 'Created', update: 'Updated', unclaim: 'Unclaimed', delete: 'Deleted' }[message.proposal.action]
+      const action = { create: 'Created', update: 'Updated', unclaim: 'Unclaimed', delete: 'Deleted', claim: 'Claimed', assign: 'Assigned', start: 'Started', complete: 'Completed', cancel: 'Cancelled' }[message.proposal.action]
       messages.value.push({ role: 'assistant', content: `${action}: ${result.task?.title || message.proposal.task.title}. Your task list is up to date.` })
     } catch (e) {
       if (request.current()) {
@@ -103,5 +130,5 @@ export function useAssistantChat(user) {
   }
   async function retry() { if (!busy.value && retryable.value && selectedFamilyId.value) await ask() }
   function stop() { controller?.abort() }
-  return { messages, input, busy, error, retryable, canSend, selectedFamilyId, selectedFamily, send, confirm, dismiss, retry, reset, stop }
+  return { messages, input, busy, error, retryable, canSend, selectedFamilyId, selectedFamily, send, selectTask, confirm, dismiss, retry, reset, stop }
 }

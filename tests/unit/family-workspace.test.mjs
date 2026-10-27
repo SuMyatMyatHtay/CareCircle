@@ -272,7 +272,7 @@ test('preview never fetches the signed-in family even with an active real sessio
 })
 
 test('a pre-claim task list reply cannot undo a successful claim', async t => {
-  seed()
+  seed([task('today', { startAt: new Date(Date.now() + 3600000).toISOString() })])
   mounted = harness.mountWorkspace()
   const waiting = deferred()
   t.mock.method(http, 'get', () => waiting.promise)

@@ -46,7 +46,7 @@ export async function requireFamilyMember(req, res, next) {
 }
 
 // Use after requireFamilyMember, on admin-only routes only:
-//   router.patch('/', requireFamilyAdmin, updateFamily)
+//   router.post('/:familyId/invite-code', requireFamilyAdmin, regenerateInviteCode)
 export function requireFamilyAdmin(req, res, next) {
   if (req.memberRole !== 'admin') {
     return res.status(403).json({ error: 'Only family admins can do this' })

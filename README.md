@@ -114,7 +114,9 @@ This README describes the implementation in this repository. External integratio
 ### AI assistant and customisation
 
 - Open a floating mascot assistant using your saved avatar appearance.
-- Search family tasks and prepare proposals to create, edit, unclaim or delete tasks through Gemini structured responses.
+- Search family tasks and prepare proposals to create, edit, claim, assign, unclaim, start, complete, cancel or delete tasks through Gemini structured responses.
+- Select a search result to retain that task as explicit chat context. Choosing Change time or Change location asks for the new value without a model-generated edit.
+- Claim only for yourself; assign an open future task only if you created it, and only to a current family member. Start/complete only your assigned tasks, and cancel only tasks you created or are assigned to. Every write requires confirmation.
 - Ask for missing details and present a confirmation card before writes. Deletion requires a second confirmation.
 - Enforce family scope, current permissions, proposal expiry and stale-update checks on the server. Repeated confirmations do not create duplicate tasks.
 - Clear chat on family/account changes. Messages stay in browser memory; task proposals are stored separately and expire after 15 minutes.
@@ -141,7 +143,7 @@ Completing directly from `claimed` is also supported. The transit `home` milesto
 | Start / complete | Claimer; valid current status required |
 | Edit task | Creator; completed/cancelled tasks are locked |
 | Delete task | Creator; in-progress/completed tasks cannot be deleted |
-| Cancel task | Creator or family admin; active tasks only |
+| Cancel task | Creator, assigned person or family admin; active tasks only. The assistant requires creator/assignee ownership |
 | Add / edit recipient | Family member; only your own account can be newly linked |
 | Archive recipient | Family admin |
 | Edit / delete care log | Author or family admin |
@@ -205,7 +207,19 @@ npm install --prefix server
 
 The repository also contains pnpm lockfiles. Use one package manager consistently within each dependency directory. Do not run npm over a pnpm-created `node_modules` tree; start with a clean dependency directory when switching package managers.
 
-Create `server/.env`, using `server/.env.example` as a starting point. Set at least:
+Create `server/.env` from the updated [server/.env.example](server/.env.example). For a new checkout, copy the template using one of these commands:
+
+```powershell
+# Windows PowerShell (run from the repository root)
+Copy-Item server/.env.example server/.env
+```
+
+```sh
+# macOS / Linux (run from the repository root)
+cp server/.env.example server/.env
+```
+
+If `server/.env` already exists, update its settings in place instead of overwriting it. Every template value is `REPLACE_THIS_WITH_YOUR_ACTUAL_VALUE`; these are placeholders, not working defaults. Core setup needs:
 
 ```dotenv
 PORT=3000
@@ -213,7 +227,9 @@ MONGODB_URI=mongodb://127.0.0.1:27017/carecircle
 JWT_SECRET=replace_with_a_long_random_secret
 ```
 
-The normal database connection explicitly uses the `carecircle` database. Tests use a separate generated database.
+Use your actual MongoDB connection URI and a long random JWT secret. `PORT` must be a number, such as `3000`. The normal database connection explicitly uses the `carecircle` database. Tests use a separate generated database.
+
+The template also includes all optional integration variables documented below. Replace the placeholders for integrations you use; leave unused optional variables empty or remove them. Placeholder strings can otherwise make an integration appear configured even though its credentials are invalid. For `GEMINI_MODEL`, supply a model ID available to your Gemini project, or leave it empty/remove it to use the default in `server/src/features/assistant/gemini.js`.
 
 Create `client/.env`:
 
@@ -241,7 +257,7 @@ The preview bypasses login and uses fictional local data; it does not validate r
 
 ### Optional integration settings
 
-Add the integrations you use to `server/.env`. No real keys belong in this README.
+The updated `server/.env.example` groups settings for Groq, Google Calendar, Gemini, Telegram, the frontend URL and Azure Translator. Configure the integrations you use in `server/.env`; keep provider credentials on the server.
 
 | Feature | Variables | Additional setup |
 | --- | --- | --- |
@@ -306,29 +322,29 @@ The API/E2E harness generates a loopback `carecircle_test_*` database, validates
 
 See [docs/TESTING.md](docs/TESTING.md), [docs/TESTING-PART-E.md](docs/TESTING-PART-E.md) and [tests/e2e/README.md](tests/e2e/README.md). Use command output for current totals; counts in older documents are historical.
 
-## Team allocation
+## Team contributions
 
-This preserves the original A–F allocation from [docs/OWNERSHIP.md](docs/OWNERSHIP.md). The [team tracker](https://docs.google.com/spreadsheets/d/1q4JjWnC077RomNEm6pJjR2DpeRkb-RZyNa4O9ssRjLk/edit?gid=77767454#gid=77767454) remains the source for current assignments and progress.
+The table records the team's contributions beyond the initial work allocation. A–F identifies each member's original package; implemented work extends across those boundaries. [docs/OWNERSHIP.md](docs/OWNERSHIP.md) describes the original allocation, while the [team tracker](https://docs.google.com/spreadsheets/d/1q4JjWnC077RomNEm6pJjR2DpeRkb-RZyNa4O9ssRjLk/edit?gid=77767454#gid=77767454) tracks assignments and progress.
 
-| Package | Original owner | Responsibility |
+| Initial package | Team member | Contributions |
 | --- | --- | --- |
-| A | Sera | Authentication, families, invitation joining and family access |
-| B | SangYoon | Family Home, settings, membership controls and preferences |
-| C | Jhen | Care recipients, profiles and recipient hub |
-| D | Marcus | Task management, lifecycle and shared backend foundations |
+| A | Sera | Authentication, families, invitation joining and family access; avatar customisation and the dress-up game; Gemini AI chatbot; task claiming and unclaiming workflows, including double-claim prevention and overdue-claim restrictions |
+| B | SangYoon | Family dashboard and settings pages |
+| C | Jhen | Care recipient management, profiles and recipient hub; language translation; Telegram chatbot implementation |
+| D | Marcus | Task creation and management, task lifecycle foundations and shared backend foundations |
 | E | Chaithra | My tasks, transit, maps and calendar workflows |
-| F | SeungHak | Care logs, translation/voice and Telegram integrations |
+| F | SeungHak | Care logs and Groq speech-to-text implementation |
 
-Contributions, the AI assistant, avatar customisation and subsequent cross-feature improvements are documented above without additional individual attribution.
+The Contributions leaderboard and other cross-feature improvements are documented in the feature sections without additional individual attribution.
 
 ## Current limitations
 
 - The sidebar **Calendar** entry remains Coming soon. Calendar export, Google Calendar sync and the mobile settings agenda are separate implemented features.
 - The conventional task-detail **Edit** button is a placeholder. Creator-authorised task updates are available through the API and assistant proposals. Cancellation has an API route, without a complete task-detail cancellation UI.
-- Family renaming returns `501` at `PATCH /families/:familyId`; membership relationships are not editable schema fields.
+- Family names are set at creation and cannot be changed. Member roles support admin/member; custom relationship labels are not supported.
 - Dashboard, notifications and transit use polling rather than Socket.IO. Live location requires the companion's active page and browser permission.
 - There is no scheduled reminder worker or recurring-task engine. Due-soon indicators, event-triggered Telegram notifications and calendar reminders are distinct from scheduled CareCircle reminders.
-- The assistant cannot claim, assign, start, complete or cancel tasks. Its quota is per server process. It sends task context/user messages to Gemini and does not provide medical advice.
+- The assistant enforces task ownership and status rules for every confirmed action. Its quota is per server process. It sends task context/user messages to Gemini and does not provide medical advice.
 - A yearly contribution wrap, the deferred gratitude log and locked avatar characters are not implemented features.
 
 ## Contributing

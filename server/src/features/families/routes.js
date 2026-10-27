@@ -11,10 +11,6 @@ const router = Router()
 
 // All family routes require authentication
 router.use(requireAuth)
-// Placeholder until the controller functions exist. Replace each one with
-// the real handler from ./controller.js, e.g. listMyFamilies, createFamily.
-const notImplemented = (_req, res) =>
-  res.status(501).json({ error: 'Not implemented', module: 'families' })
 
 // Shorthands so every route below states its access level in one word
 const member = [requireAuth, requireFamilyMember]
@@ -27,7 +23,6 @@ router.post('/join', joinFamily)
 
 
 // ---- B (SangYoon): settings and members ----
-router.patch('/:familyId', admin, notImplemented)                 // { name }
 router.post('/:familyId/invite-code', admin, regenerateInviteCode)
 router.get('/:familyId/members', member, listMembers)
 router.patch('/:familyId/members/:userId', admin, updateMember) // { role }; existing schema has no relationship field
