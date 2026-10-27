@@ -3,6 +3,7 @@
 // The parent loads the tasks and passes them in; this component only displays them.
 //   <TaskList :tasks="tasks" :is-loading="loading" :error-message="error" @retry="loadTasks" />
 import TaskListItem from './TaskListItem.vue'
+import TaskClaimActions from './TaskClaimActions.vue'
 
 defineProps({
     tasks: { type: Array, default: () => [] },
@@ -36,7 +37,7 @@ const emit = defineEmits(['retry'])
     <div v-else class="task-list overflow-y-auto pe-1" :style="{ maxHeight: maxHeight || null }">
         <TaskListItem v-for="task in tasks" :key="task._id" :task="task">
             <template #actions="{ task: rowTask }">
-                <slot name="actions" :task="rowTask"></slot>
+                <slot name="actions" :task="rowTask"><TaskClaimActions :task="rowTask" /></slot>
             </template>
         </TaskListItem>
     </div>

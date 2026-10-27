@@ -115,7 +115,7 @@ export const LOCKED_STATUSES = [TASK_STATUS.COMPLETED, TASK_STATUS.CANCELLED]
 export const UNDELETABLE_STATUSES = [TASK_STATUS.IN_PROGRESS, TASK_STATUS.COMPLETED]
 
 const USER_FIELDS = 'name telegramUsername profilePicture'
-const RECIPIENT_FIELDS = 'name nickname careType profilePicture'
+const RECIPIENT_FIELDS = 'name nickname careType profilePicture linkedUser'
 
 // Models owned by other packages. Looked up by name so this file still works
 // before they exist: no recipient populate / transit session until they are registered.
@@ -173,7 +173,10 @@ taskSchema.statics.deleteDeletableTask = function (familyId, taskId) {
 // was read, so two people claiming at once can't both succeed. Returns null otherwise.
 taskSchema.statics.updateTaskStatus = function (task, changes) {
     return this.findOneAndUpdate(
-        { _id: task._id, family: task.family, status: task.status, claimedBy: task.claimedBy },
+        { _id: task._id, family: task.family, status: task.status, claimedBy: task.claimedBy,
+            ...(task.updatedAt ? { updatedAt: task.updatedAt } : {}),
+            ...(changes.status === TASK_STATUS.CLAIMED && task.status === TASK_STATUS.OPEN
+                ? { startAt: { $gt: changes.claimedAt } } : {}) },
         { $set: changes },
         { new: true }
     )

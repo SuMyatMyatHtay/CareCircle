@@ -14,6 +14,7 @@ import PersonAvatar from '../../my-tasks/components/PersonAvatar.vue'
 import TaskDetailMobile from '../components/TaskDetailMobile.vue'
 import { useIsMobile } from '../../my-tasks/utils/useIsMobile.js'
 import { startTask } from '../../my-tasks/services/myTasksApi.js'
+import { useTaskOverdue, isTaskOverdue } from '../../tasks/composables/useTaskOverdue.js'
 import { getTask } from '../services/transitApi.js'
 import { claimTask, unclaimTask, completeTask, deleteTask, getErrorMessage } from '../../my-tasks/services/myTasksApi.js'
 import { formatTime, recipientName, TIME_ZONE } from '../../my-tasks/utils/formatters.js'
@@ -30,6 +31,7 @@ const router = useRouter()
 const isMobile = useIsMobile()
 
 const task = ref(null)
+const overdue = useTaskOverdue(task)
 const isLoading = ref(true)
 const loadError = ref('')
 const notice = ref('')
@@ -126,6 +128,7 @@ async function load() {
 }
 
 async function run(action, message) {
+    if (isBusy.value) return
     isBusy.value = true
     actionError.value = ''
     try {
@@ -140,7 +143,10 @@ async function run(action, message) {
     }
 }
 
-const claim = () => run(() => claimTask(props.familyId, props.taskId), 'You claimed this task.')
+const claim = () => {
+    if (isTaskOverdue(task.value)) { actionError.value = 'This task is overdue and can no longer be claimed.'; return }
+    return run(() => claimTask(props.familyId, props.taskId), 'You claimed this task.')
+}
 const markDone = () => {
     if (window.confirm(`Mark "${task.value.title}" as done?`)) run(() => completeTask(props.familyId, props.taskId), 'Marked as done.')
 }
@@ -299,7 +305,8 @@ watch(() => [props.familyId, props.taskId], load)
                 <!-- E: transit + Google Calendar, with D's buttons in the slots -->
                 <TaskTransitActions :task="task" :family-id="familyId" @changed="load" @error="(m) => (actionError = m)">
                     <template #middle>
-                        <button v-if="status === 'open'" type="button" class="btn-secondary" :disabled="isBusy" @click="claim">
+                        <span v-if="status === 'open' && overdue">Overdue · Claiming closed</span>
+                        <button v-else-if="status === 'open'" type="button" class="btn-secondary" :disabled="isBusy" @click="claim">
                             I'll take it
                         </button>
                         <button

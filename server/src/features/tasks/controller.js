@@ -181,6 +181,7 @@ const ACTIONS = {
         allowed: () => true,
         conflict: (task) => task.status === TASK_STATUS.CLAIMED
             ? 'Task already claimed'
+            : new Date(task.startAt).getTime() <= Date.now() ? 'This task is overdue and can no longer be claimed'
             : `Task is ${task.status} and cannot be claimed`,
         set: (_task, userId) => ({
             status: TASK_STATUS.CLAIMED, claimedBy: userId, claimedAt: new Date()
@@ -230,6 +231,9 @@ async function changeStatus(actionName, { familyId, taskId, userId, memberRole }
     }
     if (!action.allowed(task, userId, memberRole)) {
         throw httpError(403, action.forbidden)
+    }
+    if (actionName === 'claim' && new Date(task.startAt).getTime() <= Date.now()) {
+        throw httpError(409, 'This task is overdue and can no longer be claimed')
     }
 
     // Two people claiming at once: only the first update matches, the other gets null

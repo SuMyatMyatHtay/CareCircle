@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import CareAvatar from '../../../components/common/CareAvatar.vue'
+import ProfileAvatar from '../../../components/common/ProfileAvatar.vue'
 const props = defineProps({ session: { type: Object, default: null } })
 defineEmits(['view'])
 const headline = computed(
@@ -22,20 +22,21 @@ const detail = computed(() =>
 </script>
 
 <template>
-  <button
+  <div
     v-if="session"
     class="care-mobile-transit"
-    @click="$emit('view')"
-    aria-label="View live transit timeline"
   >
     <span class="care-mobile-transit-avatars">
-      <CareAvatar :person="session.recipient" size="small" />
-      <CareAvatar :person="session.companion" size="tiny" />
+      <ProfileAvatar :person="session.recipient" recipient size="small" />
+      <ProfileAvatar :person="session.companion" size="tiny" />
     </span>
-    <span class="care-mobile-transit-copy">
+    <button type="button" class="care-mobile-transit-copy care-transit-open" @click="$emit('view')" aria-label="View live transit timeline">
       <span class="care-mobile-transit-label">LIVE · TRANSIT</span>
       <strong>{{ headline }}</strong>
       <small>{{ detail }}</small>
-    </span>
-  </button>
+    </button>
+  </div>
 </template>
+<style scoped>
+.care-transit-open{border:0;background:none;padding:0;text-align:left;color:inherit;font:inherit;flex:1}.care-transit-open:focus-visible{outline:2px solid var(--care-green,#2d7d43);outline-offset:3px}
+</style>

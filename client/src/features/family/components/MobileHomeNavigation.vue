@@ -3,6 +3,8 @@ defineProps({
   active: { type: String, default: 'home' },
   homePath: { type: String, required: true },
   settingsPath: { type: String, required: true },
+  contributionsEnabled: Boolean,
+  preview: Boolean,
 })
 defineEmits(['select'])
 const tabs = [
@@ -13,7 +15,7 @@ const tabs = [
 </script>
 
 <template>
-  <nav class="care-mobile-home-navigation" aria-label="Mobile home navigation">
+  <nav class="care-mobile-home-navigation" :style="{ gridTemplateColumns: `repeat(${preview ? 5 : 6}, minmax(0, 1fr))` }" aria-label="Mobile home navigation">
     <RouterLink
       :to="homePath"
       :class="{ selected: active === 'home' }"
@@ -33,6 +35,10 @@ const tabs = [
       <i class="bi" :class="tab.icon" aria-hidden="true"></i>
       <span>{{ tab.label }}</span>
     </button>
+    <RouterLink v-if="contributionsEnabled && !preview" to="/contributions">
+      <i class="bi bi-trophy" aria-hidden="true"></i><span>Contributions</span>
+    </RouterLink>
+    <span v-else-if="!preview" tabindex="0" aria-disabled="true" title="Join a family first to view contributions." style="font-size:10px; text-align:center; color:var(--theme-muted,#717b8e)"><i class="bi bi-lock" aria-hidden="true"></i><br>Contributions</span>
     <RouterLink :to="settingsPath">
       <i class="bi bi-person" aria-hidden="true"></i>
       <span>Me</span>

@@ -1,13 +1,18 @@
 <script setup>
-import CareAvatar from '../../../components/common/CareAvatar.vue'
+import ProfileAvatar from '../../../components/common/ProfileAvatar.vue'
 // One row in a task list: date, recipient, title, time/place, who claimed it, status.
 // Buttons (e.g. "I'll take it") can be passed in through the "actions" slot.
 import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import { useActiveFamily } from '../../../composables/useActiveFamily.js'
 import TaskStatusBadge from './TaskStatusBadge.vue'
 
 const props = defineProps({
     task: { type: Object, required: true }
 })
+const route = useRoute()
+const { selectedFamilyId } = useActiveFamily()
+const familyId = computed(() => props.task.family?._id || props.task.family || selectedFamilyId.value)
 
 // The API sends UTC; show it in Singapore time
 const TIME_ZONE = 'Asia/Singapore'
@@ -55,12 +60,12 @@ function initials(name = '') {
         </div>
 
         <div class="recipient-avatar" :title="recipientName || 'Household task'">
-            <CareAvatar v-if="recipientName" :person="task.recipient" />
+            <ProfileAvatar v-if="recipientName" :person="task.recipient" recipient />
             <i v-else class="bi bi-house-heart" aria-hidden="true"></i>
         </div>
 
         <div class="task-text">
-            <h3 class="task-title">{{ task.title }}</h3>
+            <h3 class="task-title"><RouterLink v-if="!route.meta.preview && familyId" :to="{ name: 'task-detail', params: { familyId, taskId: task._id } }" class="text-reset text-decoration-none">{{ task.title }}</RouterLink><template v-else>{{ task.title }}</template></h3>
             <p class="task-meta">
                 {{ time }}<template v-if="place"> · {{ place }}</template>
                 <template v-if="recipientName"> · for {{ recipientName }}</template>
@@ -69,7 +74,7 @@ function initials(name = '') {
 
         <div class="task-side">
             <span v-if="task.claimedBy" class="claimer">
-                <CareAvatar :person="task.claimedBy" size="tiny" />
+                <ProfileAvatar :person="task.claimedBy" size="tiny" />
                 {{ task.claimedBy.name }}
             </span>
 
