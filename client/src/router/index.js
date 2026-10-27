@@ -24,6 +24,7 @@ import RecipientTasksView from '../features/recipients/views/RecipientTasksView.
 import RecipientProfileView from '../features/recipients/views/RecipientProfileView.vue'
 import RecipientNewView from '../features/recipients/views/RecipientNewView.vue'
 import NewTaskView from '../features/tasks/views/NewTaskView.vue'
+import CalendarView from '../features/calendar/views/CalendarView.vue'
 import { verifySession, clearUserSession } from '../features/auth/services/authApi.js'
 const routes = [
   {path:'/login',component:LoginView},
@@ -44,6 +45,7 @@ const routes = [
     {path:'my-tasks',name:'my-tasks',component:MyTasksView},
     {path:'family-tasks',redirect:'/home'},
     {path:'contributions',name:'contributions',component:ContributionsView},
+    {path:'calendar',name:'calendar',component:CalendarView},
     {path:'transit/:familyId/:taskId',name:'transit',component:TransitView,props:true},
     {path:'families/:familyId/tasks/:taskId',name:'task-detail',component:TaskDetailView,props:true},
     {path:'recipients/new',name:'recipient-new',component:RecipientNewView},

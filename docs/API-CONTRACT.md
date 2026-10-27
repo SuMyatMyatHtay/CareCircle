@@ -181,7 +181,7 @@ Proposal: the frontend updates the list in place from socket events. It doesn't 
 3. On reconnect, refetch the current list once, in case events were missed while offline.
 4. Each `{ task }` payload has the same shape as the REST response, so one `upsertTask(task)` function in the Vue store handles all of them.
 
-`task.updated` and `task.deleted` are socket-only: they never send Telegram messages. Add them to `constants.js` before using them.
+`task.updated`, `task.deleted` and `task.started` are also notify() events: they show in Recent updates and go to Telegram like the others.
 
 ---
 
@@ -273,7 +273,7 @@ Base: `/api/families/:familyId/logs`
 
 | Method | Path | Who | Body / query | Response | Status |
 |---|---|---|---|---|---|
-| GET | `/` | member | Query: `recipient=<id>`, `task=<id>` (notes from that visit), `before=<date>`, `limit` (1–50, default 20) | `{ logs }`, newest first, `author` populated | Implemented |
+| GET | `/` | member | Query: `recipient=<id>`, `task=<id>` (notes from that visit), `appointmentFrom` / `appointmentTo` (notes whose next appointment is in that range, for the Calendar), `before=<date>`, `limit` (1–50, default 20) | `{ logs }`, newest first, `author` populated | Implemented |
 | POST | `/` | member | `{ recipient, type, content, task?, consultation?, medicationChanges?, inputMethod?, originalLang?, notify? }` | `201 { log }`. `author` is the logged-in user. `consultation` is kept only when `type` is `consultation`. Sends one update: `medication.changed` if `medicationChanges` is set, otherwise `log.created`. `notify: false` records it for Recent updates without a Telegram message. | Implemented |
 | GET | `/:logId` | member | Query: `lang=zh` (optional) | `{ log }`. `lang` / `translatedContent` is not built yet: each translation will be cached in `translations`, so a text is translated only once. | Implemented (without `lang`) |
 | PATCH | `/:logId` | author or admin | `{ content?, type?, consultation?, medicationChanges? }` | `{ log }`. Changing `content` clears the cached translations; changing `type` away from `consultation` clears `consultation`. `recipient`, `task`, `author` and `inputMethod` can't change. Sends one update: `medication.changed` if the medication list changed, otherwise `log.updated`. | Implemented |
@@ -320,7 +320,9 @@ Each event is sent through `notify()` (Telegram) and over Socket.IO to room `fam
 | `log.updated` | F | Alex edited a consultation note for Grandpa. |
 | `log.deleted` | F | Alex deleted a care note for Grandpa. |
 | `medication.changed` | C, F | Grandpa's medication was updated. Check the app. |
-| `task.updated`, `task.deleted` | D | Socket only. No Telegram message. |
+| `task.updated` | D | Alex updated: Grandpa's eye check, Tue 10am. |
+| `task.deleted` | D | Alex removed: Grandpa's eye check. |
+| `task.started` | D | Wei Ling started: Grandpa's eye check. |
 
 ---
 

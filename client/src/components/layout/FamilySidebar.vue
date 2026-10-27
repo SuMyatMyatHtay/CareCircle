@@ -181,7 +181,11 @@ async function copyInviteCode(inviteCode) {
             My tasks <span class="coming-tag">Soon</span>
             </div>
 
-            <div class="nav-item unavailable">
+            <RouterLink v-if="!preview" to="/calendar" class="nav-item" active-class="active" @click="emit('navigate')">
+            <i class="bi bi-calendar3" aria-hidden="true"></i>
+            Calendar
+            </RouterLink>
+            <div v-else class="nav-item unavailable">
             <i class="bi bi-calendar3"></i>
             Calendar <span class="coming-tag">Soon</span>
             </div>

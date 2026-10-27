@@ -155,7 +155,7 @@ async function assertRefsInFamily(data, familyId) {
 
 export async function listLogs(req, res, next) {
     try {
-        const { recipient, task, before, limit } = req.query
+        const { recipient, task, before, limit, appointmentFrom, appointmentTo } = req.query
         const filter = { family: req.family._id }
         const errors = []
 
@@ -167,6 +167,22 @@ export async function listLogs(req, res, next) {
         if (task !== undefined) {
             if (mongoose.isValidObjectId(task)) filter.task = task
             else errors.push('Task is invalid')
+        }
+
+        // The Calendar: consultation notes whose next appointment falls in a date range
+        if (appointmentFrom !== undefined || appointmentTo !== undefined) {
+            const range = {}
+            if (appointmentFrom !== undefined) {
+                const fromDate = parseDate(appointmentFrom)
+                if (!fromDate) errors.push('appointmentFrom must be a valid date')
+                else range.$gte = fromDate
+            }
+            if (appointmentTo !== undefined) {
+                const toDate = parseDate(appointmentTo)
+                if (!toDate) errors.push('appointmentTo must be a valid date')
+                else range.$lte = toDate
+            }
+            filter['consultation.nextAppointment'] = range
         }
 
         if (before !== undefined) {

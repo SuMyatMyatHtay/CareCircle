@@ -34,8 +34,11 @@ export const MEDICATION_CHANGES = ['added', 'stopped', 'dosage_changed']
 
 export const EVENTS = {
   TASK_CREATED: 'task.created',
+  TASK_UPDATED: 'task.updated',
+  TASK_DELETED: 'task.deleted',
   TASK_CLAIMED: 'task.claimed',
   TASK_UNCLAIMED: 'task.unclaimed',
+  TASK_STARTED: 'task.started',
   TASK_COMPLETED: 'task.completed',
   TASK_CANCELLED: 'task.cancelled',
   TRANSIT_MILESTONE: 'transit.milestone',

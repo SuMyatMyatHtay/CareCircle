@@ -3,6 +3,10 @@
 // New task pop-up for md and up (Figma 09 / 09b). Phones get NewTaskView instead.
 // Pass a recipient to open it pre-filled from their hub ("New task for Grandpa").
 //   <NewTaskModal :recipient="recipient" @created="onCreated" @close="open = false" />
+// Pass a date to start on that day (a day clicked in the Calendar):
+//   <NewTaskModal date="2026-10-30" @created="onCreated" @close="open = false" />
+// Pass a task to edit it instead ("Edit" on Task detail):
+//   <NewTaskModal :task="task" :family-id="familyId" @saved="onSaved" @close="open = false" />
 // The /preview page passes save so posting goes to its sample data instead of the API.
 import './new-task/newTask.css'
 import { ref, computed, onMounted, onUnmounted, useId } from 'vue'
@@ -19,15 +23,19 @@ import { careFacts } from './new-task/careFacts.js'
 
 const props = defineProps({
     recipient: { type: Object, default: null },
-    save: { type: Function, default: null }
+    save: { type: Function, default: null },
+    task: { type: Object, default: null },        // edit this task instead of posting a new one
+    date: { type: String, default: '' },          // "YYYY-MM-DD" to start a new task on
+    familyId: { type: String, default: '' }      // the task's family, when it isn't the selected one
 })
 
-const emit = defineEmits(['created', 'close'])
+const emit = defineEmits(['created', 'saved', 'close'])
+const isEdit = computed(() => Boolean(props.task))
 
 const id = useId()
 // The workspace gives the real family, or the sample one on /preview
 const { selectedFamilyId, selectedFamily, recipients } = useFamilyWorkspace()
-const form = useTaskForm({ recipientId: props.recipient?._id ?? null, save: props.save })
+const form = useTaskForm({ recipientId: props.recipient?._id ?? null, save: props.save, task: props.task, date: props.date || null })
 
 // "Tan family" stays as it is; "Tan" becomes "Tan family"
 const familyLabel = computed(() => {
@@ -37,7 +45,7 @@ const familyLabel = computed(() => {
 
 // Opened from a hub: the person is fixed until "Change person" is clicked
 const changingPerson = ref(false)
-const isPrefilled = computed(() => Boolean(props.recipient) && !changingPerson.value)
+const isPrefilled = computed(() => Boolean(props.recipient) && !isEdit.value && !changingPerson.value)
 
 const selectedRecipient = computed(() =>
     recipients.value.find((r) => r._id === form.recipient.value) ||
@@ -47,9 +55,9 @@ const recipientName = computed(() => displayName(selectedRecipient.value))
 const showHelperStrip = computed(() => isPrefilled.value && careFacts(selectedRecipient.value).length > 0)
 
 async function post() {
-    const task = await form.submit(selectedFamilyId.value)
+    const task = await form.submit(props.familyId || selectedFamilyId.value)
     if (task) {
-        emit('created', task)
+        emit(isEdit.value ? 'saved' : 'created', task)
         emit('close')
     }
 }
@@ -84,11 +92,13 @@ onUnmounted(() => {
                         <span v-if="isPrefilled" class="header-avatar" aria-hidden="true">
                             {{ initials(recipientName) }}
                         </span>
-                        <span v-else class="header-icon" aria-hidden="true"><i class="bi bi-plus-lg"></i></span>
+                        <span v-else class="header-icon" aria-hidden="true">
+                            <i class="bi" :class="isEdit ? 'bi-pencil' : 'bi-plus-lg'"></i>
+                        </span>
 
                         <div class="header-text">
                             <h2 :id="`${id}-title`">
-                                {{ isPrefilled ? `New task for ${recipientName}` : 'New task' }}
+                                {{ isEdit ? 'Edit task' : isPrefilled ? `New task for ${recipientName}` : 'New task' }}
                             </h2>
                             <p>
                                 <template v-if="isPrefilled">
@@ -97,6 +107,7 @@ onUnmounted(() => {
                                         Change person
                                     </button>
                                 </template>
+                                <template v-else-if="isEdit">Changes are shared with the {{ familyLabel }}.</template>
                                 <template v-else>Posted to the {{ familyLabel }}. Anyone can claim it.</template>
                             </p>
                         </div>
@@ -173,13 +184,14 @@ onUnmounted(() => {
                         </p>
                         <p v-else class="footer-note" aria-live="polite">
                             <i class="bi bi-send" aria-hidden="true"></i>
-                            The {{ familyLabel }} Telegram group gets a message when you post
+                            The {{ familyLabel }} Telegram group gets a message when you {{ isEdit ? 'save' : 'post' }}
                         </p>
                         <button type="button" class="btn btn-light footer-button" @click="emit('close')">Cancel</button>
                         <button type="submit" class="btn btn-primary footer-button post-button"
                             :disabled="!form.canSubmit.value || form.isSubmitting.value">
                             <span v-if="form.isSubmitting.value" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                            {{ form.isSubmitting.value ? 'Posting...' : 'Post task' }}
+                            <template v-if="isEdit">{{ form.isSubmitting.value ? 'Saving...' : 'Save changes' }}</template>
+                            <template v-else>{{ form.isSubmitting.value ? 'Posting...' : 'Post task' }}</template>
                         </button>
                     </footer>
                 </form>
