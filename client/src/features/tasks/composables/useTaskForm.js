@@ -4,6 +4,7 @@
 //
 //   const form = useTaskForm({ recipientId: 'abc' })   // or {} for "anyone"
 //   const form = useTaskForm({ task })                 // edit: fields start from the task, submit saves it
+//   const form = useTaskForm({ date: '2026-10-30' })   // new task on a day picked in the Calendar
 //   form.title.value = 'Eye check-up'
 //   const task = await form.submit(familyId)          // null if it failed
 //
@@ -95,14 +96,14 @@ const SERVER_FIELDS = [
     [/needsTransit/i, 'needsTransit']
 ]
 
-export function useTaskForm({ recipientId = null, save = null, task = null } = {}) {
+export function useTaskForm({ recipientId = null, save = null, task = null, date: initialDate = null } = {}) {
     const { upsertTask } = useTaskCache()
 
     // ---- Fields ----
     const recipient = ref(recipientId)       // recipient id, or null for "Household"
     const title = ref('')
     const category = ref('other')
-    const date = ref(todayKey())
+    const date = ref(initialDate || todayKey())
     const startTime = ref('')                // "HH:mm" from <input type="time">
     const endTime = ref('')
     const location = ref(null)               // { name, address, postal, lat?, lng? }

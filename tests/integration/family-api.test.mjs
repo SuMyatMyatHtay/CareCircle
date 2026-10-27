@@ -285,6 +285,23 @@ describe('Family APIs with Express, authentication and a real isolated MongoDB',
     ]) assert.ok(feed.some(item => item.startsWith(line)), `missing "${line}" in\n${feed.join('\n')}`)
   })
 
+  it('finds consultation notes by their next appointment, for the Calendar', async () => {
+    const logs = `${family}/logs`
+    const post = nextAppointment => request(logs, { method: 'POST', body: {
+      recipient: ids.grandpa, type: 'consultation', content: 'Seen today.', notify: false,
+      consultation: { doctorName: 'Dr Lim', nextAppointment },
+    } })
+    const inside = (await post('2030-03-10T02:00:00.000Z')).data.log._id
+    await post('2030-05-10T02:00:00.000Z')
+
+    const found = await request(`${logs}?appointmentFrom=2030-03-01T00:00:00Z&appointmentTo=2030-03-31T23:59:59Z`)
+    assert.equal(found.status, 200)
+    assert.deepEqual(found.data.logs.map(log => log._id), [inside])
+    assert.equal((await request(`${logs}?appointmentFrom=nope`)).status, 400)
+    // Another family's calendar never sees these
+    assert.equal((await request(`/families/${ids.otherFamily}/logs?appointmentFrom=2030-01-01T00:00:00Z`)).data.logs.length, 0)
+  })
+
   it('guards optional Calendar endpoints and never exposes a saved refresh token', async t => {
     assert.equal((await request('/me/google', { authenticated: false })).status, 401)
     assert.deepEqual((await request('/me/google')).data, { available: false, connected: false })

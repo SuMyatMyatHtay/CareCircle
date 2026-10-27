@@ -8,7 +8,9 @@ The same workflows run in desktop Chromium and a 390px mobile Chromium context:
 login/logout, language saving, global dark mode, recipient create/edit/archive,
 task creation/claim and family isolation, member roles, invite regeneration,
 care-log translation/cache, care-log posting/filtering/editing/deleting, member
-permissions and voice input, and expansion of multiple live trips.
+permissions and voice input, consultation notes added from a task, task editing,
+the family Calendar (tasks and follow-up appointments, filters, months), and
+expansion of multiple live trips.
 Application API responses are real. Azure alone uses a controlled provider double
 in the test server; no live translation credential or paid request is needed.
 The voice-input success case replaces only the `/integrations/transcribe` reply in

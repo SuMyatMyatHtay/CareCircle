@@ -273,7 +273,7 @@ Base: `/api/families/:familyId/logs`
 
 | Method | Path | Who | Body / query | Response | Status |
 |---|---|---|---|---|---|
-| GET | `/` | member | Query: `recipient=<id>`, `task=<id>` (notes from that visit), `before=<date>`, `limit` (1–50, default 20) | `{ logs }`, newest first, `author` populated | Implemented |
+| GET | `/` | member | Query: `recipient=<id>`, `task=<id>` (notes from that visit), `appointmentFrom` / `appointmentTo` (notes whose next appointment is in that range, for the Calendar), `before=<date>`, `limit` (1–50, default 20) | `{ logs }`, newest first, `author` populated | Implemented |
 | POST | `/` | member | `{ recipient, type, content, task?, consultation?, medicationChanges?, inputMethod?, originalLang?, notify? }` | `201 { log }`. `author` is the logged-in user. `consultation` is kept only when `type` is `consultation`. Sends one update: `medication.changed` if `medicationChanges` is set, otherwise `log.created`. `notify: false` records it for Recent updates without a Telegram message. | Implemented |
 | GET | `/:logId` | member | Query: `lang=zh` (optional) | `{ log }`. `lang` / `translatedContent` is not built yet: each translation will be cached in `translations`, so a text is translated only once. | Implemented (without `lang`) |
 | PATCH | `/:logId` | author or admin | `{ content?, type?, consultation?, medicationChanges? }` | `{ log }`. Changing `content` clears the cached translations; changing `type` away from `consultation` clears `consultation`. `recipient`, `task`, `author` and `inputMethod` can't change. Sends one update: `medication.changed` if the medication list changed, otherwise `log.updated`. | Implemented |

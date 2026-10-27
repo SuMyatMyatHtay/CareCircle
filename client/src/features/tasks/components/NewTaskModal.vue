@@ -3,6 +3,8 @@
 // New task pop-up for md and up (Figma 09 / 09b). Phones get NewTaskView instead.
 // Pass a recipient to open it pre-filled from their hub ("New task for Grandpa").
 //   <NewTaskModal :recipient="recipient" @created="onCreated" @close="open = false" />
+// Pass a date to start on that day (a day clicked in the Calendar):
+//   <NewTaskModal date="2026-10-30" @created="onCreated" @close="open = false" />
 // Pass a task to edit it instead ("Edit" on Task detail):
 //   <NewTaskModal :task="task" :family-id="familyId" @saved="onSaved" @close="open = false" />
 // The /preview page passes save so posting goes to its sample data instead of the API.
@@ -23,6 +25,7 @@ const props = defineProps({
     recipient: { type: Object, default: null },
     save: { type: Function, default: null },
     task: { type: Object, default: null },        // edit this task instead of posting a new one
+    date: { type: String, default: '' },          // "YYYY-MM-DD" to start a new task on
     familyId: { type: String, default: '' }      // the task's family, when it isn't the selected one
 })
 
@@ -32,7 +35,7 @@ const isEdit = computed(() => Boolean(props.task))
 const id = useId()
 // The workspace gives the real family, or the sample one on /preview
 const { selectedFamilyId, selectedFamily, recipients } = useFamilyWorkspace()
-const form = useTaskForm({ recipientId: props.recipient?._id ?? null, save: props.save, task: props.task })
+const form = useTaskForm({ recipientId: props.recipient?._id ?? null, save: props.save, task: props.task, date: props.date || null })
 
 // "Tan family" stays as it is; "Tan" becomes "Tan family"
 const familyLabel = computed(() => {
