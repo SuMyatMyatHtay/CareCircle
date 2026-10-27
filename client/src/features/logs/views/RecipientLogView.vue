@@ -2,14 +2,13 @@
 // Owner: SeungHak (F)
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { useQueryClient } from '@tanstack/vue-query'
 import { useActiveFamily } from '../../../composables/useActiveFamily.js'
 import { useRecipient } from '../../../composables/useRecipients.js'
-import { queryKeys } from '../../../services/queryClient.js'
 import LogForm from '../components/LogForm.vue'
 import LogList from '../components/LogList.vue'
 import LogTypeFilter from '../components/LogTypeFilter.vue'
-import { getLogs, createLog, updateLog, deleteLog, translateLog, getLogErrorMessage, TRANSLATION_NOT_CONNECTED } from '../services/logsApi.js'
+import { getLogs, createLog, getLogErrorMessage } from '../services/logsApi.js'
+import { useLogActions } from '../useLogActions.js'
 import { displayName } from '../../recipients/recipientLabels.js'
 
 const PAGE_SIZE = 20
@@ -19,42 +18,12 @@ const { selectedFamilyId, selectedFamily } = useActiveFamily()
 
 const recipientId = computed(() => route.params.recipientId)
 
-// Other pages (e.g. the recipient Overview) cache this family's notes. Mark them
-// out of date after any change here so they show it next time.
-const queryClient = useQueryClient()
-function invalidateCachedLogs() {
-    queryClient.invalidateQueries({ queryKey: queryKeys.logs(selectedFamilyId.value) })
-}
-
-function readUser() {
-    try {
-        return JSON.parse(sessionStorage.getItem('user') || '{}')
-    } catch {
-        return {}
-    }
-}
-const user = readUser()
-
-const isAdmin = computed(() =>
-    selectedFamily.value?.members?.some((m) => m.userId === user.id && m.role === 'admin') ?? false
-)
-
-function canChange(log) {
-    return log.author?._id === user.id || isAdmin.value
-}
-
-async function translate(log, lang) {
-    try {
-        return await translateLog(selectedFamilyId.value, log._id, lang)
-    } catch (error) {
-        throw new Error(error.message === TRANSLATION_NOT_CONNECTED ? error.message : getLogErrorMessage(error))
-    }
-}
-
 const { recipient } = useRecipient(recipientId)
 const recipientName = computed(() => displayName(recipient.value))
 
 const logs = ref([])
+const actions = useLogActions(selectedFamilyId, logs)
+const { invalidateCachedLogs, editingId, isSavingEdit, editError, actionError } = actions
 const isLoading = ref(false)
 const loadError = ref('')
 const hasMore = ref(false)
@@ -147,47 +116,6 @@ async function postUpdate(payload) {
     }
 }
 
-const editingId = ref('')
-const isSavingEdit = ref(false)
-const editError = ref('')
-
-function startEdit(log) {
-    editingId.value = log._id
-    editError.value = ''
-}
-
-async function saveEdit(log, changes) {
-    isSavingEdit.value = true
-    editError.value = ''
-    try {
-        const updated = await updateLog(selectedFamilyId.value, log._id, changes)
-        logs.value = logs.value.map((item) => (item._id === updated._id ? updated : item))
-        invalidateCachedLogs()
-        editingId.value = ''
-    } catch (error) {
-        editError.value = getLogErrorMessage(error)
-    } finally {
-        isSavingEdit.value = false
-    }
-}
-
-const actionError = ref('')
-
-async function removeLog(log) {
-    if (!window.confirm('Delete this note? This cannot be undone.')) return
-
-    actionError.value = ''
-    try {
-        await deleteLog(selectedFamilyId.value, log._id)
-        logs.value = logs.value.filter((item) => item._id !== log._id)
-        invalidateCachedLogs()
-    } catch (error) {
-        if (error.response?.status === 404) {
-            logs.value = logs.value.filter((item) => item._id !== log._id)
-        }
-        actionError.value = getLogErrorMessage(error)
-    }
-}
 </script>
 
 <template>
@@ -232,8 +160,8 @@ async function removeLog(log) {
                     :is-loading="isLoading"
                     :error-message="loadError"
                     :empty-message="emptyMessage"
-                    :can-change="canChange"
-                    :translate="translate"
+                    :can-change="actions.canChange"
+                    :translate="actions.translate"
                     :has-more="hasMore && !selectedType"
                     :is-loading-more="isLoadingMore"
                     :editing-id="editingId"
@@ -241,10 +169,10 @@ async function removeLog(log) {
                     :edit-error="editError"
                     @retry="loadLogs"
                     @load-more="loadMore"
-                    @edit="startEdit"
-                    @delete="removeLog"
-                    @save-edit="saveEdit"
-                    @cancel-edit="editingId = ''"
+                    @edit="actions.startEdit"
+                    @delete="actions.removeLog"
+                    @save-edit="actions.saveEdit"
+                    @cancel-edit="actions.cancelEdit"
                 />
             </div>
 

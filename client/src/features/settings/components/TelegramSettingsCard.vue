@@ -16,7 +16,7 @@ const events = [
   { key: 'taskPosted', label: 'A task is posted' },
   { key: 'taskClaimed', label: 'Someone claims or gives back a task' },
   { key: 'transitMilestone', label: 'A transit milestone is marked' },
-  { key: 'careNote', label: 'A note or medication change is added' },
+  { key: 'careNote', label: 'A care note is added, edited or deleted, or medication changes' },
   { key: 'taskCompleted', label: 'A task is completed' },
 ]
 const reminders = [

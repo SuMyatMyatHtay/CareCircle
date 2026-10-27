@@ -11,7 +11,7 @@ const GROUPS = {
   taskPosted: ['task.created'],
   taskClaimed: ['task.claimed', 'task.unclaimed'],
   transitMilestone: ['transit.milestone'],
-  careNote: ['log.created', 'medication.changed'],
+  careNote: ['log.created', 'log.updated', 'log.deleted', 'medication.changed'],
   taskCompleted: ['task.completed', 'task.cancelled'],
 }
 const ALL_EVENTS = Object.values(GROUPS).flat()

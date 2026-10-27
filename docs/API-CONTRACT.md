@@ -273,11 +273,11 @@ Base: `/api/families/:familyId/logs`
 
 | Method | Path | Who | Body / query | Response | Status |
 |---|---|---|---|---|---|
-| GET | `/` | member | Query: `recipient=<id>`, `before=<date>`, `limit` (1–50, default 20) | `{ logs }`, newest first, `author` populated | Implemented |
-| POST | `/` | member | `{ recipient, type, content, task?, consultation?, medicationChanges?, inputMethod?, originalLang?, notify? }` | `201 { log }`. `author` is the logged-in user. `consultation` is kept only when `type` is `consultation`. Will send `log.created`, plus `medication.changed` if `medicationChanges` is set, once `notify()` exists; `notify: false` skips both. | Implemented |
+| GET | `/` | member | Query: `recipient=<id>`, `task=<id>` (notes from that visit), `before=<date>`, `limit` (1–50, default 20) | `{ logs }`, newest first, `author` populated | Implemented |
+| POST | `/` | member | `{ recipient, type, content, task?, consultation?, medicationChanges?, inputMethod?, originalLang?, notify? }` | `201 { log }`. `author` is the logged-in user. `consultation` is kept only when `type` is `consultation`. Sends one update: `medication.changed` if `medicationChanges` is set, otherwise `log.created`. `notify: false` records it for Recent updates without a Telegram message. | Implemented |
 | GET | `/:logId` | member | Query: `lang=zh` (optional) | `{ log }`. `lang` / `translatedContent` is not built yet: each translation will be cached in `translations`, so a text is translated only once. | Implemented (without `lang`) |
-| PATCH | `/:logId` | author or admin | `{ content?, type?, consultation?, medicationChanges? }` | `{ log }`. Changing `content` clears the cached translations; changing `type` away from `consultation` clears `consultation`. `recipient`, `task`, `author` and `inputMethod` can't change. | Implemented |
-| DELETE | `/:logId` | author or admin | none | `204` | Implemented |
+| PATCH | `/:logId` | author or admin | `{ content?, type?, consultation?, medicationChanges? }` | `{ log }`. Changing `content` clears the cached translations; changing `type` away from `consultation` clears `consultation`. `recipient`, `task`, `author` and `inputMethod` can't change. Sends one update: `medication.changed` if the medication list changed, otherwise `log.updated`. | Implemented |
+| DELETE | `/:logId` | author or admin | none | `204`. Sends `log.deleted`. | Implemented |
 
 Log `type` values: `consultation`, `medication_change`, `diet`, `symptom`, `general`.
 
@@ -317,6 +317,8 @@ Each event is sent through `notify()` (Telegram) and over Socket.IO to room `fam
 | `task.cancelled` | D | Cancelled: physio session on Fri. |
 | `transit.milestone` | E | Grandpa has arrived at the clinic, with Wei Ling. |
 | `log.created` | F | New consultation note for Grandpa. |
+| `log.updated` | F | Alex edited a consultation note for Grandpa. |
+| `log.deleted` | F | Alex deleted a care note for Grandpa. |
 | `medication.changed` | C, F | Grandpa's medication was updated. Check the app. |
 | `task.updated`, `task.deleted` | D | Socket only. No Telegram message. |
 
