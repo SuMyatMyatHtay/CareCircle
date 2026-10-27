@@ -3,6 +3,7 @@
 import { ref, computed } from 'vue'
 import '../../styles/components/familySidebar.css'
 import CareAvatar from '../common/CareAvatar.vue'
+import ProfileAvatar from '../common/ProfileAvatar.vue'
 import { useRoute } from 'vue-router'
 import { useDismissibleMenu } from '../../composables/useDismissibleMenu.js'
 import { displayName, initials, careTypeLabel } from '../../features/recipients/recipientLabels.js'
@@ -195,7 +196,7 @@ async function copyInviteCode(inviteCode) {
             <p v-else-if="recipientsError" class="empty-recipients">{{ recipientsError }}</p>
             <p v-else-if="!recipients.length" class="empty-recipients">No care recipients yet.</p>
             <template v-if="preview"><button v-for="recipient in recipients" :key="recipient._id || recipient.id" type="button" class="care-sidebar-recipient" @click="emit('open-recipient', recipient)"><CareAvatar :person="recipient" size="small" /><span><strong>{{ displayName(recipient) }}</strong><small>{{ careTypeLabel(recipient.careType) }}</small></span></button></template>
-            <template v-else><RouterLink v-for="recipient in recipients" :key="recipient._id" :to="{ name: 'recipient-overview', params: { recipientId: recipient._id } }" class="nav-item recipient-item" :class="{ active: route.params.recipientId === recipient._id }" @click="emit('navigate')"><CareAvatar :person="recipient" size="small" /><span class="recipient-text"><strong>{{ displayName(recipient) }}</strong><small>{{ careTypeLabel(recipient.careType) }}</small></span></RouterLink></template>
+            <template v-else><div v-for="recipient in recipients" :key="recipient._id" class="nav-item recipient-item" :class="{ active: route.params.recipientId === recipient._id }"><ProfileAvatar :person="recipient" recipient size="small" /><RouterLink :to="{ name: 'recipient-overview', params: { recipientId: recipient._id } }" class="recipient-text text-reset text-decoration-none" @click="emit('navigate')"><strong>{{ displayName(recipient) }}</strong><small>{{ careTypeLabel(recipient.careType) }}</small></RouterLink></div></template>
 
             <RouterLink v-if="!preview" to="/recipients/new" class="nav-item add-recipient" @click="emit('navigate')"><i class="bi bi-plus-lg"></i>Add care recipient</RouterLink>
             <div v-else class="nav-item unavailable">

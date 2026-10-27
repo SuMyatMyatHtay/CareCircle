@@ -358,7 +358,7 @@
   display: flex;
   padding-right: 4px;
 }
-.care-avatar-pair .care-avatar + .care-avatar {
+.care-avatar-pair > :is(.care-avatar, .care-profile-avatar-link) + :is(.care-avatar, .care-profile-avatar-link) {
   margin-left: -13px;
   border: 3px solid var(--care-soft);
 }

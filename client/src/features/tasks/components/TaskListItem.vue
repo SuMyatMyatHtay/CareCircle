@@ -1,5 +1,5 @@
 <script setup>
-import CareAvatar from '../../../components/common/CareAvatar.vue'
+import ProfileAvatar from '../../../components/common/ProfileAvatar.vue'
 // One row in a task list: date, recipient, title, time/place, who claimed it, status.
 // Buttons (e.g. "I'll take it") can be passed in through the "actions" slot.
 import { computed } from 'vue'
@@ -60,7 +60,7 @@ function initials(name = '') {
         </div>
 
         <div class="recipient-avatar" :title="recipientName || 'Household task'">
-            <CareAvatar v-if="recipientName" :person="task.recipient" />
+            <ProfileAvatar v-if="recipientName" :person="task.recipient" recipient />
             <i v-else class="bi bi-house-heart" aria-hidden="true"></i>
         </div>
 
@@ -74,7 +74,7 @@ function initials(name = '') {
 
         <div class="task-side">
             <span v-if="task.claimedBy" class="claimer">
-                <CareAvatar :person="task.claimedBy" size="tiny" />
+                <ProfileAvatar :person="task.claimedBy" size="tiny" />
                 {{ task.claimedBy.name }}
             </span>
 

@@ -4,6 +4,7 @@ import { useFamilyTasks, useTaskCache } from '../../../composables/useFamilyTask
 import { queryKeys } from '../../../services/queryClient.js'
 import { useFamilyWorkspace } from './useFamilyWorkspace.js'
 import { previewState } from '../data/previewFamily.js'
+import { isTaskOverdue, useTaskClock } from '../../tasks/composables/useTaskOverdue.js'
 import {
   apiError,
   claimDashboardTask,
@@ -16,6 +17,7 @@ export const singaporeDay = (date) =>
   )
 export function useFamilyDashboard() {
   const workspace = useFamilyWorkspace()
+  const now = useTaskClock()
   const familyTasks = useFamilyTasks({ enabled: !workspace.isPreview })
   const taskCache = useTaskCache()
   const queryClient = useQueryClient()
@@ -49,7 +51,7 @@ export function useFamilyDashboard() {
       .sort((a, b) => new Date(a.startAt) - new Date(b.startAt)),
   )
   const openTaskCount = computed(
-    () => tasks.value.filter((task) => task.status === 'open').length,
+    () => tasks.value.filter((task) => task.status === 'open' && !isTaskOverdue(task, now.value)).length,
   )
   let version = 0,
     interval,
@@ -66,6 +68,8 @@ export function useFamilyDashboard() {
     const update = {
       _id: crypto.randomUUID(),
       actor: workspace.user.value.name,
+      actorId: workspace.user.value.id,
+      profilePicture: workspace.user.value.profilePicture,
       avatar: workspace.user.value.avatar,
       text,
       time: new Intl.DateTimeFormat('en-SG', {
@@ -130,6 +134,11 @@ export function useFamilyDashboard() {
     showToast('A new chance to lend a hand. Task posted!')
   }
   async function claimTask(task) {
+    if (busyId.value || task.status !== 'open') return
+    if (isTaskOverdue(task)) {
+      showToast('This task is overdue and can no longer be claimed.', true)
+      return
+    }
     const familyId = workspace.selectedFamilyId.value
     busyId.value = task._id
     try {

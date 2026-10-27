@@ -1,11 +1,27 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import MobileTodayTasks from '../components/MobileTodayTasks.vue'
 
-const openTask = { _id: 'task-one', title: 'Collect medicine', startAt: '2026-10-21T06:00:00Z', status: 'open', recipient: { name: 'Grandpa' } }
+const openTask = { _id: 'task-one', title: 'Collect medicine', startAt: new Date(Date.now() + 86400000).toISOString(), status: 'open', recipient: { name: 'Grandpa' } }
 const claimButton = wrapper => wrapper.findAll('button').find(button => button.text() === 'I’ll take it')
 
 describe('Mobile today task list with its real child cards', () => {
+  it('closes claiming automatically when the scheduled start time arrives', async () => {
+    vi.useFakeTimers()
+    const startAt = new Date(Date.now() + 1000).toISOString()
+    const wrapper = mount(MobileTodayTasks, { props: { tasks: [{ ...openTask, startAt }] } })
+    expect(claimButton(wrapper)).toBeDefined()
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(claimButton(wrapper)).toBeUndefined()
+    expect(wrapper.text()).toContain('Overdue · Claiming closed')
+    expect(wrapper.emitted('claim')).toBeUndefined()
+  })
+
+  it('does not offer claiming for a task already overdue', () => {
+    const wrapper = mount(MobileTodayTasks, { props: { tasks: [{ ...openTask, startAt: new Date(Date.now() - 1000).toISOString() }] } })
+    expect(claimButton(wrapper)).toBeUndefined()
+    expect(wrapper.text()).toContain('Overdue · Claiming closed')
+  })
   it('passes a claim from a child card to the page with the correct task', async () => {
     const wrapper = mount(MobileTodayTasks, { props: { tasks: [openTask] } })
     expect(wrapper.get('article').text()).toContain('Collect medicine')

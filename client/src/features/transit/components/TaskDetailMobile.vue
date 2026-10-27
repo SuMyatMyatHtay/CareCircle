@@ -8,6 +8,7 @@ import { getTransitSession } from '../services/transitApi.js'
 import { formatTime, recipientName, TIME_ZONE } from '../../my-tasks/utils/formatters.js'
 import AddToCalendar from './AddToCalendar.vue'
 import { WORDS } from '../utils/wording.js'
+import { useTaskOverdue } from '../../tasks/composables/useTaskOverdue.js'
 
 const props = defineProps({
     task: { type: Object, required: true },
@@ -28,6 +29,7 @@ const CATEGORY_LABELS = {
 }
 
 const session = ref(null)
+const overdue = useTaskOverdue(() => props.task)
 const menuOpen = ref(false)
 const calendarOpen = ref(false)
 
@@ -80,7 +82,7 @@ const progress = computed(() => {
 
 // Main green button
 const mainButton = computed(() => {
-    if (status.value === 'open') return { label: "I'll take it", event: 'claim', icon: 'bi-hand-thumbs-up' }
+    if (status.value === 'open') return overdue.value ? null : { label: "I'll take it", event: 'claim', icon: 'bi-hand-thumbs-up' }
     if (props.task.needsTransit && props.isClaimer && status.value === 'claimed') {
         return { label: WORDS.startTrip, event: 'start', icon: 'bi-arrow-right' }
     }
@@ -181,6 +183,7 @@ watch(() => [props.task._id, props.task.status], loadSession, { immediate: true 
             <p>{{ task.description }}</p>
         </section>
 
+        <p v-if="status === 'open' && overdue" role="status">Overdue · Claiming closed</p>
         <footer v-if="mainButton || canUnclaim || (isClaimer && ['claimed', 'in_progress'].includes(status))" class="footer">
             <button v-if="mainButton" type="button" class="btn-main" :disabled="isBusy" @click="emit(mainButton.event)">
                 <i class="bi" :class="mainButton.icon" aria-hidden="true"></i> {{ mainButton.label }}

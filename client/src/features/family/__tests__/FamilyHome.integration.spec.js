@@ -58,6 +58,27 @@ beforeEach(async () => {
 afterEach(() => { wrapper?.unmount(); queryClient.clear() })
 
 describe('Family home task board and navigation', () => {
+  it('separates expired unclaimed tasks from tasks that still need someone', async () => {
+    const past = new Date(Date.now() - 3600000).toISOString()
+    queryClient.setQueryData(queryKeys.tasks('one'), [...tasks,
+      { _id: 'expired', family: 'one', title: 'Missed appointment', status: 'open', startAt: past },
+      { _id: 'already-claimed', family: 'one', title: 'Claimed appointment', status: 'claimed', startAt: past, claimedBy: { _id: 'alex', name: 'Alex' } },
+      { _id: 'cancelled', family: 'one', title: 'Cancelled appointment', status: 'cancelled', startAt: past },
+    ])
+    await flushPromises()
+    const board = wrapper.getComponent(TodayTasks)
+    await findButton(board, 'Needs someone').trigger('click')
+    expect(board.text()).toContain('Future appointment')
+    expect(board.text()).not.toContain('Missed appointment')
+    await findButton(board, 'Overdue').trigger('click')
+    expect(board.text()).toContain('Missed appointment')
+    expect(board.text()).toContain('Overdue · Claiming closed')
+    expect(board.text()).not.toContain('Future appointment')
+    expect(board.text()).not.toContain('Claimed appointment')
+    expect(board.text()).not.toContain('Cancelled appointment')
+    expect(board.text()).not.toContain('Completed walk')
+  })
+
   it('keeps all task filters and claiming inside the existing home dashboard', async () => {
     const board = wrapper.getComponent(TodayTasks)
     expect(board.text()).toContain('Today across the family')
