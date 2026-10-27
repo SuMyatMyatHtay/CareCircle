@@ -139,6 +139,16 @@ const BUILDERS = {
     const transit = task.needsTransit ? ' Needs someone to take them there.' : ''
     return { text: `New task: ${taskSubject(task)}${when ? `, ${when}` : ''}.${transit} Who can take it?`, ...taskRef(task) }
   },
+  [EVENTS.TASK_UPDATED]: (task) => {
+    const when = whenLabel(task.startAt)
+    return { text: `${shortName(task.createdBy?.name) || 'Someone'} updated: ${taskSubject(task)}${when ? `, ${when}` : ''}.`, ...taskRef(task) }
+  },
+  [EVENTS.TASK_DELETED]: (task) => ({
+    text: `${shortName(task.createdBy?.name) || 'Someone'} removed: ${taskSubject(task)}.`, ...taskRef(task),
+  }),
+  [EVENTS.TASK_STARTED]: (task) => ({
+    text: `${shortName(task.claimedBy?.name) || 'Someone'} started: ${taskSubject(task)}.`, ...taskRef(task),
+  }),
   [EVENTS.TASK_CLAIMED]: (task) => ({
     text: `${shortName(task.claimedBy?.name) || 'Someone'} claimed: ${taskSubject(task)}.`, ...taskRef(task),
   }),
@@ -177,6 +187,7 @@ export function deepLink({ eventType, refType, refId, familyId }) {
   const base = (process.env.APP_URL || '').replace(/\/+$/, '')
   if (!base || !refId) return ''
   if (refType === 'task') {
+    if (eventType === EVENTS.TASK_DELETED) return '' // the task page no longer exists
     return eventType === EVENTS.TRANSIT_MILESTONE
       ? `${base}/transit/${familyId}/${refId}`
       : `${base}/families/${familyId}/tasks/${refId}`
@@ -192,7 +203,6 @@ export function deepLink({ eventType, refType, refId, familyId }) {
 // (e.g. a care note posted with "Notify the family Telegram group" unticked).
 export async function notify(familyId, eventType, payload, { send = true } = {}) {
   try {
-    // task.updated / task.deleted are socket-only and never go to Telegram
     if (!EVENT_TYPES.includes(eventType)) return null
 
     const id = familyId?._id ?? familyId

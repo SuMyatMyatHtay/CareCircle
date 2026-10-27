@@ -266,6 +266,25 @@ describe('Family APIs with Express, authentication and a real isolated MongoDB',
     assert.equal(events.length, 3)
   })
 
+  it('task edits, starts and deletes show in Recent updates', async () => {
+    const tasks = `${family}/tasks`
+    const startAt = new Date(Date.now() + 3600e3).toISOString()
+    const make = async title => (await request(tasks, { method: 'POST', body: { title, recipient: ids.grandpa, category: 'errand', startAt } })).data.task._id
+    const kept = await make('Buy medicine')
+    const removed = await make('Old errand')
+    assert.equal((await request(`${tasks}/${kept}`, { method: 'PATCH', body: { title: 'Buy eye drops' } })).status, 200)
+    assert.equal((await request(`${tasks}/${kept}/claim`, { method: 'POST' })).status, 200)
+    assert.equal((await request(`${tasks}/${kept}/start`, { method: 'POST' })).status, 200)
+    assert.equal((await request(`${tasks}/${removed}`, { method: 'DELETE' })).status, 200)
+
+    const feed = (await request(`${family}/notifications`)).data.notifications.map(n => `${n.eventType} | ${n.text}`)
+    for (const line of [
+      'task.updated | Alex updated: Buy eye drops for Grandpa',
+      'task.started | Alex started: Buy eye drops for Grandpa.',
+      'task.deleted | Alex removed: Old errand for Grandpa.',
+    ]) assert.ok(feed.some(item => item.startsWith(line)), `missing "${line}" in\n${feed.join('\n')}`)
+  })
+
   it('guards optional Calendar endpoints and never exposes a saved refresh token', async t => {
     assert.equal((await request('/me/google', { authenticated: false })).status, 401)
     assert.deepEqual((await request('/me/google')).data, { available: false, connected: false })

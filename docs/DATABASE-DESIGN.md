@@ -274,6 +274,9 @@ Events are the only way modules talk to each other. A module calls `notify()` an
 | `task.unclaimed` | Tasks | Grandpa's eye check needs someone again. |
 | `task.completed` | Tasks | Done: grocery run, by Marcus. |
 | `task.cancelled` | Tasks | Cancelled: physio session on Fri. |
+| `task.updated` | Tasks | Alex updated: Grandpa's eye check, Tue 10am. |
+| `task.deleted` | Tasks | Alex removed: Grandpa's eye check. |
+| `task.started` | Tasks | Wei Ling started: Grandpa's eye check. |
 | `transit.milestone` | Transit | Grandpa has arrived at the clinic, with Wei Ling. |
 | `log.created` | Logs | New consultation note for Grandpa. |
 | `log.updated` | Logs | Alex edited a consultation note for Grandpa. |

@@ -8,11 +8,11 @@ import { getNotifications, getNotifySettings, saveNotifyEvents, sendTestMessage,
 // ---------------------------------------------------------------- Switches <-> events
 // The settings card has five switches; the server stores event names (EVENTS in server/src/constants.js).
 const GROUPS = {
-  taskPosted: ['task.created'],
+  taskPosted: ['task.created', 'task.updated', 'task.deleted'],
   taskClaimed: ['task.claimed', 'task.unclaimed'],
   transitMilestone: ['transit.milestone'],
   careNote: ['log.created', 'log.updated', 'log.deleted', 'medication.changed'],
-  taskCompleted: ['task.completed', 'task.cancelled'],
+  taskCompleted: ['task.started', 'task.completed', 'task.cancelled'],
 }
 const ALL_EVENTS = Object.values(GROUPS).flat()
 

@@ -21,6 +21,8 @@ import { formatTime, recipientName, TIME_ZONE } from '../../my-tasks/utils/forma
 import ConsultationNoteModal from '../../logs/components/ConsultationNoteModal.vue'
 import VisitNotes from '../../logs/components/VisitNotes.vue'
 import SavedToast from '../../logs/components/SavedToast.vue'
+import { showSaved } from '../../logs/savedToast.js'
+import NewTaskModal from '../../tasks/components/NewTaskModal.vue'
 
 const props = defineProps({
     familyId: { type: String, required: true },
@@ -93,6 +95,14 @@ const activity = computed(() => {
     if (t.createdBy) items.push({ name: t.createdBy.name, text: `${t.createdBy.name} created this · ${shortDate(t.createdAt)}` })
     return items
 })
+
+// Edit opens D's task form with this task filled in
+const isEditing = ref(false)
+async function taskSaved() {
+    isEditing.value = false
+    await load()
+    showSaved('Task updated')
+}
 
 // F (SeungHak): care log notes saved against this task
 const recipientId = computed(() => idOf(task.value?.recipient) || '')
@@ -216,7 +226,7 @@ watch(() => [props.familyId, props.taskId], load)
             @complete="markDone"
             @unclaim="giveBack"
             @claim="claim"
-            @edit="notice = 'Editing comes with the task form (Task Management).'"
+            @edit="isEditing = true"
             @delete="remove"
             @dismiss="notice = ''"
         />
@@ -255,7 +265,7 @@ watch(() => [props.familyId, props.taskId], load)
                     </div>
                     <span class="spacer"></span>
                     <!-- D (Marcus) owns editing; the task form isn't built yet -->
-                    <button v-if="canEdit" type="button" class="btn-secondary" @click="notice = 'Editing comes with the task form (Task Management).'">Edit</button>
+                    <button v-if="canEdit" type="button" class="btn-secondary" data-testid="task-edit" @click="isEditing = true">Edit</button>
                     <button v-if="canDelete" type="button" class="btn-secondary danger" :disabled="isBusy" @click="remove">Delete</button>
                 </div>
 
@@ -350,7 +360,6 @@ watch(() => [props.familyId, props.taskId], load)
                         @close="isNoteOpen = false"
                         @saved="noteSaved"
                     />
-                    <SavedToast />
                 </section>
 
                 <section class="card">
@@ -365,6 +374,16 @@ watch(() => [props.familyId, props.taskId], load)
             </aside>
         </div>
     </div>
+
+    <!-- Shared by both layouts -->
+    <SavedToast />
+    <NewTaskModal
+        v-if="isEditing && task"
+        :task="task"
+        :family-id="familyId"
+        @saved="taskSaved"
+        @close="isEditing = false"
+    />
 </template>
 
 <style scoped>

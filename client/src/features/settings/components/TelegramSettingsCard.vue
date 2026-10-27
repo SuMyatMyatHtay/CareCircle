@@ -13,11 +13,11 @@ const props = defineProps({
 const emit = defineEmits(['change'])
 const workspace = useFamilyWorkspace()
 const events = [
-  { key: 'taskPosted', label: 'A task is posted' },
+  { key: 'taskPosted', label: 'A task is posted, edited or removed' },
   { key: 'taskClaimed', label: 'Someone claims or gives back a task' },
   { key: 'transitMilestone', label: 'A transit milestone is marked' },
   { key: 'careNote', label: 'A care note is added, edited or deleted, or medication changes' },
-  { key: 'taskCompleted', label: 'A task is completed' },
+  { key: 'taskCompleted', label: 'A task is started, completed or cancelled' },
 ]
 const reminders = [
   { key: 'beforeTask', label: 'Remind me 1 hour before a task I’ve claimed' },

@@ -181,7 +181,7 @@ Proposal: the frontend updates the list in place from socket events. It doesn't 
 3. On reconnect, refetch the current list once, in case events were missed while offline.
 4. Each `{ task }` payload has the same shape as the REST response, so one `upsertTask(task)` function in the Vue store handles all of them.
 
-`task.updated` and `task.deleted` are socket-only: they never send Telegram messages. Add them to `constants.js` before using them.
+`task.updated`, `task.deleted` and `task.started` are also notify() events: they show in Recent updates and go to Telegram like the others.
 
 ---
 
@@ -320,7 +320,9 @@ Each event is sent through `notify()` (Telegram) and over Socket.IO to room `fam
 | `log.updated` | F | Alex edited a consultation note for Grandpa. |
 | `log.deleted` | F | Alex deleted a care note for Grandpa. |
 | `medication.changed` | C, F | Grandpa's medication was updated. Check the app. |
-| `task.updated`, `task.deleted` | D | Socket only. No Telegram message. |
+| `task.updated` | D | Alex updated: Grandpa's eye check, Tue 10am. |
+| `task.deleted` | D | Alex removed: Grandpa's eye check. |
+| `task.started` | D | Wei Ling started: Grandpa's eye check. |
 
 ---
 
