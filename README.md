@@ -1,133 +1,338 @@
-# CareCircle 💚🩷
+﻿# CareCircle
 
 **Care together, closer always.**
 
-CareCircle is a family-care coordination web application for sharing caregiving responsibilities, tracking appointments and tasks, and keeping loved ones informed. Family members can join multiple family circles, view tasks that still need volunteers, and coordinate care for individual recipients.
+CareCircle is a family-care coordination application for the IS216 Group Project, Section G8. Families can share tasks, maintain care profiles and notes, follow appointment journeys, and recognise the people lending a hand.
 
-> **IS216 Group Project · Section G8 · In development.** features and integrations listed below are project scope, not necessarily completed functionality yet. Please refer to the project tracking sheet for details.
+One person can belong to multiple families. Each family has its own recipients, tasks, updates and Contributions leaderboard. **My tasks** brings together the signed-in person's claimed tasks across their families.
 
-## 🔗 Project resources
+This README describes the implementation in this repository. External integrations require configuration; the limitations below distinguish working features from placeholders.
 
-| Resource                                           | Link                                                                                                                                                                            |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Task allocation & progress tracker                 | **[CareCircle Task Allocation](https://docs.google.com/spreadsheets/d/1q4JjWnC077RomNEm6pJjR2DpeRkb-RZyNa4O9ssRjLk/edit?gid=77767454#gid=77767454)** |
-| Wireframes (Figma)                                 | [Open wireframes](https://www.figma.com/design/oo8lDXmN1OIF7zJ75SPn3a/Preline-UI-Figma--Community-?node-id=299804-16564&t=bZtps8beujV1iiui-1)                                   |
-| Project proposal, specifications & database design | [Team Google Doc](https://docs.google.com/document/d/1C0RIz2fLhAb1berm-wca4x8c-Li_FNyRMWFHNJV37T8/edit?tab=t.0)                                                                 |
-| Presentation Slide for Project Update (13th Oct) | [Canva Link](https://www.canva.com/design/DAHXlRxCktA/P5yOdcJa_RUiOY1k8l6CRQ/edit)                                                                 |
-| Hosting | [Vercel Web](https://care-circle-delta-one.vercel.app/)                                                                 |
+## Project resources
 
-## ✨ Project scope
+| Resource | Link |
+| --- | --- |
+| Hosted frontend | [CareCircle on Vercel](https://care-circle-delta-one.vercel.app/) |
+| Task allocation and progress | [Team tracker](https://docs.google.com/spreadsheets/d/1q4JjWnC077RomNEm6pJjR2DpeRkb-RZyNa4O9ssRjLk/edit?gid=77767454#gid=77767454) |
+| Wireframes | [Figma designs](https://www.figma.com/design/oo8lDXmN1OIF7zJ75SPn3a/Preline-UI-Figma--Community-?node-id=299804-16564&t=bZtps8beujV1iiui-1) |
+| Proposal, specifications and database design | [Team document](https://docs.google.com/document/d/1C0RIz2fLhAb1berm-wca4x8c-Li_FNyRMWFHNJV37T8/edit?tab=t.0) |
+| Project update presentation | [13 October slides](https://www.canva.com/design/DAHXlRxCktA/P5yOdcJa_RUiOY1k8l6CRQ/edit) |
 
-- **Authentication & Families:** sign up, log in, log out, create or join families, switch between multiple families, and enforce family membership access.
-- **Family Dashboard & Settings:** household overview, upcoming tasks, members, roles, and preferences.
-- **Care Recipient Management:** care profiles with overview, tasks, logs, and profile details.
-- **Task Management:** create, edit, claim, unclaim, and complete caregiving tasks; browse unclaimed tasks.
-- **My Tasks & Transit:** view claimed tasks across families, track appointment journeys with timestamps and progress updates.
-- **Care Logs & Integrations:** consultation notes, task calendar, and planned Telegram reminders/notifications.
-- **Gamification:** profile badges, leaderboard, spotify-inspired yearly wrap
+## Features
 
-## 🧰 Tech stack
+### Accounts, families and preferences
 
-| Area                 | Technology                                                |
-| -------------------- | --------------------------------------------------------- |
-| Frontend             | Vue 3, Vite, Vue Router, Bootstrap, Axios                 |
-| Backend              | Node.js, Express.js                                       |
-| Database             | MongoDB, Mongoose                                         |
-| Authentication       | bcrypt password hashing, JWT                              |
-| Planned integrations | Telegram Bot API, OneMap, Google Calendar, LibreTranslate |
+- Register, sign in and sign out with hashed passwords and JWT authentication. Signing out revokes the existing session token.
+- Create a family, join using an invitation code, and switch between multiple families. Invitation codes contain 10 hexadecimal characters and can be regenerated by an admin.
+- Manage members and admin/member roles, remove members, or leave a family. The last admin cannot be removed or demoted.
+- Edit your name, phone, Telegram username, language preference and profile picture. Email is read-only in the profile form.
+- View another member's profile and recent tasks from shared families. Profiles are accessible to the account owner and people who share a family with them.
+- Choose light, dark or device appearance, saved in the browser and applied across pages and dialogs.
+- Save an English, Chinese, Malay or Tamil preference. Care-log translation is requested separately; this does not automatically translate the entire interface.
 
-## 🚀 Local setup
+### Family home
 
-**Prerequisites:** Node.js 20+, npm, and access to a MongoDB instance.
+- See the greeting, care recipients, today's tasks, active transit banners and recent updates in one dashboard.
+- Browse recipients using numbered pages, three cards per page. Cards show upcoming care and tasks needing someone, and open the recipient hub.
+- Browse tasks inside Home using **Today**, **Needs someone**, **Overdue**, **Claimed**, **In progress**, **Completed** and **All tasks**. There is no separate Family tasks page.
+- Claim available tasks from Home. Expired unclaimed tasks move out of Needs someone and into Overdue automatically.
+- Scroll the task panel and Recent updates independently while their headings remain visible.
+- Follow multiple active trips, with additional trips behind an expandable control.
+- Open profiles from identified account/recipient photos on desktop and mobile. Linked recipients open their account profile; recipients without accounts open their care profile.
+- Receive task changes through polling and a shared query cache. Recent updates uses the family's notification history, with local session updates as a fallback.
+- Use responsive mobile navigation and family switching. Users without a family see create/join options.
 
-1. Clone the repository and enter the project folder.
-2. Install dependencies from the repository root:
+### Care recipients
 
-   ```bash
-   npm install
-   npm install --prefix client
-   npm install --prefix server
-   ```
+- Create and edit profiles for elderly care, pregnancy, postpartum care, infants, injuries and other care needs.
+- Record names/nicknames, profile pictures, birth dates, mobility, allergies, conditions, dietary restrictions, medications, emergency contacts, preferred clinic and care notes.
+- Use the recipient hub's **Overview**, **Tasks**, **Log** and **Profile** tabs. Overview combines upcoming tasks, latest notes and essential care information.
+- Link a recipient to your own account within a family. Infant profiles cannot be linked to accounts.
+- Opt into **I'm also a care recipient** in My Profile. Saving creates or reactivates one linked recipient per family; the setting also applies when creating or joining another family.
+- Toggle that setting repeatedly without creating a new recipient ID each time. Opting out hides the linked profiles while preserving tasks and care history.
+- Archive recipients instead of deleting them. The record and account link remain available for historical tasks/logs and later reactivation.
 
-3. Create `server/.env` from `server/.env.example` (or create it manually):
+### Tasks and shared responsibilities
 
-   ```env
-   PORT=3000
-   MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>/carecircle
-   JWT_SECRET=replace_with_a_long_random_secret
-   ```
+- Create tasks for a recipient or the household with title, description, category, start/end time, location and optional transport requirement.
+- Categories: appointment, therapy, errand, groceries, childcare, medication, companionship and other.
+- Search Singapore locations through OneMap and save the address, postal code and coordinates.
+- Claim from Home, recipient task lists or task details. The server assigns the signed-in member rather than accepting a client-supplied assignee.
+- Unclaim a task before starting it, returning it to the family. Either the claimer or task creator can release the claim.
+- Prevent double claims with a conditional database update: simultaneous requests have one winner; the other receives a conflict.
+- Close claiming at the scheduled start time. Both the UI and database write condition enforce the deadline. An overdue task can be unclaimed, but cannot be reclaimed unless its schedule changes.
+- Start and complete claimed tasks. Starting a transport task creates a real transit session.
+- View task details, status, location, assignment and timestamp-based activity. Creator-only edit/delete APIs and creator/admin cancellation APIs enforce lifecycle restrictions.
+- Make confirmed task edits through the assistant. The conventional task-detail Edit button remains a placeholder.
 
-   For frontend API setup, create `client/.env`:
+### My tasks, transit and maps
 
-   ```env
-   VITE_API_URL=http://localhost:3000/api
-   ```
+- View your claimed tasks across families, filter by family, and switch between Upcoming, In progress and Done.
+- See task progress, a week strip and due-soon/overdue indicators. Start, give back or complete tasks according to their current status.
+- Follow journeys through **Departed home → Arrived at clinic → Consultation done → Heading home → Safely back home**.
+- Post timestamped preset/custom milestones. The companion can remove mistakes, end transit without completing the task, or resume an eligible trip.
+- Complete the task automatically when the companion records **Safely back home**.
+- View the timeline and live position/path on a OneMap map. Location sharing requires the companion's browser permission and active transit page; it is not background phone tracking.
+- Open location directions and follow trips as another member of the same family.
 
-4. Start both apps:
+### Calendars
 
-   ```bash
-   npm run dev
-   ```
+- Add individual tasks to Google Calendar or Outlook, or download an `.ics` event for Apple Calendar and compatible apps, without connecting an account.
+- Optionally connect Google Calendar through OAuth from My tasks. Sync claimed, in-progress and completed tasks, update events, and remove events when tasks are given back or otherwise no longer belong in that calendar.
+- Sync manually or through task-change/My tasks triggers. Disconnect with the option to remove generated events.
+- Keep Google credentials and refresh tokens on the server; token fields are excluded from normal responses.
 
-| Service          | Local URL                                                                            |
-| ---------------- | ------------------------------------------------------------------------------------ |
-| Frontend         | http://localhost:5173                                                                |
-| Backend          | http://localhost:3000                                                                |
-| API health check | http://localhost:3000/api/health                                                     |
-| Login endpoint   | `POST http://localhost:3000/api/auth/login` (when implemented in the current branch) |
+### Care logs, translation and voice input
 
-**Do not commit `.env`, database credentials, JWT secrets, or real patient information.** Use fictional data for development and demonstrations.
+- Write consultation, medication-change, diet, symptom and general notes in a recipient's Log tab.
+- Record consultation details, next appointments and medication additions, adjustments or removals. Logs can reference related tasks.
+- Filter and browse history. The author or family admin can edit/delete a note.
+- Translate notes on demand into English, Chinese, Malay or Tamil using Azure Translator. Cache translations per language and invalidate them when the source content changes.
+- Dictate notes using browser recording and Groq Whisper transcription. Review the transcription before saving; typed input remains available if recording/provider access fails.
+- Choose whether to notify the family when creating a note.
 
-## 🗂️ Project structure
+### Telegram and updates
+
+- Link a Telegram group with `/link <inviteCode>`, unlink with `/unlink`, and get instructions through `/start` or `/help`.
+- Configure notification categories in Family settings. Admins can send a test message or unlink the group from the app.
+- Generate notifications for task creation, claims/unclaims, completion/cancellation, transit milestones, care notes and medication updates where handlers call the shared notification utility.
+- Store notification history with pending, sent, failed or skipped status, and display the history in Home's Recent updates.
+- Omit clinical note bodies and medication details from generated Telegram messages. Task titles and user-provided text may still contain personal information.
+
+### Contributions
+
+- Separate leaderboard per family with **This week**, **This month** and **All time** views.
+- Completed-task totals, helping members, care points, each person's task share, recent completions and a top-three podium.
+- **Points:** 1 per completed task, +1 for an appointment requiring transit, +1 for claiming within one hour of task creation.
+- Sort by points, completed-task count, name and account ID. Nonzero contributors receive consecutive ranks even when totals tie; zero-contribution members remain unranked.
+- Show first place before second when only two people contributed; use the central first-place podium when three people contributed.
+- Track consecutive helping-day streaks through today or yesterday across all time.
+- Award period-based badges: **Appointment hero** for three completed appointments; **Quick to help** for three completed tasks claimed within an hour of creation; **Night owl** for five tasks completed after 6pm.
+- Show Night owl progress and clickable contributor photos. Dates use Singapore time; weeks start Monday.
+- Lock Contributions navigation for users without a family, with a hover/focus explanation.
+
+### AI assistant and customisation
+
+- Open a floating mascot assistant using your saved avatar appearance.
+- Search family tasks and prepare proposals to create, edit, unclaim or delete tasks through Gemini structured responses.
+- Ask for missing details and present a confirmation card before writes. Deletion requires a second confirmation.
+- Enforce family scope, current permissions, proposal expiry and stale-update checks on the server. Repeated confirmations do not create duplicate tasks.
+- Clear chat on family/account changes. Messages stay in browser memory; task proposals are stored separately and expire after 15 minutes.
+- Customise an Avatar Studio character with dresses, tops, skirts/shorts and accessories, and save the outfit to your account. The earlier pet dress-up screen is also retained.
+- Available Avatar Studio characters include cat, dog, fox, elephant and dinosaur. Rabbit, chick and duck are locked as Coming soon.
+
+## Task lifecycle and permissions
+
+```text
+open --claim before startAt--> claimed --start--> in_progress --complete--> completed
+  ^                              |
+  +----------- unclaim ----------+
+
+open / claimed / in_progress --cancel--> cancelled
+```
+
+Completing directly from `claimed` is also supported. The transit `home` milestone uses the shared task-completion handler. **Overdue is a derived filter, not another stored status**: it identifies an unclaimed task whose scheduled start time has been reached.
+
+| Action | Permission / restriction |
+| --- | --- |
+| Read family tasks, recipients, logs or trips | Authenticated family member |
+| Claim | Family member; open task before its start time |
+| Unclaim | Creator or claimer; task is still claimed |
+| Start / complete | Claimer; valid current status required |
+| Edit task | Creator; completed/cancelled tasks are locked |
+| Delete task | Creator; in-progress/completed tasks cannot be deleted |
+| Cancel task | Creator or family admin; active tasks only |
+| Add / edit recipient | Family member; only your own account can be newly linked |
+| Archive recipient | Family admin |
+| Edit / delete care log | Author or family admin |
+| Manage other members, invitations or Telegram settings | Family admin; last-admin protection applies |
+
+Admin status alone does not allow editing/deleting someone else's task or starting it on their behalf.
+
+## Technology and structure
+
+| Area | Implementation |
+| --- | --- |
+| Frontend | Vue 3, Vue Router, Vite, Bootstrap, Bootstrap Icons, Axios |
+| Shared server data | TanStack Vue Query with family-scoped cache keys |
+| Backend | Node.js ES modules, Express |
+| Database | MongoDB, Mongoose |
+| Authentication | bcryptjs, JWT, token-version revocation |
+| Integrations | OneMap, Google Calendar, Telegram, Azure Translator, Groq Whisper, Gemini |
+| Testing | Node test runner, Vitest, Vue Test Utils, jsdom, isolated MongoDB, Playwright |
 
 ```text
 CareCircle/
-├── client/
-│   └── src/
-│       ├── features/       # Vue pages/components organized by feature
-│       ├── router/
-│       ├── assets/
-│       └── styles/
-├── server/
-│   └── src/
-│       ├── features/       # Feature-specific models, routes and controllers
-│       ├── middleware/     # Shared auth and family access checks
-│       ├── config/         # Database setup
-│       └── routes/         # API router registration
-├── docs/                  # Project contracts and team notes
-└── README.md
+  client/
+    public/avatars/       Profile pictures, characters and wardrobe assets
+    src/
+      components/         Shared avatars, dialogs, cards and layout
+      composables/        Active family, recipients and task cache
+      features/           auth, family, settings, recipients, tasks, my-tasks,
+                          transit, logs, contributions, assistant and avatar
+      router/             Authenticated routes and isolated preview routes
+      services/           HTTP client and query cache
+      styles/             Themes and responsive layout
+  server/
+    src/
+      features/           Models, controllers, services and feature routers
+      middleware/         Authentication, membership and role checks
+      routes/             API registration
+      config/             Database connection
+      utils/              Shared notifications and picture validation
+    test/support/         Isolated database and provider fixtures
+  tests/
+    unit/                 Node regressions
+    integration/          Express + isolated MongoDB tests
+    e2e/                  Desktop/mobile browser workflows
+    support/              Test-only application launcher
+  docs/                   Contracts, ownership, design and testing notes
 ```
 
-## 👥 Work packages
+Backend `journeys/` implements transit sessions; the frontend calls it `transit/`. Persistent data includes users, families, recipients, tasks, transit sessions, care logs, notifications, assistant proposals and Google Calendar links. Account/integration records are user-scoped; family records are family-scoped and membership-protected.
 
-| Package | Scope                       |
-| ------- | --------------------------- |
-| A       | Authentication & Families   |
-| B       | Family Dashboard & Settings |
-| C       | Care Recipient Management   |
-| D       | Task Management             |
-| E       | My Tasks & Transit          |
-| F       | Care Logs & Integrations    |
+## Local setup
 
-See the **[task allocation tracker](https://docs.google.com/spreadsheets/d/1q4JjWnC077RomNEm6pJjR2DpeRkb-RZyNa4O9ssRjLk/edit?gid=77767454#gid=77767454)** for current owners, priorities, blockers, and progress. The tracker is the source of truth for assignments.
+Use **Node.js 24 LTS**, npm and a reachable MongoDB instance. Core accounts, families, tasks and care profiles do not require optional integration credentials.
 
-## 🧑‍💻 Collaboration guidelines
+```sh
+git clone https://github.com/SuMyatMyatHtay/CareCircle.git
+cd CareCircle
+npm install
+npm install --prefix client
+npm install --prefix server
+```
 
-1. Create a feature branch, e.g. `feature/auth-login` or `feature/task-board`.
-2. Keep frontend/backend changes inside the corresponding feature folders where possible.
-3. Agree on API contracts and database fields before changing shared schemas or middleware.
-4. Submit a pull request with a short description, screenshots (for UI changes), testing steps, and any blockers.
-5. Test at both desktop and mobile widths; check loading, empty, success, and error states.
-6. Do not reset the shared MongoDB seed data without informing the team.
+The repository also contains pnpm lockfiles. Use one package manager consistently within each dependency directory. Do not run npm over a pnpm-created `node_modules` tree; start with a clean dependency directory when switching package managers.
 
-## 🔐 Data access conventions
+Create `server/.env`, using `server/.env.example` as a starting point. Set at least:
 
-A user may belong to **multiple families**. Family-specific records must be scoped to a family ID, and backend routes must verify the authenticated user's membership before exposing the data. Protect care notes and avoid placing sensitive medical details in external notifications.
+```dotenv
+PORT=3000
+MONGODB_URI=mongodb://127.0.0.1:27017/carecircle
+JWT_SECRET=replace_with_a_long_random_secret
+```
 
-## 📌 Status & attribution
+The normal database connection explicitly uses the `carecircle` database. Tests use a separate generated database.
 
-CareCircle is an ongoing student project. We will be updating the details of the finished individual features along the line by documenting AI-assisted work and external assets according to the course requirements. We will not be treating mock screens or proposed API integrations as live functionality until tested.
+Create `client/.env`:
 
-## Automated tests
+```dotenv
+VITE_API_URL=http://localhost:3000/api
+```
 
-Run `npm run test:all` after installing the root, client and server dependencies and Chromium (`pnpm exec playwright install chromium`). The suite includes existing regressions, Vitest/Vue Test Utils, API integration with an isolated real MongoDB, and Playwright desktop/mobile workflows. It never uses the shared seed script or server `.env`. See [the testing guide](docs/TESTING.md) for individual commands, setup and scope.
+Set this explicitly because some account/family adapters read it directly. Restart the relevant development server after changing environment variables. Keep real credentials out of source control and out of `VITE_*` variables, which are included in the frontend bundle.
+
+```sh
+npm run dev
+```
+
+| Service | Address |
+| --- | --- |
+| Frontend | http://localhost:5173 |
+| API | http://localhost:3000/api |
+| Server health, without a DB connection | http://localhost:3000/api/health |
+| Database health | http://localhost:3000/api/health/db |
+| Fictional dashboard preview | http://localhost:5173/preview/home |
+
+Start separately with `npm run dev:client` or `npm run dev:server`. Build the frontend with `npm run build`; serve the backend with `npm start --prefix server`.
+
+The preview bypasses login and uses fictional local data; it does not validate real integrations. For a real workflow, register, create a family, add a recipient and post a future task. Join that family from another account using the invite code, claim the task, and open My tasks. Enable **Needs transit** on an appointment to test a real journey after starting it. Use fictional care information for demonstrations.
+
+### Optional integration settings
+
+Add the integrations you use to `server/.env`. No real keys belong in this README.
+
+| Feature | Variables | Additional setup |
+| --- | --- | --- |
+| AI assistant | `GEMINI_API_KEY`, optional `GEMINI_MODEL` | Choose a structured-output model available to your project; the code supplies a default |
+| Care-log translation | `AZURE_TRANSLATOR_KEY`, `AZURE_TRANSLATOR_REGION` | Use the region belonging to your Translator resource |
+| Voice notes | `GROQ_API_KEY` | Microphone permission; HTTPS or localhost for browser recording |
+| Google Calendar sync | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | Enable Calendar API and configure OAuth consent/test users and the exact callback URI |
+| Telegram | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, optional `TELEGRAM_BOT_USERNAME` | Register a public webhook at `/api/integrations/telegram/webhook` with the matching secret token |
+| Telegram task links | `APP_URL` | Frontend origin, e.g. `http://localhost:5173` locally |
+| OneMap search and maps | No credentials in the current implementation | Network access; location permission for live sharing |
+
+For local Google OAuth, use `http://localhost:5173/api/google/callback` as the callback: Vite proxies `/api` to port 3000, and the callback returns to the frontend origin. Register the same URI in Google and `GOOGLE_REDIRECT_URI`.
+
+For Telegram, add the bot to a group and send `/link YOUR_INVITE_CODE`. Family settings provides notification preferences, test delivery and unlinking. A local backend needs a public HTTPS endpoint/tunnel for webhook delivery.
+
+For deployment, build `client/` to `dist/`, configure its API URL at build time, and configure backend variables separately. The client includes a Vercel SPA rewrite. The backend exports the Express app for serverless hosting and otherwise listens on `PORT`.
+
+## API overview
+
+Paths below are relative to `/api`. [server/src/routes/index.js](server/src/routes/index.js) registers the current endpoints.
+
+| Prefix | Purpose |
+| --- | --- |
+| `/auth` | Registration, sessions, current/public profiles, avatar/pet saving |
+| `/families` | Create/join/list families; members, roles and invitations |
+| `/families/:familyId/recipients` | Recipient profiles and archiving |
+| `/families/:familyId/tasks` | CRUD, claim/unclaim, start, complete and cancel |
+| `/families/:familyId/tasks/:taskId/transit` | Session, milestones, location, end/resume |
+| `/families/:familyId/transit` | Family transit sessions |
+| `/families/:familyId/logs` | Care logs and translation |
+| `/families/:familyId/notifications` | Family notification history |
+| `/families/:familyId/notify-settings` | Telegram preferences, test delivery and unlinking |
+| `/families/:familyId/assistant` | Chat and confirm/cancel task proposals |
+| `/me/tasks` | Signed-in person's tasks across families |
+| `/me/google`, `/google/callback` | Calendar connection, sync and OAuth callback |
+| `/integrations` | OneMap search, voice transcription and Telegram webhook |
+
+Contributions is calculated from existing membership-protected task/member endpoints; there is no separate Contributions API. See [API-CONTRACT.md](docs/API-CONTRACT.md) for detailed contracts, and feature routes when older design notes differ from the implementation.
+
+## Testing
+
+From the repository root:
+
+```sh
+npm test
+npm run build
+```
+
+| Command | Coverage |
+| --- | --- |
+| `npm run test:regression` | All Node regressions in `tests/unit/*.test.mjs` |
+| `npm run test:client` | Vitest functions, components and page integration |
+| `npm run test:api` | Express/JWT/Mongoose against isolated real MongoDB |
+| `npm run test:e2e` | Desktop/mobile Chromium workflows |
+| `npm run test:e2e:headed` | Browser workflows in visible windows |
+| `npm run test:all` | Node, frontend, API and browser suites in sequence |
+| `npm run test:watch --prefix client` | Frontend watch mode |
+
+Before browser tests, install Chromium using `npx playwright install chromium`. API/E2E tests may download a MongoDB binary on their first run. E2E reserves frontend port **5180**; its API and database use available local ports.
+
+The API/E2E harness generates a loopback `carecircle_test_*` database, validates isolation before resets, and does not load `server/.env` or run the shared seed script. External providers are disabled or doubled where appropriate. Tests cover family isolation, roles, sessions, claims/conflicts, overdue deadlines, unclaiming, recipient preservation, contributions, profile links, assistant confirmation, transit, calendar helpers and translation. Isolated tests do not prove live provider or deployment configuration.
+
+See [docs/TESTING.md](docs/TESTING.md), [docs/TESTING-PART-E.md](docs/TESTING-PART-E.md) and [tests/e2e/README.md](tests/e2e/README.md). Use command output for current totals; counts in older documents are historical.
+
+## Team allocation
+
+This preserves the original A–F allocation from [docs/OWNERSHIP.md](docs/OWNERSHIP.md). The [team tracker](https://docs.google.com/spreadsheets/d/1q4JjWnC077RomNEm6pJjR2DpeRkb-RZyNa4O9ssRjLk/edit?gid=77767454#gid=77767454) remains the source for current assignments and progress.
+
+| Package | Original owner | Responsibility |
+| --- | --- | --- |
+| A | Sera | Authentication, families, invitation joining and family access |
+| B | SangYoon | Family Home, settings, membership controls and preferences |
+| C | Jhen | Care recipients, profiles and recipient hub |
+| D | Marcus | Task management, lifecycle and shared backend foundations |
+| E | Chaithra | My tasks, transit, maps and calendar workflows |
+| F | SeungHak | Care logs, translation/voice and Telegram integrations |
+
+Contributions, the AI assistant, avatar customisation and subsequent cross-feature improvements are documented above without additional individual attribution.
+
+## Current limitations
+
+- The sidebar **Calendar** entry remains Coming soon. Calendar export, Google Calendar sync and the mobile settings agenda are separate implemented features.
+- The conventional task-detail **Edit** button is a placeholder. Creator-authorised task updates are available through the API and assistant proposals. Cancellation has an API route, without a complete task-detail cancellation UI.
+- Family renaming returns `501` at `PATCH /families/:familyId`; membership relationships are not editable schema fields.
+- Dashboard, notifications and transit use polling rather than Socket.IO. Live location requires the companion's active page and browser permission.
+- There is no scheduled reminder worker or recurring-task engine. Due-soon indicators, event-triggered Telegram notifications and calendar reminders are distinct from scheduled CareCircle reminders.
+- The assistant cannot claim, assign, start, complete or cancel tasks. Its quota is per server process. It sends task context/user messages to Gemini and does not provide medical advice.
+- A yearly contribution wrap, the deferred gratitude log and locked avatar characters are not implemented features.
+
+## Contributing
+
+Work on a feature branch and submit a pull request describing the change, validation and screenshots for UI changes. Keep code within its feature folders, coordinate shared schema/API changes with the owner, and update affected contracts alongside code. Check desktop/mobile, loading, empty, success and failure states. Do not reseed the shared database without coordinating with the team.
+
+Further notes: [family UI](docs/FAMILY-UI.md), [assistant](docs/ASSISTANT.md), [database design](docs/DATABASE-DESIGN.md) and [ownership](docs/OWNERSHIP.md). Some notes describe earlier plans; implemented routes and source code take precedence when they differ.
