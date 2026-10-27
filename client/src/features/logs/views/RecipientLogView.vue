@@ -9,6 +9,8 @@ import LogList from '../components/LogList.vue'
 import LogTypeFilter from '../components/LogTypeFilter.vue'
 import { getLogs, createLog, getLogErrorMessage } from '../services/logsApi.js'
 import { useLogActions } from '../useLogActions.js'
+import { showSaved, logName } from '../savedToast.js'
+import SavedToast from '../components/SavedToast.vue'
 import { displayName } from '../../recipients/recipientLabels.js'
 
 const PAGE_SIZE = 20
@@ -109,6 +111,7 @@ async function postUpdate(payload) {
         invalidateCachedLogs()
         selectedType.value = ''
         form.value?.reset()
+        showSaved(`Note saved to ${logName(log)}`)
     } catch (error) {
         postError.value = getLogErrorMessage(error)
     } finally {
@@ -120,6 +123,7 @@ async function postUpdate(payload) {
 
 <template>
     <div class="log-page">
+        <SavedToast />
         <nav class="breadcrumb-row" aria-label="Breadcrumb">
             <RouterLink to="/home">Family home</RouterLink>
             <span aria-hidden="true">/</span>

@@ -9,6 +9,7 @@ import { useQueryClient } from '@tanstack/vue-query'
 import { useActiveFamily } from '../../composables/useActiveFamily.js'
 import { queryKeys } from '../../services/queryClient.js'
 import { updateLog, deleteLog, translateLog, getLogErrorMessage, TRANSLATION_NOT_CONNECTED } from './services/logsApi.js'
+import { showSaved, logName } from './savedToast.js'
 
 function readUser() {
     try {
@@ -70,6 +71,7 @@ export function useLogActions(familyId, logs) {
             logs.value = logs.value.map((item) => (item._id === updated._id ? updated : item))
             invalidateCachedLogs()
             editingId.value = ''
+            showSaved(`Note updated in ${logName(updated)}`)
         } catch (error) {
             editError.value = getLogErrorMessage(error)
         } finally {
@@ -85,6 +87,7 @@ export function useLogActions(familyId, logs) {
             await deleteLog(currentFamilyId(), log._id)
             logs.value = logs.value.filter((item) => item._id !== log._id)
             invalidateCachedLogs()
+            showSaved(`Note deleted from ${logName(log)}`)
         } catch (error) {
             if (error.response?.status === 404) {
                 logs.value = logs.value.filter((item) => item._id !== log._id)

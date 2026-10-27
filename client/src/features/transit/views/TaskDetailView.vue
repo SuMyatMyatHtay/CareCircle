@@ -97,7 +97,6 @@ const activity = computed(() => {
 // F (SeungHak): care log notes saved against this task
 const recipientId = computed(() => idOf(task.value?.recipient) || '')
 const visitNotes = ref(null)
-const savedMessage = ref('')
 
 const isNoteOpen = ref(false)
 
@@ -112,7 +111,6 @@ function addConsultationNote() {
 function noteSaved(log) {
     isNoteOpen.value = false
     visitNotes.value?.add(log)
-    savedMessage.value = `Note saved to ${who.value ? `${who.value}'s` : 'the care'} log`
 }
 
 async function load() {
@@ -352,7 +350,7 @@ watch(() => [props.familyId, props.taskId], load)
                         @close="isNoteOpen = false"
                         @saved="noteSaved"
                     />
-                    <SavedToast :message="savedMessage" @close="savedMessage = ''" />
+                    <SavedToast />
                 </section>
 
                 <section class="card">

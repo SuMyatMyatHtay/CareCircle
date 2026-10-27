@@ -258,7 +258,6 @@ function startTrip() {
 const noteRecipientId = computed(() => idOf(task.value?.recipient) || '')
 const isNoteOpen = ref(false)
 const visitNotes = ref(null)
-const savedMessage = ref('')
 
 function addNote() {
     if (!noteRecipientId.value) {
@@ -271,8 +270,6 @@ function addNote() {
 function noteSaved(log) {
     isNoteOpen.value = false
     visitNotes.value?.add(log)
-    const who = recipientName(task.value)
-    savedMessage.value = `Note saved to ${who ? `${who}'s` : 'the care'} log`
 }
 
 // Poll while the trip is active so the family sees new steps without reloading
@@ -554,7 +551,7 @@ onUnmounted(stopPolling)
                         @close="isNoteOpen = false"
                         @saved="noteSaved"
                     />
-                    <SavedToast :message="savedMessage" @close="savedMessage = ''" />
+                    <SavedToast />
                 </aside>
             </div>
         </template>

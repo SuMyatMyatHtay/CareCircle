@@ -1,18 +1,21 @@
 <script setup>
 // Owner: SeungHak (F)
 // Small green confirmation at the top of the screen, e.g. "Note saved to Grandma's log".
-// Hides itself after a few seconds.
-import { onUnmounted, watch } from 'vue'
+// Shows whatever showSaved() (../savedToast.js) was last called with, then hides itself.
+import { computed, onUnmounted, watch } from 'vue'
+import { savedToast, hideSaved } from '../savedToast.js'
 
-const props = defineProps({ message: { type: String, default: '' } })
-const emit = defineEmits(['close'])
+const message = computed(() => savedToast.value.text)
 
 let timer = null
-watch(() => props.message, (message) => {
+watch(() => savedToast.value.id, () => {
     clearTimeout(timer)
-    if (message) timer = setTimeout(() => emit('close'), 3500)
-}, { immediate: true })
-onUnmounted(() => clearTimeout(timer))
+    if (message.value) timer = setTimeout(hideSaved, 3500)
+})
+onUnmounted(() => {
+    clearTimeout(timer)
+    hideSaved()
+})
 </script>
 
 <template>
@@ -21,7 +24,7 @@ onUnmounted(() => clearTimeout(timer))
             <div v-if="message" class="saved-toast" role="status" data-testid="saved-toast">
                 <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
                 <span>{{ message }}</span>
-                <button type="button" aria-label="Dismiss" @click="emit('close')">
+                <button type="button" aria-label="Dismiss" @click="hideSaved">
                     <i class="bi bi-x-lg" aria-hidden="true"></i>
                 </button>
             </div>
