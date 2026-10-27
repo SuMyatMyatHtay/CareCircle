@@ -136,7 +136,17 @@ onUnmounted(() => {
 
       <main class="app-main">
         <div v-if="isPreview" class="care-preview-bar"><span><i class="bi bi-eye" aria-hidden="true"></i> Preview · sample family data</span><button @click="resetPreview">Reset sample</button><RouterLink to="/login">Back to login <i class="bi bi-arrow-up-right" aria-hidden="true"></i></RouterLink></div>
-        <RouterView />
+        <!-- Only the page animates. Keyed on the top-level route, so recipient hub tabs
+             don't replay it (the hub crossfades its own tab content). The wrapper gives every
+             page one element to animate: with out-in, a page with several root nodes would
+             never finish leaving and the next page would never show. -->
+        <RouterView v-slot="{ Component, route: viewRoute }">
+          <Transition :name="viewRoute.name === 'transit' ? 'care-sheet' : 'care-page'" mode="out-in">
+            <div :key="viewRoute.matched[1]?.path ?? viewRoute.path" class="care-route">
+              <component :is="Component" />
+            </div>
+          </Transition>
+        </RouterView>
       </main>
       <AssistantLauncher v-if="!isPreview" :user="user" :inert="isMobile && sidebarOpen" />
       <RecipientSummaryModal v-if="selectedRecipient" :recipient="selectedRecipient" @close="selectedRecipient = null" />

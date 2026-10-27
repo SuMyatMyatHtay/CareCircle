@@ -8,6 +8,10 @@ defineProps({
   loading: Boolean,
   error: { type: String, default: '' },
   busyId: { type: String, default: '' },
+  // Task whose claim just succeeded: shows a check for a moment
+  claimedId: { type: String, default: '' },
+  // Rows someone else just changed (live update): they flash once
+  flashIds: { type: Array, default: () => [] },
   filterLabel: { type: String, default: '' },
   filter: { type: String, default: 'today' },
   filters: { type: Array, default: () => [] },
@@ -38,6 +42,7 @@ defineEmits(['retry', 'claim', 'clear-filter', 'filter'])
           ? 'No unclaimed tasks for this recipient.'
           : filter === 'today' ? 'A little breathing room. No tasks scheduled today.' : 'No tasks with this status in this family.'
       "
+      :flash-ids="flashIds"
       @retry="$emit('retry')"
     >
       <template #actions="{ task }">
@@ -45,10 +50,26 @@ defineEmits(['retry', 'claim', 'clear-filter', 'filter'])
         <button
           v-else-if="task.status === 'open'"
           class="care-button care-button--coral care-claim-button"
+          :class="{ 'is-claimed': claimedId === task._id }"
           :disabled="Boolean(busyId)"
           @click="$emit('claim', task)"
         >
-          {{ busyId === task._id ? 'Claiming…' : 'I’ll take it' }}
+          <template v-if="claimedId === task._id">
+            <svg class="care-check" viewBox="0 0 16 16" aria-hidden="true">
+              <polyline
+                points="3 8.5 6.5 12 13 4.5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <span class="visually-hidden">Claimed</span>
+          </template>
+          <template v-else>
+            {{ busyId === task._id ? 'Claiming…' : 'I’ll take it' }}
+          </template>
         </button>
       </template>
     </TaskList>
