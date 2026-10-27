@@ -16,7 +16,12 @@ const shown = computed(() => (feed.items.value.length ? feed.items.value : props
 <template>
   <SectionCard title="Recent updates" class="care-recent-updates">
     <div class="care-home-panel-scroll" role="region" aria-label="Recent family updates" tabindex="0">
-    <ol v-if="shown.length" class="care-activity-list">
+    <TransitionGroup
+      v-if="shown.length"
+      name="care-list"
+      tag="ol"
+      class="care-activity-list"
+    >
       <li v-for="update in shown.slice(0, 8)" :key="update._id">
         <ProfileAvatar
           :person="{ _id: update.actorId, name: update.actor || 'Family', avatar: update.avatar, profilePicture: update.profilePicture }"
@@ -27,7 +32,7 @@ const shown = computed(() => (feed.items.value.length ? feed.items.value : props
           <time>{{ update.time }}</time>
         </div>
       </li>
-    </ol>
+    </TransitionGroup>
     <p v-else class="care-muted care-small">
       Task changes will appear here while you’re on this page.
     </p>

@@ -95,7 +95,8 @@ describe('Family home task board and navigation', () => {
     })
     await board.findAll('article').find(row => row.text().includes('Future appointment')).get('button').trigger('click')
     await flushPromises()
-    expect(board.text()).not.toContain('Future appointment')
+    // The claim button shows a check for ~400ms before the row leaves the filtered list
+    await vi.waitFor(() => expect(board.text()).not.toContain('Future appointment'))
     await findButton(board, 'Claimed').trigger('click')
     expect(board.text()).toContain('Future appointment')
     expect(board.text()).toContain('Alex Tan')

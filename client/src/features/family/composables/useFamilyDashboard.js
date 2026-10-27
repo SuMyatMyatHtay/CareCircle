@@ -23,6 +23,10 @@ export function useFamilyDashboard() {
   const queryClient = useQueryClient()
   const updates = ref([]),
     busyId = ref(''),
+    // The task whose claim just succeeded: its button shows a check for a moment
+    claimedId = ref(''),
+    // Rows someone else changed in the last live update; TaskList flashes them once
+    flashIds = ref([]),
     toast = ref(''),
     toastError = ref(false)
   const tasks = workspace.isPreview
@@ -108,6 +112,12 @@ export function useFamilyDashboard() {
         (task) => !currentIds.has(task._id),
       )
       const changes = [...changed, ...removed]
+      // Never flash a row for something the user did themselves (e.g. on another page)
+      const myId = workspace.user.value.id
+      const isMine = (task) =>
+        (task.claimedBy?._id ?? task.claimedBy) === myId ||
+        (!previous.has(task._id) && (task.createdBy?._id ?? task.createdBy) === myId)
+      flashIds.value = changed.filter((task) => !isMine(task)).map((task) => task._id)
       if (changes.length) {
         const message =
           changes.length === 1
@@ -133,6 +143,12 @@ export function useFamilyDashboard() {
     addActivity(`${workspace.user.value.name} posted “${task.title}”`)
     showToast('A new chance to lend a hand. Task posted!')
   }
+  // Show the check for ~400ms before the row changes (or leaves a filtered list)
+  async function showClaimed(taskId) {
+    claimedId.value = taskId
+    await new Promise((resolve) => setTimeout(resolve, 400))
+    if (claimedId.value === taskId) claimedId.value = ''
+  }
   async function claimTask(task) {
     if (busyId.value || task.status !== 'open') return
     if (isTaskOverdue(task)) {
@@ -145,6 +161,7 @@ export function useFamilyDashboard() {
       if (workspace.isPreview) {
         if (task.status !== 'open')
           throw new Error('Someone already claimed this task.')
+        await showClaimed(task._id)
         task.status = 'claimed'
         task.claimedBy = {
           _id: workspace.user.value.id,
@@ -154,6 +171,8 @@ export function useFamilyDashboard() {
         const updated = await claimDashboardTask(familyId, task._id)
         if (familyId !== workspace.selectedFamilyId.value) return
         version++
+        await showClaimed(task._id)
+        if (familyId !== workspace.selectedFamilyId.value) return
         await upsert(familyId, updated)
         if (familyId !== workspace.selectedFamilyId.value) return
       }
@@ -199,6 +218,8 @@ export function useFamilyDashboard() {
       updates.value = []
       toast.value = ''
       busyId.value = ''
+      claimedId.value = ''
+      flashIds.value = []
     },
     { immediate: true },
   )
@@ -240,6 +261,8 @@ export function useFamilyDashboard() {
     loading,
     error,
     busyId,
+    claimedId,
+    flashIds,
     toast,
     toastError,
     openTaskCount,
