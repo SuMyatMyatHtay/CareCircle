@@ -8,6 +8,7 @@ import Recipient from '../../server/src/features/recipients/CareRecipient.model.
 import User from '../../server/src/features/auth/User.model.js'
 import Task from '../../server/src/features/tasks/TaskModel.js'
 import Log from '../../server/src/features/logs/CareLog.model.js'
+import Notification from '../../server/src/features/notifications/Notifications.model.js'
 import GoogleCalendarLink from '../../server/src/features/calendar-sync/GoogleCalendarLink.model.js'
 import { installTranslationProvider } from '../../server/test/support/translation-provider.js'
 
@@ -222,6 +223,83 @@ describe('Family APIs with Express, authentication and a real isolated MongoDB',
       assert.equal(result.data.error, 'Translation service is unavailable. Please try again later.')
       assert.equal((await Log.findById(ids.log)).translations.size, 0)
     }
+  })
+
+  it('records log.updated and log.deleted for Recent updates, naming who did it but never the note text', async () => {
+    const path = `${family}/logs/${ids.log}`
+    // Jasmine is an admin, so she can change Alex's note
+    assert.equal((await request(path, { method: 'PATCH', user: 'jasmine', body: { content: 'Private detail: new rash on arm.' } })).status, 200)
+    assert.equal((await request(path, { method: 'DELETE', user: 'jasmine' })).status, 204)
+
+    const feed = await request(`${family}/notifications`)
+    assert.equal(feed.status, 200)
+    const [deleted, updated] = feed.data.notifications
+    assert.deepEqual(
+      [updated.eventType, updated.text, String(updated.refId)],
+      ['log.updated', 'Jasmine edited a care note for Grandpa.', ids.grandpa],
+    )
+    assert.deepEqual([deleted.eventType, deleted.text], ['log.deleted', 'Jasmine deleted a care note for Grandpa.'])
+    // No Telegram group is linked in the fixtures, so nothing is sent
+    assert.ok([updated, deleted].every(n => n.status === 'skipped'))
+    assert.ok(!JSON.stringify(feed.data).includes('rash'))
+    assert.equal(await Notification.countDocuments({ family: ids.otherFamily }), 0)
+  })
+
+  it('a note posted without Telegram still shows in Recent updates, but is never sent', async () => {
+    await Family.updateOne({ _id: ids.family }, { $set: { telegram: { chatId: '-100123', linkedAt: new Date() } } })
+    const created = await request(`${family}/logs`, { method: 'POST', body: {
+      recipient: ids.grandpa, type: 'medication_change', content: 'Dose changed.', notify: false,
+      medicationChanges: [{ name: 'Amlodipine', change: 'dosage_changed', details: '10mg' }],
+    } })
+    assert.equal(created.status, 201)
+    const feed = (await request(`${family}/notifications`)).data.notifications
+    // One update per note. Had it tried Telegram (no bot token in tests) the status would be 'failed'
+    assert.deepEqual(feed.map(n => `${n.eventType} ${n.status}`), ['medication.changed skipped'])
+
+    // Editing only the text is an edit, not another "medication was updated"
+    const path = `${family}/logs/${created.data.log._id}`
+    const sameMedicines = created.data.log.medicationChanges
+    await request(path, { method: 'PATCH', body: { content: 'Dose changed today.', medicationChanges: sameMedicines } })
+    await request(path, { method: 'PATCH', body: { medicationChanges: [{ name: 'Amlodipine', change: 'stopped' }] } })
+    const events = (await request(`${family}/notifications`)).data.notifications.map(n => n.eventType)
+    assert.deepEqual(events.slice(0, 2).sort(), ['log.updated', 'medication.changed'])
+    assert.equal(events.length, 3)
+  })
+
+  it('task edits, starts and deletes show in Recent updates', async () => {
+    const tasks = `${family}/tasks`
+    const startAt = new Date(Date.now() + 3600e3).toISOString()
+    const make = async title => (await request(tasks, { method: 'POST', body: { title, recipient: ids.grandpa, category: 'errand', startAt } })).data.task._id
+    const kept = await make('Buy medicine')
+    const removed = await make('Old errand')
+    assert.equal((await request(`${tasks}/${kept}`, { method: 'PATCH', body: { title: 'Buy eye drops' } })).status, 200)
+    assert.equal((await request(`${tasks}/${kept}/claim`, { method: 'POST' })).status, 200)
+    assert.equal((await request(`${tasks}/${kept}/start`, { method: 'POST' })).status, 200)
+    assert.equal((await request(`${tasks}/${removed}`, { method: 'DELETE' })).status, 200)
+
+    const feed = (await request(`${family}/notifications`)).data.notifications.map(n => `${n.eventType} | ${n.text}`)
+    for (const line of [
+      'task.updated | Alex updated: Buy eye drops for Grandpa',
+      'task.started | Alex started: Buy eye drops for Grandpa.',
+      'task.deleted | Alex removed: Old errand for Grandpa.',
+    ]) assert.ok(feed.some(item => item.startsWith(line)), `missing "${line}" in\n${feed.join('\n')}`)
+  })
+
+  it('finds consultation notes by their next appointment, for the Calendar', async () => {
+    const logs = `${family}/logs`
+    const post = nextAppointment => request(logs, { method: 'POST', body: {
+      recipient: ids.grandpa, type: 'consultation', content: 'Seen today.', notify: false,
+      consultation: { doctorName: 'Dr Lim', nextAppointment },
+    } })
+    const inside = (await post('2030-03-10T02:00:00.000Z')).data.log._id
+    await post('2030-05-10T02:00:00.000Z')
+
+    const found = await request(`${logs}?appointmentFrom=2030-03-01T00:00:00Z&appointmentTo=2030-03-31T23:59:59Z`)
+    assert.equal(found.status, 200)
+    assert.deepEqual(found.data.logs.map(log => log._id), [inside])
+    assert.equal((await request(`${logs}?appointmentFrom=nope`)).status, 400)
+    // Another family's calendar never sees these
+    assert.equal((await request(`/families/${ids.otherFamily}/logs?appointmentFrom=2030-01-01T00:00:00Z`)).data.logs.length, 0)
   })
 
   it('guards optional Calendar endpoints and never exposes a saved refresh token', async t => {

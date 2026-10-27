@@ -2,6 +2,7 @@
 
 import mongoose from 'mongoose'
 import LogEntry from './CareLog.model.js'
+import User from '../auth/User.model.js'
 import { EVENTS, LOG_TYPES } from '../../constants.js'
 import { translateText, isSupportedLanguage, SUPPORTED_LANGUAGES } from '../integrations/azureTranslate.js'
 import { notify } from '../../utils/notify.js'
@@ -44,9 +45,19 @@ function populateRefs(query) {
     return query
 }
 
-// replaced
-async function announce(eventType, log) {
-    await notify(log.family, eventType, log)
+async function announce(eventType, log, options) {
+    await notify(log.family, eventType, log, options)
+}
+
+// Compares medication lists, so editing only the text of a note isn't "medication was updated"
+function medicationKey(list = []) {
+    return JSON.stringify(list.map((m) => [m.name, m.change, m.details || '']))
+}
+
+// Edits and deletes name the person who did them, who may not be the author (an admin)
+async function announceChange(eventType, log, req) {
+    const changedBy = await User.findById(req.user.userId).select('name').lean()
+    await announce(eventType, { ...log.toObject(), changedBy })
 }
 
 function parseLogInput(body, { partial }) {
@@ -144,13 +155,34 @@ async function assertRefsInFamily(data, familyId) {
 
 export async function listLogs(req, res, next) {
     try {
-        const { recipient, before, limit } = req.query
+        const { recipient, task, before, limit, appointmentFrom, appointmentTo } = req.query
         const filter = { family: req.family._id }
         const errors = []
 
         if (recipient !== undefined) {
             if (mongoose.isValidObjectId(recipient)) filter.recipient = recipient
             else errors.push('Recipient is invalid')
+        }
+
+        if (task !== undefined) {
+            if (mongoose.isValidObjectId(task)) filter.task = task
+            else errors.push('Task is invalid')
+        }
+
+        // The Calendar: consultation notes whose next appointment falls in a date range
+        if (appointmentFrom !== undefined || appointmentTo !== undefined) {
+            const range = {}
+            if (appointmentFrom !== undefined) {
+                const fromDate = parseDate(appointmentFrom)
+                if (!fromDate) errors.push('appointmentFrom must be a valid date')
+                else range.$gte = fromDate
+            }
+            if (appointmentTo !== undefined) {
+                const toDate = parseDate(appointmentTo)
+                if (!toDate) errors.push('appointmentTo must be a valid date')
+                else range.$lte = toDate
+            }
+            filter['consultation.nextAppointment'] = range
         }
 
         if (before !== undefined) {
@@ -192,10 +224,11 @@ export async function createLog(req, res, next) {
         })
 
         const populated = await populateRefs(LogEntry.findById(log._id))
-        if (req.body?.notify !== false) {
-            await announce(EVENTS.LOG_CREATED, populated)
-            if (populated.medicationChanges.length) await announce(EVENTS.MEDICATION_CHANGED, populated)
-        }
+        // notify: false ("Notify the family Telegram group" unticked) still shows in Recent updates
+        const options = { send: req.body?.notify !== false }
+        // One message per note: a medication change says so, anything else is a new care note
+        const event = populated.medicationChanges.length ? EVENTS.MEDICATION_CHANGED : EVENTS.LOG_CREATED
+        await announce(event, populated, options)
 
         return res.status(201).json({ log: populated })
     } catch (error) {
@@ -231,11 +264,16 @@ export async function updateLog(req, res, next) {
             log.translations = new Map()
         }
 
+        const medicationsBefore = medicationKey(log.medicationChanges)
         log.set(data)
         await log.save()
 
         const populated = await populateRefs(LogEntry.findById(log._id))
-        if (data.medicationChanges?.length) announce(EVENTS.MEDICATION_CHANGED, populated)
+        // One message per edit: "medication was updated" only when the list really changed
+        const medicationsChanged = populated.medicationChanges.length > 0 &&
+            medicationKey(populated.medicationChanges) !== medicationsBefore
+        if (medicationsChanged) await announce(EVENTS.MEDICATION_CHANGED, populated)
+        else await announceChange(EVENTS.LOG_UPDATED, populated, req)
 
         return res.json({ log: populated })
     } catch (error) {
@@ -248,7 +286,10 @@ export async function deleteLog(req, res, next) {
         const log = await findLogInFamily(req.family._id, req.params.logId)
         assertCanChange(log, req)
 
+        // Load the recipient's name now: it can't be looked up once the note is gone
+        const populated = await populateRefs(LogEntry.findById(log._id))
         await log.deleteOne()
+        await announceChange(EVENTS.LOG_DELETED, populated, req)
         return res.status(204).end()
     } catch (error) {
         return handleError(error, res, next)
@@ -283,8 +324,6 @@ export async function translateLog(req, res, next) {
             throw httpError(502, 'Translation service is unavailable. Please try again later.')
         }
         
-        console.log(lang, cached)
-
         await LogEntry.updateOne(
             { _id: log._id, content: log.content },
             { $set: { [`translations.${lang}`]: translation } },

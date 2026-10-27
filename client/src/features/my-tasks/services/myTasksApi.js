@@ -1,6 +1,7 @@
 // Owner: Chaithra (E)
 // My Tasks: GET /api/me/tasks, plus D's start / unclaim / complete actions on a task.
 import { http } from '../../../services/http.js'
+import { queryClient, queryKeys } from '../../../services/queryClient.js'
 
 export function authHeaders() {
     const token = sessionStorage.getItem('token')
@@ -16,10 +17,24 @@ export async function getMyTasks(filters = {}) {
 }
 
 async function taskAction(familyId, taskId, action) {
-    const response = await http.post(
-        `/families/${familyId}/tasks/${taskId}/${action}`, null, { headers: authHeaders() }
-    )
-    return response.data
+    const token = sessionStorage.getItem('token')
+    try {
+        const response = await http.post(
+            `/families/${familyId}/tasks/${taskId}/${action}`, null, { headers: authHeaders() }
+        )
+        if (token !== sessionStorage.getItem('token')) return response.data
+        const task = response.data.task
+        await queryClient.cancelQueries({ queryKey: queryKeys.tasks(familyId) })
+        if (token !== sessionStorage.getItem('token')) return response.data
+        if (task) queryClient.setQueryData(queryKeys.tasks(familyId), old => old?.map(row => row._id === taskId ? task : row))
+        await queryClient.invalidateQueries({ queryKey: queryKeys.tasks(familyId) })
+        window.dispatchEvent(new CustomEvent('carecircle:task-updated', { detail: { familyId, taskId, task, action } }))
+        return response.data
+    } catch (error) {
+        if ([404, 409].includes(error.response?.status) && token === sessionStorage.getItem('token'))
+            await queryClient.invalidateQueries({ queryKey: queryKeys.tasks(familyId) })
+        throw error
+    }
 }
 
 // D's endpoints. Each returns { task } ("start" also returns transitSession)

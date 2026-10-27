@@ -14,6 +14,7 @@ import AvatarStudioView from '../features/avatar/views/AvatarStudioView.vue'
 import RecipientLogView from '../features/logs/views/RecipientLogView.vue'
 
 import MyTasksView from '../features/my-tasks/views/MyTasksView.vue'
+import ContributionsView from '../features/contributions/ContributionsView.vue'
 import TransitView from '../features/transit/views/TransitView.vue'
 import TaskDetailView from '../features/transit/views/TaskDetailView.vue'
 
@@ -23,6 +24,7 @@ import RecipientTasksView from '../features/recipients/views/RecipientTasksView.
 import RecipientProfileView from '../features/recipients/views/RecipientProfileView.vue'
 import RecipientNewView from '../features/recipients/views/RecipientNewView.vue'
 import NewTaskView from '../features/tasks/views/NewTaskView.vue'
+import CalendarView from '../features/calendar/views/CalendarView.vue'
 import { verifySession, clearUserSession } from '../features/auth/services/authApi.js'
 const routes = [
   {path:'/login',component:LoginView},
@@ -41,6 +43,9 @@ const routes = [
     {path:'avatar-studio',name:'avatar-studio',component:AvatarStudioView},
     {path:'tasks/new',name:'task-new',component:NewTaskView},
     {path:'my-tasks',name:'my-tasks',component:MyTasksView},
+    {path:'family-tasks',redirect:'/home'},
+    {path:'contributions',name:'contributions',component:ContributionsView},
+    {path:'calendar',name:'calendar',component:CalendarView},
     {path:'transit/:familyId/:taskId',name:'transit',component:TransitView,props:true},
     {path:'families/:familyId/tasks/:taskId',name:'task-detail',component:TaskDetailView,props:true},
     {path:'recipients/new',name:'recipient-new',component:RecipientNewView},

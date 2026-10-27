@@ -394,3 +394,6 @@
     .sidebar-nav { padding-top: 10px; }
     .sidebar-bottom { margin-top: 5px; }
 }
+.contributions-locked { position: relative; cursor: not-allowed; color: var(--theme-muted, #717b8e); }
+.contributions-locked [role="tooltip"] { display: none; position: absolute; top: 100%; left: 8px; right: 8px; padding: 10px; background: var(--theme-text, #30332f); color: var(--theme-panel, #fff); border-radius: 8px; font-size: 12px; z-index: 20; }
+.contributions-locked:hover [role="tooltip"], .contributions-locked:focus [role="tooltip"] { display: block; }

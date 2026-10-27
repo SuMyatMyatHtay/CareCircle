@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import CareAvatar from '../../../components/common/CareAvatar.vue'
+import ProfileAvatar from '../../../components/common/ProfileAvatar.vue'
 import { mobilityChip } from '../../recipients/recipientLabels.js'
 const props = defineProps({
   recipient: { type: Object, required: true },
@@ -29,7 +29,7 @@ const detail = computed(() => {
 <template>
   <article class="care-recipient-card">
     <div class="care-recipient-heading">
-      <CareAvatar :person="recipient" />
+      <ProfileAvatar :person="recipient" recipient />
       <div>
         <h3>{{ recipient.nickname || recipient.name }}</h3>
         <p>

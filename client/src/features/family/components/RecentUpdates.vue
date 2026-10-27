@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import SectionCard from '../../../components/common/SectionCard.vue'
-import CareAvatar from '../../../components/common/CareAvatar.vue'
+import ProfileAvatar from '../../../components/common/ProfileAvatar.vue'
 import { useFamilyWorkspace } from '../composables/useFamilyWorkspace.js'
 import { useRecentNotifications } from '../../settings/composables/useNotifications.js'
 
@@ -15,10 +15,11 @@ const shown = computed(() => (feed.items.value.length ? feed.items.value : props
 </script>
 <template>
   <SectionCard title="Recent updates" class="care-recent-updates">
+    <div class="care-home-panel-scroll" role="region" aria-label="Recent family updates" tabindex="0">
     <ol v-if="shown.length" class="care-activity-list">
-+      <li v-for="update in shown.slice(0, 8)" :key="update._id">
-        <CareAvatar
-          :person="{ name: update.actor || 'Family', avatar: update.avatar }"
+      <li v-for="update in shown.slice(0, 8)" :key="update._id">
+        <ProfileAvatar
+          :person="{ _id: update.actorId, name: update.actor || 'Family', avatar: update.avatar, profilePicture: update.profilePicture }"
           size="small"
         />
         <div>
@@ -30,6 +31,7 @@ const shown = computed(() => (feed.items.value.length ? feed.items.value : props
     <p v-else class="care-muted care-small">
       Task changes will appear here while you’re on this page.
     </p>
+    </div>
     <p v-if="!preview" class="care-activity-note">
       Task board checks for updates every 20 seconds. Care log updates will
       appear when the activity feed is connected.

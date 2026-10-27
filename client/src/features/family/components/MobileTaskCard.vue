@@ -1,7 +1,8 @@
 <script setup>
 import { computed } from 'vue'
-import CareAvatar from '../../../components/common/CareAvatar.vue'
+import ProfileAvatar from '../../../components/common/ProfileAvatar.vue'
 import TaskStatusBadge from '../../tasks/components/TaskStatusBadge.vue'
+import { useTaskOverdue } from '../../tasks/composables/useTaskOverdue.js'
 const props = defineProps({
   task: { type: Object, required: true },
   busyId: { type: String, default: '' },
@@ -9,6 +10,7 @@ const props = defineProps({
   allowClaim: { type: Boolean, default: true },
 })
 defineEmits(['claim'])
+const overdue = useTaskOverdue(() => props.task)
 const recipient = computed(() =>
   typeof props.task.recipient === 'object' && props.task.recipient
     ? props.task.recipient
@@ -47,7 +49,7 @@ const context = computed(() =>
     :class="{ 'care-mobile-task--open': task.status === 'open' }"
   >
     <div class="care-mobile-task-row">
-      <CareAvatar :person="recipient" size="small" />
+      <ProfileAvatar :person="recipient" recipient size="small" />
       <div class="care-mobile-task-copy">
         <h3>{{ task.title }}</h3>
         <p>
@@ -57,7 +59,7 @@ const context = computed(() =>
         </p>
       </div>
       <div v-if="task.status !== 'open'" class="care-mobile-task-status">
-        <CareAvatar
+        <ProfileAvatar
           v-if="task.claimedBy"
           :person="task.claimedBy"
           size="tiny"
@@ -68,8 +70,9 @@ const context = computed(() =>
         />
       </div>
     </div>
+    <p v-if="task.status === 'open' && overdue" class="care-muted care-small">Overdue · Claiming closed</p>
     <button
-      v-if="task.status === 'open' && allowClaim"
+      v-else-if="task.status === 'open' && allowClaim"
       class="care-mobile-claim"
       :disabled="Boolean(busyId)"
       @click="$emit('claim', task)"

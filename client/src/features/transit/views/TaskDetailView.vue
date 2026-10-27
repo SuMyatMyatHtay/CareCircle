@@ -14,9 +14,15 @@ import PersonAvatar from '../../my-tasks/components/PersonAvatar.vue'
 import TaskDetailMobile from '../components/TaskDetailMobile.vue'
 import { useIsMobile } from '../../my-tasks/utils/useIsMobile.js'
 import { startTask } from '../../my-tasks/services/myTasksApi.js'
+import { useTaskOverdue, isTaskOverdue } from '../../tasks/composables/useTaskOverdue.js'
 import { getTask } from '../services/transitApi.js'
 import { claimTask, unclaimTask, completeTask, deleteTask, getErrorMessage } from '../../my-tasks/services/myTasksApi.js'
 import { formatTime, recipientName, TIME_ZONE } from '../../my-tasks/utils/formatters.js'
+import ConsultationNoteModal from '../../logs/components/ConsultationNoteModal.vue'
+import VisitNotes from '../../logs/components/VisitNotes.vue'
+import SavedToast from '../../logs/components/SavedToast.vue'
+import { showSaved } from '../../logs/savedToast.js'
+import NewTaskModal from '../../tasks/components/NewTaskModal.vue'
 
 const props = defineProps({
     familyId: { type: String, required: true },
@@ -27,6 +33,7 @@ const router = useRouter()
 const isMobile = useIsMobile()
 
 const task = ref(null)
+const overdue = useTaskOverdue(task)
 const isLoading = ref(true)
 const loadError = ref('')
 const notice = ref('')
@@ -89,6 +96,33 @@ const activity = computed(() => {
     return items
 })
 
+// Edit opens D's task form with this task filled in
+const isEditing = ref(false)
+async function taskSaved() {
+    isEditing.value = false
+    await load()
+    showSaved('Task updated')
+}
+
+// F (SeungHak): care log notes saved against this task
+const recipientId = computed(() => idOf(task.value?.recipient) || '')
+const visitNotes = ref(null)
+
+const isNoteOpen = ref(false)
+
+function addConsultationNote() {
+    if (!recipientId.value) {
+        notice.value = 'Consultation notes are kept in a care recipient\'s log, and this task is not for a care recipient.'
+        return
+    }
+    isNoteOpen.value = true
+}
+
+function noteSaved(log) {
+    isNoteOpen.value = false
+    visitNotes.value?.add(log)
+}
+
 async function load() {
     isLoading.value = true
     loadError.value = ''
@@ -102,6 +136,7 @@ async function load() {
 }
 
 async function run(action, message) {
+    if (isBusy.value) return
     isBusy.value = true
     actionError.value = ''
     try {
@@ -116,7 +151,10 @@ async function run(action, message) {
     }
 }
 
-const claim = () => run(() => claimTask(props.familyId, props.taskId), 'You claimed this task.')
+const claim = () => {
+    if (isTaskOverdue(task.value)) { actionError.value = 'This task is overdue and can no longer be claimed.'; return }
+    return run(() => claimTask(props.familyId, props.taskId), 'You claimed this task.')
+}
 const markDone = () => {
     if (window.confirm(`Mark "${task.value.title}" as done?`)) run(() => completeTask(props.familyId, props.taskId), 'Marked as done.')
 }
@@ -188,7 +226,7 @@ watch(() => [props.familyId, props.taskId], load)
             @complete="markDone"
             @unclaim="giveBack"
             @claim="claim"
-            @edit="notice = 'Editing comes with the task form (Task Management).'"
+            @edit="isEditing = true"
             @delete="remove"
             @dismiss="notice = ''"
         />
@@ -227,7 +265,7 @@ watch(() => [props.familyId, props.taskId], load)
                     </div>
                     <span class="spacer"></span>
                     <!-- D (Marcus) owns editing; the task form isn't built yet -->
-                    <button v-if="canEdit" type="button" class="btn-secondary" @click="notice = 'Editing comes with the task form (Task Management).'">Edit</button>
+                    <button v-if="canEdit" type="button" class="btn-secondary" data-testid="task-edit" @click="isEditing = true">Edit</button>
                     <button v-if="canDelete" type="button" class="btn-secondary danger" :disabled="isBusy" @click="remove">Delete</button>
                 </div>
 
@@ -275,7 +313,8 @@ watch(() => [props.familyId, props.taskId], load)
                 <!-- E: transit + Google Calendar, with D's buttons in the slots -->
                 <TaskTransitActions :task="task" :family-id="familyId" @changed="load" @error="(m) => (actionError = m)">
                     <template #middle>
-                        <button v-if="status === 'open'" type="button" class="btn-secondary" :disabled="isBusy" @click="claim">
+                        <span v-if="status === 'open' && overdue">Overdue · Claiming closed</span>
+                        <button v-else-if="status === 'open'" type="button" class="btn-secondary" :disabled="isBusy" @click="claim">
                             I'll take it
                         </button>
                         <button
@@ -308,10 +347,19 @@ watch(() => [props.familyId, props.taskId], load)
                 <!-- F (SeungHak): consultation notes -->
                 <section class="card">
                     <h2>Notes from this visit</h2>
-                    <p class="muted">No notes yet. Whoever goes can add what the doctor said, so the family doesn't need to ask.</p>
-                    <button type="button" class="btn-secondary" @click="notice = 'Consultation notes are part of Care Logs, which is coming soon.'">
+                    <VisitNotes ref="visitNotes" :family-id="familyId" :task-id="taskId" empty-text="No notes yet. Whoever goes can add what the doctor said, so the family doesn't need to ask." />
+                    <button type="button" class="btn-secondary" data-testid="task-add-note" @click="addConsultationNote">
                         + Add consultation note
                     </button>
+                    <ConsultationNoteModal
+                        v-if="isNoteOpen"
+                        :family-id="familyId"
+                        :recipient-id="recipientId"
+                        :recipient-name="who"
+                        :task-id="taskId"
+                        @close="isNoteOpen = false"
+                        @saved="noteSaved"
+                    />
                 </section>
 
                 <section class="card">
@@ -326,6 +374,16 @@ watch(() => [props.familyId, props.taskId], load)
             </aside>
         </div>
     </div>
+
+    <!-- Shared by both layouts -->
+    <SavedToast />
+    <NewTaskModal
+        v-if="isEditing && task"
+        :task="task"
+        :family-id="familyId"
+        @saved="taskSaved"
+        @close="isEditing = false"
+    />
 </template>
 
 <style scoped>

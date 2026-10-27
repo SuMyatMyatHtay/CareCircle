@@ -31,12 +31,38 @@ defineEmits(['switch-family'])
       </div>
       <h1>{{ greeting }}</h1>
     </div>
-    <RouterLink
-      :to="settingsPath"
-      class="care-mobile-account"
-      aria-label="Open family settings"
-    >
-      <CareAvatar :person="user" size="small" />
-    </RouterLink>
+    <div class="care-mobile-header-actions">
+      <!-- F (SeungHak): phones have no sidebar on Home, so the Calendar is reached from here -->
+      <RouterLink v-if="!preview" to="/calendar" class="care-mobile-calendar" aria-label="Open the family calendar">
+        <i class="bi bi-calendar3" aria-hidden="true"></i>
+      </RouterLink>
+      <RouterLink
+        :to="preview ? settingsPath : '/profile'"
+        class="care-mobile-account"
+        aria-label="Open my profile"
+      >
+        <CareAvatar :person="user" size="small" />
+      </RouterLink>
+    </div>
   </header>
 </template>
+
+<style scoped>
+.care-mobile-header-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+}
+.care-mobile-calendar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--care-border, #dfe3e8);
+  border-radius: 50%;
+  background: var(--theme-panel, #fff);
+  color: var(--care-green, #2d7d43);
+  font-size: 16px;
+}
+</style>

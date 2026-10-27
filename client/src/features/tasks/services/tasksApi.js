@@ -35,6 +35,17 @@ export async function createTask(familyId, task) {
     return response.data.task
 }
 
+// Edit a task (creator only). Same fields as createTask; status and claimedBy are ignored.
+export async function updateTask(familyId, taskId, changes) {
+    const response = await http.patch(
+        `/families/${familyId}/tasks/${taskId}`,
+        changes,
+        { headers: authHeaders() }
+    )
+
+    return response.data.task
+}
+
 // Task errors come back as { error, errors? }, unlike family/auth's { message }
 export function getTaskErrorMessage(error) {
     if (error.response?.status === 401) {

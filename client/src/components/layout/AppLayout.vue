@@ -7,6 +7,7 @@ import FamilySidebar from './FamilySidebar.vue'
 import RecipientSummaryModal from '../../features/family/components/RecipientSummaryModal.vue'
 import { provideFamilyWorkspace } from '../../features/family/composables/useFamilyWorkspace.js'
 import { resetPreview } from '../../features/family/data/previewFamily.js'
+import { queryClient } from '../../services/queryClient.js'
 import '../../styles/appLayout.css'
 import '../../styles/familyWorkspace.css'
 
@@ -18,9 +19,14 @@ const isSettingsPage = computed(() => ['family-settings', 'preview-settings'].in
 const selectedRecipient = ref(null)
 watch(selectedFamilyId, () => { selectedRecipient.value = null })
 function showRecipient(event) { selectedRecipient.value = event.detail }
+function onProfileUpdated() {
+  refreshUser()
+  if (!isPreview) queryClient.invalidateQueries({ predicate: query => query.queryKey[0] === 'families' && query.queryKey[2] === 'recipients' })
+}
 
 const sidebarOpen = ref(window.innerWidth >= 768)
 const isMobile = ref(window.innerWidth < 768)
+watch(() => route.fullPath, closeMobileSidebar)
 watch(isHomePage, (isHome) => { if (isHome && isMobile.value) sidebarOpen.value = false })
 watch(isSettingsPage, (isSettings) => { if (isSettings && isMobile.value) sidebarOpen.value = false })
 
@@ -46,14 +52,14 @@ onMounted(() => {
   loadFamilies()
   window.addEventListener('resize', handleResize)
   window.addEventListener('keydown', handleKeydown)
-  window.addEventListener('carecircle:profile-updated', refreshUser)
+  window.addEventListener('carecircle:profile-updated', onProfileUpdated)
   window.addEventListener('carecircle:open-recipient', showRecipient)
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
   window.removeEventListener('keydown', handleKeydown)
-  window.removeEventListener('carecircle:profile-updated', refreshUser)
+  window.removeEventListener('carecircle:profile-updated', onProfileUpdated)
   window.removeEventListener('carecircle:open-recipient', showRecipient)
 })
 </script>

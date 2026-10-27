@@ -2,6 +2,7 @@
 import { authenticateUser, findCurrentUser, toPublicUser } from './service.js'
 import User from './User.model.js'
 import { validProfilePicture } from '../../utils/profilePicture.js'
+import { syncAccountRecipients } from '../recipients/syncAccountRecipient.js'
 
 export async function login(req, res) {
   try {
@@ -146,6 +147,7 @@ export async function updateProfile(req, res) {
         $set: {
           ...(profilePicture !== undefined ? { profilePicture } : {}),
           name: name.trim(),
+          isCaretaker,
           phone: phone.trim(),
           preferredLang,
           telegramUsername: telegramUsername.trim()
@@ -160,6 +162,8 @@ export async function updateProfile(req, res) {
         message: 'User not found'
       })
     }
+
+    await syncAccountRecipients(user)
 
     return res.status(200).json({
       success: true,
