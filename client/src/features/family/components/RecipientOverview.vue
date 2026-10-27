@@ -1,6 +1,7 @@
 <script setup>
+import { computed, ref, watch } from 'vue'
 import RecipientCard from './RecipientCard.vue'
-defineProps({
+const props = defineProps({
   recipients: { type: Array, default: () => [] },
   loading: Boolean,
   error: { type: String, default: '' },
@@ -11,6 +12,11 @@ defineProps({
 defineEmits(['retry', 'open', 'show-open-tasks'])
 const id = (value) =>
   typeof value === 'object' && value ? value._id || value.id : value
+const page = ref(1)
+const pageSize = 3
+const pageCount = computed(() => Math.ceil(props.recipients.length / pageSize))
+const visibleRecipients = computed(() => props.recipients.slice((page.value - 1) * pageSize, page.value * pageSize))
+watch(() => props.recipients.map(id).join(','), () => { page.value = 1 })
 function recipientTasks(tasks, recipient) {
   return tasks
     .filter(
@@ -54,9 +60,10 @@ function nextTask(tasks, recipient) {
         Add care recipient
       </RouterLink>
     </div>
-    <div v-else class="care-recipient-grid">
+    <div v-else>
+    <div class="care-recipient-grid">
       <RecipientCard
-        v-for="recipient in recipients"
+        v-for="recipient in visibleRecipients"
         :key="recipient._id || recipient.id"
         :recipient="recipient"
         :tasks-available="tasksAvailable"
@@ -71,6 +78,13 @@ function nextTask(tasks, recipient) {
         @open="$emit('open', $event)"
         @show-open-tasks="$emit('show-open-tasks', $event)"
       />
+    </div>
+    <nav v-if="pageCount > 1" class="care-recipient-pagination" aria-label="Care recipient pages">
+      <span class="care-recipient-page-summary" role="status">{{ (page - 1) * pageSize + 1 }}–{{ Math.min(page * pageSize, recipients.length) }} of {{ recipients.length }}</span>
+      <button type="button" :disabled="page === 1" aria-label="Previous recipients page" @click="page--"><i class="bi bi-chevron-left" aria-hidden="true"></i></button>
+      <button v-for="number in pageCount" :key="number" type="button" :class="{ selected: page === number }" :aria-label="`Recipients page ${number}`" :aria-current="page === number ? 'page' : undefined" @click="page = number">{{ number }}</button>
+      <button type="button" :disabled="page === pageCount" aria-label="Next recipients page" @click="page++"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+    </nav>
     </div>
   </section>
 </template>

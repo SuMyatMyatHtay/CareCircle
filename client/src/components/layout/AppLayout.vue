@@ -26,6 +26,7 @@ function onProfileUpdated() {
 
 const sidebarOpen = ref(window.innerWidth >= 768)
 const isMobile = ref(window.innerWidth < 768)
+watch(() => route.fullPath, closeMobileSidebar)
 watch(isHomePage, (isHome) => { if (isHome && isMobile.value) sidebarOpen.value = false })
 watch(isSettingsPage, (isSettings) => { if (isSettings && isMobile.value) sidebarOpen.value = false })
 

@@ -41,6 +41,7 @@ const {
   selectFamily,
 } = useFamilyWorkspace()
 const {
+  allTasks,
   tasks,
   todayTasks,
   activity,
@@ -100,8 +101,19 @@ const mobileDate = new Intl.DateTimeFormat('en-SG', {
   timeZone: 'Asia/Singapore',
 }).format(new Date())
 const mobilePanel = ref('')
+const taskFilter = ref('today')
+const taskFilters = [
+  { key: 'today', label: 'Today' },
+  { key: 'open', label: 'Needs someone' },
+  { key: 'claimed', label: 'Claimed' },
+  { key: 'in_progress', label: 'In progress' },
+  { key: 'completed', label: 'Completed' },
+  { key: 'all', label: 'All tasks' },
+]
+const taskBoardTasks = computed(() => taskFilter.value === 'today' ? todayTasks.value
+  : allTasks.value.filter(task => taskFilter.value === 'all' || task.status === taskFilter.value))
 const upcomingTasks = computed(() =>
-  [...tasks.value].sort((a, b) => new Date(a.startAt) - new Date(b.startAt)),
+  [...taskBoardTasks.value].sort((a, b) => new Date(a.startAt) - new Date(b.startAt)),
 )
 async function openMobileTaskForm() {
   mobilePanel.value = ''
@@ -110,11 +122,12 @@ async function openMobileTaskForm() {
   else router.push({ name: 'task-new' })
 }
 function navigateMobileHome(tab) {
-  if (tab === 'tasks' && !isPreview) {
-    router.push({ name: 'my-tasks' })
-    return
-  }
+  if (tab === 'tasks') taskFilter.value = 'all'
   mobilePanel.value = tab === 'home' ? '' : tab
+}
+function showAllMobileTasks() {
+  taskFilter.value = 'all'
+  mobilePanel.value = 'tasks'
 }
 function switchMobileFamily(familyId) {
   mobilePanel.value = ''
@@ -135,14 +148,14 @@ const filterRecipient = ref(null),
   showTransit = ref(false)
 const displayTasks = computed(() =>
   filterRecipient.value
-    ? tasks.value
+    ? allTasks.value
         .filter(
           (task) =>
             (task.recipient?._id || task.recipient) ===
               filterRecipient.value._id && task.status === 'open',
         )
         .sort((a, b) => new Date(a.startAt) - new Date(b.startAt))
-    : todayTasks.value,
+    : taskBoardTasks.value,
 )
 function openRecipient(recipient) {
   if (!isPreview) {
@@ -164,6 +177,7 @@ const savePreviewTask = isPreview
     }
   : null
 watch(selectedFamilyId, () => {
+  taskFilter.value = 'today'
   mobilePanel.value = ''
   filterRecipient.value = null
   showNewTask.value = false
@@ -221,6 +235,8 @@ watch(selectedFamilyId, () => {
         />
         <div class="care-dashboard-grid">
           <TodayTasks
+            :filter="taskFilter"
+            :filters="taskFilters"
             :tasks="displayTasks"
             :loading="loading"
             :error="error"
@@ -231,6 +247,7 @@ watch(selectedFamilyId, () => {
             @retry="loadTasks()"
             @claim="claimTask"
             @clear-filter="filterRecipient = null"
+            @filter="taskFilter = $event; filterRecipient = null"
           />
           <RecentUpdates :updates="activity" :preview="isPreview" />
         </div>
@@ -276,7 +293,7 @@ watch(selectedFamilyId, () => {
           :loading="loading"
           :error="error"
           :busy-id="busyId"
-          @see-all="mobilePanel = 'tasks'"
+          @see-all="showAllMobileTasks"
           @retry="loadTasks()"
           @claim="claimTask"
         />
@@ -303,13 +320,16 @@ watch(selectedFamilyId, () => {
       "
       @close="mobilePanel = ''"
     >
+      <div v-if="mobilePanel === 'tasks'" class="care-home-task-filters" role="group" aria-label="Filter family tasks">
+        <button v-for="option in taskFilters" :key="option.key" type="button" :aria-pressed="taskFilter === option.key" :class="{ selected: taskFilter === option.key }" @click="taskFilter = option.key">{{ option.label }}</button>
+      </div>
       <MobileTodayTasks
         v-if="mobilePanel === 'tasks'"
         :tasks="upcomingTasks"
         :loading="loading"
         :error="error"
         :busy-id="busyId"
-        title="Upcoming tasks"
+        title="Family tasks"
         :show-all="false"
         show-date
         :allow-create="Boolean(selectedFamily)"

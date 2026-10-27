@@ -72,6 +72,7 @@ before(async () => {
           import { useActiveFamily } from '/src/composables/useActiveFamily.js'
           import { queryClient, queryKeys } from '/src/services/queryClient.js'
           export { queryClient, queryKeys, useActiveFamily }
+          export { claimTask as claimRealTask, startTask as startRealTask } from '/src/features/my-tasks/services/myTasksApi.js'
           const renderer = createRenderer({
             createComment: () => ({}), createText: () => ({}), createElement: () => ({}),
             insert() {}, remove() {}, parentNode: () => null, nextSibling: () => null,
@@ -172,6 +173,42 @@ test('dashboard includes the full tenth day ahead but excludes the eleventh day'
   mounted = harness.mountWorkspace()
   assert.deepEqual(mounted.dashboard.tasks.value.map(task => task._id), ['tenth-day'])
   assert.equal(mounted.fullList.tasks.value.length, 2)
+})
+
+test('real claim updates the family cache and notifies My tasks; starting returns a transit session', async t => {
+  const original = task('real-task', { family: 'one', needsTransit: true })
+  seed([original])
+  seedOtherFamily()
+  const events = []
+  t.mock.method(window, 'dispatchEvent', event => { events.push(event.detail) })
+  let state = original
+  t.mock.method(http, 'post', async (path, body, config) => {
+    assert.equal(config.headers.Authorization, 'Bearer test-only-token')
+    if (path.endsWith('/claim')) {
+      state = { ...original, status: 'claimed', claimedBy: { _id: 'alex', name: 'Alex' }, claimedAt: new Date().toISOString() }
+      return { data: { task: state } }
+    }
+    assert.equal(path, '/families/one/tasks/real-task/start')
+    state = { ...state, status: 'in_progress' }
+    return { data: { task: state, transitSession: { _id: 'real-transit', task: state._id, companion: 'alex' } } }
+  })
+  await harness.claimRealTask('one', 'real-task')
+  assert.equal(harness.queryClient.getQueryData(harness.queryKeys.tasks('one'))[0].claimedBy._id, 'alex')
+  assert.equal(events[0].action, 'claim')
+  assert.equal(harness.queryClient.getQueryData(harness.queryKeys.tasks('two'))[0].status, 'open')
+  const result = await harness.startRealTask('one', 'real-task')
+  assert.equal(result.transitSession.task, 'real-task')
+  assert.equal(harness.queryClient.getQueryData(harness.queryKeys.tasks('one'))[0].status, 'in_progress')
+})
+
+function seedOtherFamily() { harness.queryClient.setQueryData(harness.queryKeys.tasks('two'), [task('other-family')]) }
+
+test('a losing claim refreshes stale family data and keeps the conflict visible', async t => {
+  seed()
+  const conflict = Object.assign(new Error('Task already claimed'), { response: { status: 409 } })
+  t.mock.method(http, 'post', async () => { throw conflict })
+  await assert.rejects(harness.claimRealTask('one', 'today'), error => error === conflict)
+  assert.equal(harness.queryClient.getQueryState(harness.queryKeys.tasks('one')).isInvalidated, true)
 })
 
 test('assistant actions immediately appear in dashboard activity for the active family', t => {

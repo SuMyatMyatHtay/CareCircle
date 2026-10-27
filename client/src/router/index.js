@@ -42,6 +42,7 @@ const routes = [
     {path:'avatar-studio',name:'avatar-studio',component:AvatarStudioView},
     {path:'tasks/new',name:'task-new',component:NewTaskView},
     {path:'my-tasks',name:'my-tasks',component:MyTasksView},
+    {path:'family-tasks',redirect:'/home'},
     {path:'contributions',name:'contributions',component:ContributionsView},
     {path:'transit/:familyId/:taskId',name:'transit',component:TransitView,props:true},
     {path:'families/:familyId/tasks/:taskId',name:'task-detail',component:TaskDetailView,props:true},

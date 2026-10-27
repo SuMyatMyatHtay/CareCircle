@@ -3,11 +3,16 @@ import CareAvatar from '../../../components/common/CareAvatar.vue'
 // One row in a task list: date, recipient, title, time/place, who claimed it, status.
 // Buttons (e.g. "I'll take it") can be passed in through the "actions" slot.
 import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import { useActiveFamily } from '../../../composables/useActiveFamily.js'
 import TaskStatusBadge from './TaskStatusBadge.vue'
 
 const props = defineProps({
     task: { type: Object, required: true }
 })
+const route = useRoute()
+const { selectedFamilyId } = useActiveFamily()
+const familyId = computed(() => props.task.family?._id || props.task.family || selectedFamilyId.value)
 
 // The API sends UTC; show it in Singapore time
 const TIME_ZONE = 'Asia/Singapore'
@@ -60,7 +65,7 @@ function initials(name = '') {
         </div>
 
         <div class="task-text">
-            <h3 class="task-title">{{ task.title }}</h3>
+            <h3 class="task-title"><RouterLink v-if="!route.meta.preview && familyId" :to="{ name: 'task-detail', params: { familyId, taskId: task._id } }" class="text-reset text-decoration-none">{{ task.title }}</RouterLink><template v-else>{{ task.title }}</template></h3>
             <p class="task-meta">
                 {{ time }}<template v-if="place"> · {{ place }}</template>
                 <template v-if="recipientName"> · for {{ recipientName }}</template>

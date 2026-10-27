@@ -457,6 +457,44 @@
   align-items: stretch;
   min-height: 380px;
 }
+.care-dashboard-grid > .care-today-tasks,
+.care-dashboard-grid > .care-recent-updates {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: clamp(380px, 55vh, 540px);
+}
+.care-home-panel-scroll {
+  flex: 1;
+  min-height: 0;
+  max-height: 420px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--care-border, #d3dfd5) transparent;
+  padding-right: 6px;
+}
+.care-home-panel-scroll:focus-visible {
+  outline: 2px solid var(--care-green, #2d7d43);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+.care-recipient-pagination { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.care-recipient-page-summary { margin-right: auto; color: var(--care-muted); font-size: 12px; }
+.care-recipient-pagination button { display: grid; place-items: center; min-width: 32px; height: 32px; border: 1px solid var(--care-border); border-radius: 9px; background: var(--care-panel); color: var(--care-text); font: inherit; font-size: 12px; }
+.care-recipient-pagination button.selected { background: var(--care-green); border-color: var(--care-green); color: white; font-weight: 700; }
+.care-recipient-pagination button:hover:not(:disabled):not(.selected) { background: var(--care-soft); }
+.care-recipient-pagination button:disabled { opacity: .4; cursor: default; }
+.care-recipient-pagination button:focus-visible { outline: 2px solid var(--care-green); outline-offset: 2px; }
+.care-today-tasks > .section-card-header,
+.care-today-tasks > .care-home-task-filters,
+.care-today-tasks > .care-task-filter,
+.care-recent-updates > .section-card-header,
+.care-recent-updates > .care-activity-note {
+  flex-shrink: 0;
+}
 .care-page .section-card .task-item {
   gap: 11px;
   padding: 12px;
@@ -1135,3 +1173,7 @@
 .app-layout .app-topbar .app-topbar-brand {
   color: var(--care-green);
 }
+.care-home-task-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.care-home-task-filters button { border: 1px solid var(--care-border, #e4ece5); border-radius: 20px; background: var(--care-panel, #fff); color: var(--care-muted, #717b8e); padding: 6px 10px; font: inherit; font-size: 12px; }
+.care-home-task-filters button.selected { background: var(--care-soft, #e8f5e9); color: var(--care-green, #2d7d43); border-color: var(--care-green, #2d7d43); }
+.care-home-task-filters button:focus-visible { outline: 2px solid var(--care-green, #2d7d43); outline-offset: 2px; }
