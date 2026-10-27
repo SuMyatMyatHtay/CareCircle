@@ -9,6 +9,7 @@ import CareModal from '../../../components/common/CareModal.vue'
 import { queryKeys } from '../../../services/queryClient.js'
 import LogForm from './LogForm.vue'
 import { createLog, getLogErrorMessage } from '../services/logsApi.js'
+import { showSaved, logName } from '../savedToast.js'
 
 const props = defineProps({
     familyId: { type: String, required: true },
@@ -30,6 +31,7 @@ async function save(payload) {
         const log = await createLog(props.familyId, { ...payload, recipient: props.recipientId, task: props.taskId })
         queryClient.invalidateQueries({ queryKey: queryKeys.logs(props.familyId) })
         emit('saved', log)
+        showSaved(`Note saved to ${logName(log)}`)
     } catch (error) {
         saveError.value = getLogErrorMessage(error)
     } finally {
