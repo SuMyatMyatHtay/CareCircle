@@ -224,6 +224,7 @@ export function useFamilyDashboard() {
     window.removeEventListener('carecircle:task-updated', onAssistantTaskUpdated)
   })
   return {
+    allTasks: workspace.isPreview ? computed(() => previewState.tasks) : familyTasks.tasks,
     tasks,
     todayTasks,
     activity,

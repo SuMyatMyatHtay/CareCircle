@@ -102,6 +102,7 @@ async function load() {
 }
 
 async function run(action, message) {
+    if (isBusy.value) return
     isBusy.value = true
     actionError.value = ''
     try {
