@@ -5,6 +5,7 @@ import { useRoute } from 'vue-router'
 import AssistantLauncher from '../../features/avatar/components/AssistantLauncher.vue'
 import FamilySidebar from './FamilySidebar.vue'
 import RecipientSummaryModal from '../../features/family/components/RecipientSummaryModal.vue'
+import FamilySearchBar from '../../features/search/components/FamilySearchBar.vue'
 import { provideFamilyWorkspace } from '../../features/family/composables/useFamilyWorkspace.js'
 import { resetPreview } from '../../features/family/data/previewFamily.js'
 import { queryClient } from '../../services/queryClient.js'
@@ -16,6 +17,8 @@ const { families, selectedFamilyId, loadFamilies, selectFamily, recipients, reci
 const isFamilyPage = computed(() => ['home', 'family-settings', 'preview-home', 'preview-settings'].includes(route.name))
 const isHomePage = computed(() => ['home', 'preview-home'].includes(route.name))
 const isSettingsPage = computed(() => ['family-settings', 'preview-settings'].includes(route.name))
+// Hidden on pages with meta.search: false, and in the preview (it has no API to search)
+const showSearch = computed(() => !isPreview && route.meta.search !== false)
 const selectedRecipient = ref(null)
 watch(selectedFamilyId, () => { selectedRecipient.value = null })
 function showRecipient(event) { selectedRecipient.value = event.detail }
@@ -135,6 +138,9 @@ onUnmounted(() => {
       </header>
 
       <main class="app-main">
+        <!-- Desktop only; phones open the search page from Home. Outside the transition,
+             so it stays put while pages change. -->
+        <div v-if="showSearch" class="app-search d-none d-md-block"><FamilySearchBar /></div>
         <div v-if="isPreview" class="care-preview-bar"><span><i class="bi bi-eye" aria-hidden="true"></i> Preview · sample family data</span><button @click="resetPreview">Reset sample</button><RouterLink to="/login">Back to login <i class="bi bi-arrow-up-right" aria-hidden="true"></i></RouterLink></div>
         <!-- Only the page animates. Keyed on the top-level route, so recipient hub tabs
              don't replay it (the hub crossfades its own tab content). The wrapper gives every
