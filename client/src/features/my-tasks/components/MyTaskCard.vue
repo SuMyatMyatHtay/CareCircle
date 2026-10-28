@@ -3,6 +3,7 @@
 // One task on My Tasks (Figma frame 10). Click a card to show its progress row and buttons.
 import { computed } from 'vue'
 import TaskProgress from './TaskProgress.vue'
+import RecurringTaskBadge from '../../tasks/components/RecurringTaskBadge.vue'
 import PersonAvatar from './PersonAvatar.vue'
 import { formatDay, formatTime, recipientName } from '../utils/formatters.js'
 import { WORDS } from '../../transit/utils/wording.js'
@@ -40,6 +41,7 @@ const statusLabel = computed(() => {
                     <strong class="title">{{ task.title }}</strong>
                     <span class="badge" :class="`family-${familyTone}`">{{ task.family?.name }}</span>
                 </span>
+                <RecurringTaskBadge :task="task" />
                 <span class="meta">{{ meta }}<template v-if="who"> · for {{ who }}</template></span>
             </span>
 

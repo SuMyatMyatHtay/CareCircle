@@ -12,6 +12,7 @@ import { displayName, initials } from '../../recipients/recipientLabels.js'
 import TaskPersonPicker from './new-task/TaskPersonPicker.vue'
 import TaskCategoryPicker from './new-task/TaskCategoryPicker.vue'
 import TaskWhenFields from './new-task/TaskWhenFields.vue'
+import TaskRepeatFields from './new-task/TaskRepeatFields.vue'
 import TaskPlacePicker from './new-task/TaskPlacePicker.vue'
 import TaskTransitToggle from './new-task/TaskTransitToggle.vue'
 import TaskCareFacts from './new-task/TaskCareFacts.vue'
@@ -140,6 +141,8 @@ onUnmounted(() => {
                                     :start-error="form.fieldError('startAt')"
                                     :end-error="form.fieldError('endAt') || form.errors.value.endAt" />
 
+                                <TaskRepeatFields v-if="!save" v-model="form.recurrence.value" :date="form.date.value" :preview="form.repeatPreview.value" />
+                                <p v-else class="care-muted">Sign in to a family to create repeating tasks.</p>
                                 <TaskPlacePicker v-model="form.location.value"
                                     :suggestion="selectedRecipient?.preferredClinic"
                                     :suggestion-label="selectedRecipient ? `${recipientName}'s preferred clinic` : ''"
@@ -179,7 +182,7 @@ onUnmounted(() => {
                         <button type="submit" class="btn btn-primary footer-button post-button"
                             :disabled="!form.canSubmit.value || form.isSubmitting.value">
                             <span v-if="form.isSubmitting.value" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                            {{ form.isSubmitting.value ? 'Posting...' : 'Post task' }}
+                            {{ form.isSubmitting.value ? 'Posting...' : form.postLabel.value }}
                         </button>
                     </footer>
                 </form>

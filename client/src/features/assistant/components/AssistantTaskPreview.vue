@@ -23,6 +23,7 @@ const rows = computed(() => Object.keys(labels).filter(field => props.proposal.a
   <div class="assistant-task-preview">
     <div class="preview-label"><i class="bi bi-calendar-check" aria-hidden="true"></i> {{ actionLabels[proposal.action] }}</div>
     <h3>{{ proposal.task.title }}</h3>
+    <p v-if="proposal.task.recurringSeries">{{ proposal.task.recurrenceDetached ? 'This is a one-day exception; only this date is affected.' : proposal.action === 'claim' || proposal.action === 'assign' ? 'This claims every upcoming session in the series, including future generated dates.' : 'Only this occurrence is affected; other sessions stay unchanged.' }}</p>
     <p v-if="proposal.action === 'assign'">Assign to: <strong>{{ proposal.task.assigneeName || proposal.changes.assigneeName }}</strong></p>
     <p v-if="['claim', 'assign', 'start', 'complete', 'cancel', 'unclaim'].includes(proposal.action)">Status: {{ proposal.before?.status?.replaceAll('_', ' ') }} → {{ proposal.task.status?.replaceAll('_', ' ') }}</p>
     <dl><div v-for="row in rows" :key="row.label"><dt>{{ row.label }}</dt><dd><span v-if="proposal.action === 'update' && row.before !== row.after" class="preview-before">{{ row.before }}</span>{{ row.after }}</dd></div></dl>

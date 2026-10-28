@@ -12,6 +12,7 @@ import { displayName } from '../../recipients/recipientLabels.js'
 import TaskPersonPicker from '../components/new-task/TaskPersonPicker.vue'
 import TaskCategoryPicker from '../components/new-task/TaskCategoryPicker.vue'
 import TaskWhenFields from '../components/new-task/TaskWhenFields.vue'
+import TaskRepeatFields from '../components/new-task/TaskRepeatFields.vue'
 import TaskPlacePicker from '../components/new-task/TaskPlacePicker.vue'
 import TaskTransitToggle from '../components/new-task/TaskTransitToggle.vue'
 import TaskCareFacts from '../components/new-task/TaskCareFacts.vue'
@@ -124,6 +125,7 @@ watch(selectedFamilyId, (newId, oldId) => {
                     v-model:end-time="form.endTime.value" :start-error="form.fieldError('startAt')"
                     :end-error="form.fieldError('endAt') || form.errors.value.endAt" />
 
+                <TaskRepeatFields v-model="form.recurrence.value" :date="form.date.value" :preview="form.repeatPreview.value" />
                 <TaskPlacePicker v-model="form.location.value" :suggestion="selectedRecipient?.preferredClinic"
                     :suggestion-label="selectedRecipient ? `${recipientName}'s preferred clinic` : ''"
                     :error="form.fieldError('location') || form.errors.value.location" />
@@ -188,7 +190,7 @@ watch(selectedFamilyId, (newId, oldId) => {
                 </button>
                 <button type="submit" class="post-button" :disabled="!form.canSubmit.value || form.isSubmitting.value">
                     <span v-if="form.isSubmitting.value" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                    {{ form.isSubmitting.value ? 'Posting...' : 'Post task' }}
+                    {{ form.isSubmitting.value ? 'Posting...' : form.postLabel.value }}
                 </button>
             </footer>
         </template>

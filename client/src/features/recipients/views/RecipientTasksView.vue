@@ -7,6 +7,7 @@ import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import SectionCard from '../../../components/common/SectionCard.vue'
 import TaskList from '../../tasks/components/TaskList.vue'
+import RecurringSeriesPanel from '../../tasks/components/RecurringSeriesPanel.vue'
 import { useFamilyTasks, taskRecipientId } from '../../../composables/useFamilyTasks.js'
 import { displayName, dateKey, formatDate } from '../recipientLabels.js'
 
@@ -29,12 +30,14 @@ const FILTERS = [
     { value: 'all', label: 'All', statuses: null },
     { value: 'open', label: 'Needs someone', statuses: ['open'] },
     { value: 'claimed', label: 'Claimed', statuses: ['claimed', 'in_progress'] },
-    { value: 'completed', label: 'Completed', statuses: ['completed'] }
+    { value: 'completed', label: 'Completed', statuses: ['completed'] },
+    { value: 'repeating', label: 'Repeating', statuses: null }
 ]
 
 const filter = ref('all')
 
 function matches(task, filterValue) {
+    if (filterValue === 'repeating') return !!task.recurringSeries && !task.recurrenceDetached
     const statuses = FILTERS.find((f) => f.value === filterValue)?.statuses
     return !statuses || statuses.includes(task.status)
 }
@@ -100,6 +103,7 @@ const week = computed(() => {
                 </button>
             </div>
 
+            <RecurringSeriesPanel v-if="tasks.some(task => task.recurringSeries)" :tasks="tasks" :recipient-id="recipientId" />
             <TaskList v-if="tasksLoading || tasksError || shownTasks.length === 0" :tasks="shownTasks"
                 :is-loading="tasksLoading" :error-message="tasksError" :empty-message="emptyMessage"
                 @retry="reloadTasks" />

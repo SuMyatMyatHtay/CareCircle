@@ -63,7 +63,19 @@ This README describes the implementation in this repository. External integratio
 - Close claiming at the scheduled start time. Both the UI and database write condition enforce the deadline. An overdue task can be unclaimed, but cannot be reclaimed unless its schedule changes.
 - Start and complete claimed tasks. Starting a transport task creates a real transit session.
 - View task details, status, location, assignment and timestamp-based activity. Creator-only edit/delete APIs and creator/admin cancellation APIs enforce lifecycle restrictions.
-- Make confirmed task edits through the assistant. The conventional task-detail Edit button remains a placeholder.
+- Make confirmed task edits through the assistant. Repeating tasks also have an Edit dialog with occurrence/series scope; the conventional Edit button for ordinary tasks remains a placeholder.
+
+### Repeating tasks
+
+- Create daily, weekly, fortnightly, monthly or custom-interval tasks. Weekly schedules can include several weekdays. End on a date, after a session count, or choose **Never**.
+- Each session is its own task, with its own status, transit journey, calendar event and completed-task contribution. Finite schedules support up to 500 sessions; months without the selected day (such as the 31st) are skipped.
+- **Never** generates tasks four weeks ahead and extends that window when family tasks or My tasks are loaded. It does not depend on a scheduled worker.
+- Claim **Every upcoming session** by default, **Just this date**, or **The next 4 sessions**. Whole-series claims also cover newly generated sessions. Other members cannot take an already claimed session or series.
+- Give back one session when unavailable. That date becomes a permanent one-day exception; its replacement helper takes only that date. The original helper keeps the other sessions. Limited-scope claims also remain independent of later whole-series claims.
+- Creators can edit only the selected date, that date and future sessions, or every upcoming session. Series edits preserve started/completed sessions and independent exceptions; time changes keep each session's calendar date. Moving to another date requires **Only this date**.
+- Creators can pause/resume a series from Home or the recipient's Tasks tab. Pausing cancels attached future, unstarted sessions; resuming restores them and extends the window. Completed work and independent dates are preserved.
+- Assistant claims/assignments follow the same whole-series default, while assistant edits, cancellation, completion and deletion act on the selected session. Deleted sessions are recorded so generation cannot recreate them.
+- Recurring writes use MongoDB transactions and a unique series/occurrence index. Use **MongoDB Atlas or a replica set**; a standalone MongoDB server supports ordinary tasks but cannot create/change recurring series. Existing ordinary tasks need no migration.
 
 ### My tasks, transit and maps
 
@@ -191,11 +203,11 @@ CareCircle/
   docs/                   Contracts, ownership, design and testing notes
 ```
 
-Backend `journeys/` implements transit sessions; the frontend calls it `transit/`. Persistent data includes users, families, recipients, tasks, transit sessions, care logs, notifications, assistant proposals and Google Calendar links. Account/integration records are user-scoped; family records are family-scoped and membership-protected.
+Backend `journeys/` implements transit sessions; the frontend calls it `transit/`. Persistent data includes users, families, recipients, tasks, recurring series, transit sessions, care logs, notifications, assistant proposals and Google Calendar links. Shared recurrence/calendar arithmetic lives in `shared/`. Account/integration records are user-scoped; family records are family-scoped and membership-protected.
 
 ## Local setup
 
-Use **Node.js 24 LTS**, npm and a reachable MongoDB instance. Core accounts, families, tasks and care profiles do not require optional integration credentials.
+Use **Node.js 24 LTS**, npm and a reachable MongoDB instance (Atlas or a replica set for repeating tasks). Core accounts, families, tasks and care profiles do not require optional integration credentials.
 
 ```sh
 git clone https://github.com/SuMyatMyatHtay/CareCircle.git
@@ -285,6 +297,7 @@ Paths below are relative to `/api`. [server/src/routes/index.js](server/src/rout
 | `/families` | Create/join/list families; members, roles and invitations |
 | `/families/:familyId/recipients` | Recipient profiles and archiving |
 | `/families/:familyId/tasks` | CRUD, claim/unclaim, start, complete and cancel |
+| `/families/:familyId/tasks/recurring` | List recurring series; `PATCH /:seriesId` pauses/resumes a creator's series |
 | `/families/:familyId/tasks/:taskId/transit` | Session, milestones, location, end/resume |
 | `/families/:familyId/transit` | Family transit sessions |
 | `/families/:familyId/logs` | Care logs and translation |
@@ -340,10 +353,10 @@ The Contributions leaderboard and other cross-feature improvements are documente
 ## Current limitations
 
 - The sidebar **Calendar** entry remains Coming soon. Calendar export, Google Calendar sync and the mobile settings agenda are separate implemented features.
-- The conventional task-detail **Edit** button is a placeholder. Creator-authorised task updates are available through the API and assistant proposals. Cancellation has an API route, without a complete task-detail cancellation UI.
+- The conventional task-detail **Edit** button for ordinary tasks is a placeholder; recurring tasks have a scoped editing dialog. Creator-authorised task updates are also available through the API and assistant proposals. Cancellation has an API route, without a complete task-detail cancellation UI.
 - Family names are set at creation and cannot be changed. Member roles support admin/member; custom relationship labels are not supported.
 - Dashboard, notifications and transit use polling rather than Socket.IO. Live location requires the companion's active page and browser permission.
-- There is no scheduled reminder worker or recurring-task engine. Due-soon indicators, event-triggered Telegram notifications and calendar reminders are distinct from scheduled CareCircle reminders.
+- There is no scheduled reminder worker. Open-ended recurrence extends on task reads, so a family that never loads tasks does not generate more sessions automatically. Due-soon indicators, event-triggered Telegram notifications and calendar reminders are distinct from scheduled CareCircle reminders; recurring tasks do not add evening-before Telegram reminders.
 - The assistant enforces task ownership and status rules for every confirmed action. Its quota is per server process. It sends task context/user messages to Gemini and does not provide medical advice.
 - A yearly contribution wrap, the deferred gratitude log and locked avatar characters are not implemented features.
 

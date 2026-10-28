@@ -321,6 +321,35 @@ Claim acts for the signed-in person. Assign requires task-creator ownership and 
 
 `selectedTaskId` explicitly anchors a follow-up to a family task. `selectTask: true` returns a clarification without a provider call. Change time/location follow-ups also ask for the new value directly. Empty model edits never create a proposal.
 
+## Recurring tasks
+
+These endpoints use the existing authenticated family membership middleware. Recurring writes require MongoDB Atlas or a replica set (transactions); standalone MongoDB returns `503` for those writes.
+
+`POST /api/families/:familyId/tasks` accepts the normal task fields plus an optional rule:
+
+```json
+{
+  "recurrence": {
+    "frequency": "weekly",
+    "interval": 1,
+    "weekdays": [1, 4],
+    "end": { "mode": "on", "until": "2026-12-18" }
+  }
+}
+```
+
+Frequencies: `daily`, `weekly`, `monthly`; interval is an integer 1–365. Weekdays use Monday=0 through Sunday=6. End modes: `never`, `on` with a Singapore `YYYY-MM-DD` date, or `after` with `count` 1–500. Finite end dates must be within five years and produce at most 500 sessions. Monthly schedules skip months without the selected day. Omitting recurrence or using `frequency: "none"` preserves ordinary task creation.
+
+Creation returns `{ task }`, the first occurrence, retaining the existing response shape. Refetch the family task list to retrieve every generated occurrence. Each has `recurringSeries`, `occurrenceIndex`, `originalStartAt`, `recurrenceLabel`, `recurrenceDetached` and `recurrencePaused`. Occurrence indexes are stable; deletions leave tombstones. An open-ended series extends four weeks ahead when the family task list, series list or My tasks is read.
+
+- `POST /:taskId/claim` accepts `{ "scope": "series" }` (default), `one`, or `next4`. Series claims reserve every attached open future occurrence and future generated sessions; next4 takes this and up to three later available attached dates. Limited claims detach those dates. Already assigned sessions are never overwritten.
+- `POST /:taskId/unclaim` releases only that occurrence and permanently detaches it. Any later claim of a detached occurrence is forced to `one`, regardless of supplied scope. Creator/claimer permissions and overdue restrictions still apply.
+- `PATCH /:taskId` accepts ordinary editable fields, optional `expectedUpdatedAt` and `scope`: `one` (default), `future`, or `all`. The creator can edit selected/upcoming attached sessions; started, completed, cancelled and independent sessions are preserved. Detached dates accept only `one`. A series-wide time change preserves occurrence dates; moving to another date requires `one`. Recurrence rule changes are not supported by this endpoint.
+- `GET /recurring` returns `{ series: [...] }` with template, rule, creator, usual helper and pause status.
+- `PATCH /recurring/:seriesId` accepts `{ "paused": true }` or `false`, creator only. Pause cancels attached future open/claimed sessions with a pause marker. Resume restores only those marked sessions and extends generation. Historical and detached sessions remain unchanged.
+
+Complete/start/cancel/delete apply to one occurrence. Assistant claim/assign defaults to the series; assistant updates apply to one occurrence. Existing event notifications remain event-triggered; this feature does not schedule Telegram reminders.
+
 ## Cross-module events
 
 Each event is sent through `notify()` (Telegram) and over Socket.IO to room `family:<familyId>`. Event names are fixed: don't rename them.

@@ -7,6 +7,7 @@ import FamilyEmptyState from '../components/FamilyEmptyState.vue'
 import TransitBanner from '../components/TransitBanner.vue'
 import RecipientOverview from '../components/RecipientOverview.vue'
 import TodayTasks from '../components/TodayTasks.vue'
+import RecurringSeriesPanel from '../../tasks/components/RecurringSeriesPanel.vue'
 import RecentUpdates from '../components/RecentUpdates.vue'
 import LiveUpdateToast from '../components/LiveUpdateToast.vue'
 import NewTaskModal from '../../tasks/components/NewTaskModal.vue'
@@ -240,6 +241,7 @@ watch(selectedFamilyId, () => {
           @open="openRecipient"
           @show-open-tasks="filterRecipient = $event"
         />
+        <RecurringSeriesPanel v-if="!isPreview && allTasks.some(task => task.recurringSeries)" :tasks="allTasks" />
         <div class="care-dashboard-grid">
           <TodayTasks
             :filter="taskFilter"

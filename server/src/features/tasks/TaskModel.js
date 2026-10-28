@@ -91,6 +91,13 @@ const taskSchema = new mongoose.Schema({
         default: null
     },
 
+    recurringSeries: { type: mongoose.Schema.Types.ObjectId, ref: 'RecurringSeries', default: null },
+    occurrenceIndex: { type: Number, default: null },
+    originalStartAt: { type: Date, default: null },
+    recurrenceDetached: { type: Boolean, default: false },
+    recurrenceLabel: { type: String, default: '' },
+    recurrencePaused: { type: Boolean, default: false },
+    recurrenceEdited: { type: Boolean, default: false },
     claimedAt: { type: Date, default: null },
     completedAt: { type: Date, default: null },
     cancelledAt: { type: Date, default: null }
@@ -101,6 +108,7 @@ const taskSchema = new mongoose.Schema({
 
 // Family task board, sorted by start time
 taskSchema.index({ family: 1, startAt: 1 })
+taskSchema.index({ recurringSeries: 1, occurrenceIndex: 1 }, { unique: true, partialFilterExpression: { recurringSeries: { $type: 'objectId' } } })
 // Recipient tasks tab
 taskSchema.index({ family: 1, recipient: 1, startAt: 1 })
 // My Tasks (E): a user's claimed tasks across families

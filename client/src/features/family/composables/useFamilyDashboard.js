@@ -151,10 +151,12 @@ export function useFamilyDashboard() {
           ...workspace.user.value,
         }
       } else {
-        const updated = await claimDashboardTask(familyId, task._id)
+        const updated = await claimDashboardTask(familyId, task._id, task)
+        if (!updated) return
         if (familyId !== workspace.selectedFamilyId.value) return
         version++
         await upsert(familyId, updated)
+        if (updated.recurringSeries) await queryClient.invalidateQueries({ queryKey: queryKeys.family(familyId) })
         if (familyId !== workspace.selectedFamilyId.value) return
       }
       addActivity(`${workspace.user.value.name} claimed “${task.title}”`)

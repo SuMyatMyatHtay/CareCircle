@@ -6,6 +6,7 @@ import { parseTaskInput, createFamilyTask, updateFamilyTask, performFamilyTaskAc
 import Family from '../families/Family.model.js'
 import User from '../auth/User.model.js'
 import { syncInBackground } from '../calendar-sync/sync.js'
+import { deleteRecurringOccurrence } from '../tasks/recurringService.js'
 import { assistantError, generateReply, validateConversation } from './gemini.js'
 import { TASK_STATUSES, TASK_CATEGORIES } from '../../constants.js'
 
@@ -37,6 +38,8 @@ export function taskSummary(task, recipients = []) {
     startAt: task.startAt, endAt: task.endAt || null, location: task.location || null,
     category: task.category || 'other', needsTransit: task.needsTransit || false, status: task.status,
     createdBy: id(task.createdBy) || null, claimedBy: id(task.claimedBy) || null,
+    recurringSeries: task.recurringSeries ? id(task.recurringSeries) : null,
+    recurrenceDetached: task.recurrenceDetached || false, recurrenceLabel: task.recurrenceLabel || '',
     description: task.description || '' }
 }
 
@@ -187,7 +190,7 @@ export async function chat({ body, familyId, familyName, userId, memberRole, gen
   const [recipients, recent] = await Promise.all([
     Recipient.find({ family: familyId, isActive: true }).select('name nickname').sort({ name: 1 }).limit(100).lean(),
     Task.find({ family: familyId, startAt: { $gte: new Date(Date.now() - 30 * 86400000) } })
-      .select('title recipient startAt endAt location category needsTransit status createdBy claimedBy')
+      .select('title recipient startAt endAt location category needsTransit status createdBy claimedBy recurringSeries recurrenceDetached recurrenceLabel')
       .sort({ startAt: 1 }).limit(80).lean()
   ])
   const family = await Family.findById(familyId)
@@ -230,7 +233,7 @@ export async function chat({ body, familyId, familyName, userId, memberRole, gen
   if (reply.intent === 'reply') return { message: reply.message, suggestions: reply.suggestions }
   if (reply.intent === 'search') {
     const results = await Task.find(searchFilter(reply.search || {}, familyId))
-      .select('title recipient startAt endAt location category needsTransit status').sort({ startAt: 1 }).limit(11).lean()
+      .select('title recipient startAt endAt location category needsTransit status recurringSeries recurrenceDetached recurrenceLabel').sort({ startAt: 1 }).limit(11).lean()
     return { message: results.length ? 'Here are the matching tasks. Choose one if you want to make changes.' : 'I couldn’t find matching tasks. Try a different name, keyword or date.',
       tasks: results.slice(0, 10).map(task => taskSummary(task, recipients)), hasMore: results.length > 10, suggestions: [] }
   }
@@ -293,7 +296,9 @@ export async function confirm({ proposalId, familyId, userId, memberRole }) {
     } else if (proposal.action === 'delete') {
       if (+new Date(before.updatedAt) !== +new Date(proposal.expectedUpdatedAt)) throw assistantError(409, 'This task changed. Please prepare a new proposal.')
       const filter = { _id: before._id, family: familyId, updatedAt: new Date(proposal.expectedUpdatedAt), status: before.status, claimedBy: before.claimedBy ?? null }
-      const result = await Task.deleteOne(filter)
+      const result = before.recurringSeries
+        ? (await deleteRecurringOccurrence(before, proposal.expectedUpdatedAt), { deletedCount: 1 })
+        : await Task.deleteOne(filter)
       if (!result.deletedCount) throw assistantError(409, 'This task changed. Please prepare a new proposal.')
       syncInBackground(userId, id(before.claimedBy))
     } else task = proposal.action === 'create'
