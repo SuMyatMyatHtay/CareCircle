@@ -20,8 +20,7 @@ import { WORDS, TRIP_STEPS, extraUpdates } from '../utils/wording.js'
 import { startTask, getErrorMessage } from '../../my-tasks/services/myTasksApi.js'
 import { formatTime, recipientName } from '../../my-tasks/utils/formatters.js'
 import { useActiveFamily } from '../../../composables/useActiveFamily.js'
-import ConsultationNoteModal from '../../logs/components/ConsultationNoteModal.vue'
-import VisitNotes from '../../logs/components/VisitNotes.vue'
+import VisitNotesCard from '../../logs/components/VisitNotesCard.vue'
 import SavedToast from '../../logs/components/SavedToast.vue'
 
 const props = defineProps({
@@ -254,23 +253,8 @@ function startTrip() {
     })
 }
 
-// F (SeungHak): a pop-up, so the trip keeps sharing its location while the note is written
+// F (SeungHak): notes open in a pop-up, so the trip keeps sharing its location while one is written
 const noteRecipientId = computed(() => idOf(task.value?.recipient) || '')
-const isNoteOpen = ref(false)
-const visitNotes = ref(null)
-
-function addNote() {
-    if (!noteRecipientId.value) {
-        notice.value = 'Consultation notes are kept in a care recipient\'s log, and this task is not for a care recipient.'
-        return
-    }
-    isNoteOpen.value = true
-}
-
-function noteSaved(log) {
-    isNoteOpen.value = false
-    visitNotes.value?.add(log)
-}
 
 // Poll while the trip is active so the family sees new steps without reloading
 let timer = null
@@ -328,7 +312,17 @@ onUnmounted(stopPolling)
             :other-trips="otherTrips"
             @open-trip="openLiveTransit"
             @dismiss="notice = ''"
-        />
+        >
+            <template #notes>
+                <VisitNotesCard
+                    :family-id="familyId"
+                    :task-id="taskId"
+                    :recipient-id="noteRecipientId"
+                    :recipient-name="recipientName(task)"
+                    empty-text="Add what the doctor said, so the family doesn't need to ask."
+                />
+            </template>
+        </TransitMobile>
     </div>
 
     <!-- Laptops: Figma "Web wireframes" → 06 · Transit mode -->
@@ -537,25 +531,21 @@ onUnmounted(stopPolling)
                     </p>
 
                     <span class="push-down"></span>
-                    <section class="visit-notes-block">
-                        <h3>Notes from this visit</h3>
-                        <VisitNotes ref="visitNotes" :family-id="familyId" :task-id="taskId" empty-text="Add what the doctor said, so the family doesn't need to ask." />
-                    </section>
-                    <button type="button" class="btn-secondary wide" data-testid="transit-add-note" @click="addNote">Add consultation note</button>
-                    <ConsultationNoteModal
-                        v-if="isNoteOpen"
+                    <VisitNotesCard
+                        class="visit-notes-block"
                         :family-id="familyId"
+                        :task-id="taskId"
                         :recipient-id="noteRecipientId"
                         :recipient-name="recipientName(task)"
-                        :task-id="taskId"
-                        @close="isNoteOpen = false"
-                        @saved="noteSaved"
+                        empty-text="Add what the doctor said, so the family doesn't need to ask."
                     />
-                    <SavedToast />
                 </aside>
             </div>
         </template>
     </div>
+
+    <!-- Shared by both layouts -->
+    <SavedToast />
 </template>
 
 <style scoped>
@@ -1135,8 +1125,7 @@ h3 {
     color: var(--theme-muted, #6b7280);
 }
 
-.visit-notes-block h3 {
-    margin: 0 0 8px;
+.visit-notes-block :deep(.visit-notes-title) {
     font-size: 14px;
     font-weight: 800;
 }

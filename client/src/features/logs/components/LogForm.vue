@@ -322,6 +322,8 @@ defineExpose({ reset })
 
 <style scoped>
 .log-form {
+    /* Lay the fields out by the form's own width, so it also fits a pop-up or a side column */
+    container-type: inline-size;
     padding: 18px 20px;
     background: var(--theme-panel, white);
     border: 1.5px solid var(--theme-accent-border, #B5DDC0);
@@ -633,6 +635,44 @@ defineExpose({ reset })
 .submit-button:disabled,
 .cancel-button:disabled {
     opacity: 0.6;
+}
+
+@container (max-width: 560px) {
+    .extra-fields {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .extra-field:last-child {
+        grid-column: 1 / -1;
+    }
+
+    .medication-row {
+        grid-template-columns: auto 1fr auto;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--theme-warning-border, #FBE6B5);
+    }
+
+    .medication-row .med-name,
+    .medication-row .med-change,
+    .medication-row .med-details {
+        grid-column: 2;
+    }
+
+    .medication-row .remove-med {
+        grid-column: 3;
+        grid-row: 1;
+    }
+}
+
+@container (max-width: 360px) {
+    .extra-fields {
+        grid-template-columns: 1fr;
+    }
+
+    .form-footer .submit-button {
+        flex: 1;
+        justify-content: center;
+    }
 }
 
 @media (max-width: 767px) {

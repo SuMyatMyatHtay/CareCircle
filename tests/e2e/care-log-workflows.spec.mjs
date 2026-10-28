@@ -180,8 +180,7 @@ test('a transcribed voice note is added to the text and saved as voice input', a
   expect((await saved.json()).log).toMatchObject({ inputMethod: 'voice', content: 'Morning update: Grandpa walked to the park today.' })
 })
 
-test('"Add consultation note" on a task opens a pop-up and saves the note to that visit', async ({ page, isMobile }) => {
-  test.skip(isMobile, 'The phone task page has no notes card yet')
+test('"Add consultation note" on a task opens a pop-up and saves the note to that visit', async ({ page }) => {
   await login(page)
   const taskPage = `/families/${ids.family}/tasks/${ids.task}`
   await page.goto(taskPage)
@@ -211,9 +210,13 @@ test('"Add consultation note" on a task opens a pop-up and saves the note to tha
   await newNote.getByTestId('log-translate-zh').click()
   await expect(newNote.locator('.translation')).toBeVisible()
 
+  // Editing opens a pop-up, so the narrow column never squeezes the form
   await newNote.getByRole('button', { name: 'Edit note', exact: true }).click()
-  await visitNotes.locator(`#log-content-${log._id}`).fill('Doctor says the tablets are working. Review in 2 weeks.')
-  await visitNotes.getByRole('button', { name: 'Save changes', exact: true }).click()
+  const editDialog = page.getByRole('dialog', { name: 'Edit note' })
+  await expect(editDialog.getByLabel(/Doctor/)).toBeVisible()
+  await editDialog.locator(`#log-content-${log._id}`).fill('Doctor says the tablets are working. Review in 2 weeks.')
+  await editDialog.getByRole('button', { name: 'Save changes', exact: true }).click()
+  await expect(editDialog).toHaveCount(0)
   await expect(newNote).toContainText('Review in 2 weeks.')
 
   await page.goto(logPage)
