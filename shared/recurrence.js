@@ -3,6 +3,20 @@ const DAY = 86400000, OFFSET = 8 * 3600000
 export const MAX_SESSIONS = 500
 const fail = message => { throw Object.assign(new Error(message), { status: 400 }) }
 export const sgDay = value => new Date(+new Date(value) + OFFSET).toISOString().slice(0, 10)
+// Pick the next selected weekday using the same Monday-first Singapore calendar
+// as generation. A calendar-selected date is a lower bound, not an extra session.
+export function nextWeeklyDate(anchor, time, weekdays, now = new Date()) {
+  const today = sgDay(now), from = anchor > today ? anchor : today
+  if (!weekdays?.length) return from
+  for (let offset = 0; offset <= 7; offset++) {
+    const day = new Date(Date.parse(from) + offset * DAY).toISOString().slice(0, 10)
+    const weekday = (new Date(`${day}T12:00:00+08:00`).getUTCDay() + 6) % 7
+    if (!weekdays.includes(weekday)) continue
+    if (time && +new Date(`${day}T${time}:00+08:00`) <= +now) continue
+    return day
+  }
+  return from
+}
 export function parseRecurrence(input, startAt) {
   if (input == null || input.frequency === 'none') return null
   if (typeof input !== 'object' || Array.isArray(input)) fail('Repeat settings must be an object')

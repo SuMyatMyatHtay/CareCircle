@@ -10,6 +10,7 @@ defineProps({
     emptyMessage: { type: String, default: 'No notes yet. Add the first update above.' },
     canChange: { type: Function, default: () => false },
     translate: { type: Function, default: null },
+    compact: { type: Boolean, default: false },
     hasMore: { type: Boolean, default: false },
     isLoadingMore: { type: Boolean, default: false },
     editingId: { type: String, default: '' },
@@ -38,10 +39,13 @@ const emit = defineEmits(['retry', 'edit', 'delete', 'load-more', 'save-edit', '
         <p>{{ emptyMessage }}</p>
     </div>
 
-    <div v-else class="log-list" data-testid="log-list">
-        <template v-for="log in logs" :key="log._id">
+    <!-- New and deleted notes animate (motion.css care-list). TransitionGroup needs the key
+         on each real element, so it sits on LogForm / LogCard rather than the template. -->
+    <TransitionGroup v-else name="care-list" tag="div" class="log-list" data-testid="log-list">
+        <template v-for="log in logs">
             <LogForm
                 v-if="log._id === editingId"
+                :key="log._id"
                 :initial-log="log"
                 :is-saving="isSavingEdit"
                 :error-message="editError"
@@ -50,9 +54,11 @@ const emit = defineEmits(['retry', 'edit', 'delete', 'load-more', 'save-edit', '
             />
             <LogCard
                 v-else
+                :key="log._id"
                 :log="log"
                 :can-change="canChange(log)"
                 :translate="translate"
+                :compact="compact"
                 @edit="emit('edit', $event)"
                 @delete="emit('delete', $event)"
             />
@@ -60,6 +66,7 @@ const emit = defineEmits(['retry', 'edit', 'delete', 'load-more', 'save-edit', '
 
         <button
             v-if="hasMore"
+            key="load-more"
             type="button"
             class="load-more"
             :disabled="isLoadingMore"
@@ -68,11 +75,12 @@ const emit = defineEmits(['retry', 'edit', 'delete', 'load-more', 'save-edit', '
             <span v-if="isLoadingMore" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
             {{ isLoadingMore ? 'Loading...' : 'Load older notes' }}
         </button>
-    </div>
+    </TransitionGroup>
 </template>
 
 <style scoped>
 .log-list {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 12px;

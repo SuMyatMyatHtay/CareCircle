@@ -36,8 +36,8 @@ const recipientName = computed(() => displayName(selectedRecipient.value))
 
 // ---- Preview ----
 const startDate = computed(() => form.startAt.value)
-const previewWeekday = computed(() => dateLabel(form.date.value).split(' ')[0].toUpperCase())
-const previewDay = computed(() => Number(form.date.value.split('-')[2]))
+const previewWeekday = computed(() => dateLabel(form.scheduledDate.value).split(' ')[0].toUpperCase())
+const previewDay = computed(() => Number(form.scheduledDate.value.split('-')[2]))
 const previewTime = computed(() => {
     if (!startDate.value) return ''
     return form.endAt.value ? `${timeLabel(startDate.value)}–${timeLabel(form.endAt.value)}` : timeLabel(startDate.value)
@@ -51,7 +51,7 @@ const categoryLabel = computed(() => TASK_CATEGORIES.find((c) => c.value === for
 const telegramText = computed(() => {
     const what = form.title.value.trim() || 'a task'
     const forWhom = recipientName.value ? `${recipientName.value}'s ${what.charAt(0).toLowerCase()}${what.slice(1)}` : what
-    const when = [dateLabel(form.date.value), startDate.value ? timeLabel(startDate.value) : ''].filter(Boolean).join(' ')
+    const when = [dateLabel(form.scheduledDate.value), startDate.value ? timeLabel(startDate.value) : ''].filter(Boolean).join(' ')
     const transit = form.needsTransit.value ? ' Needs someone to take them there.' : ''
     return `New task: ${forWhom}, ${when}.${transit} Who can take it?`
 })
@@ -61,7 +61,7 @@ const hasFacts = computed(() => careFacts(selectedRecipient.value).length > 0)
 // One line for the sticky footer
 const summary = computed(() => {
     if (!form.canSubmit.value) return form.missingMessage.value
-    return [form.title.value.trim(), recipientName.value || 'Household', `${dateLabel(form.date.value)} ${previewTime.value}`]
+    return [form.title.value.trim(), recipientName.value || 'Household', `${dateLabel(form.scheduledDate.value)} ${previewTime.value}`]
         .join(' · ')
 })
 
@@ -122,10 +122,11 @@ watch(selectedFamilyId, (newId, oldId) => {
             <section class="step-card" aria-labelledby="step-2">
                 <h2 id="step-2"><span class="step-number">2</span> When and where</h2>
                 <TaskWhenFields v-model:date="form.date.value" v-model:start-time="form.startTime.value"
+                    :weekly="form.isWeekly.value" :first-date="form.scheduledDate.value"
                     v-model:end-time="form.endTime.value" :start-error="form.fieldError('startAt')"
                     :end-error="form.fieldError('endAt') || form.errors.value.endAt" />
 
-                <TaskRepeatFields v-model="form.recurrence.value" :date="form.date.value" :preview="form.repeatPreview.value" />
+                <TaskRepeatFields v-model="form.recurrence.value" :date="form.scheduledDate.value" :preview="form.repeatPreview.value" />
                 <TaskPlacePicker v-model="form.location.value" :suggestion="selectedRecipient?.preferredClinic"
                     :suggestion-label="selectedRecipient ? `${recipientName}'s preferred clinic` : ''"
                     :error="form.fieldError('location') || form.errors.value.location" />

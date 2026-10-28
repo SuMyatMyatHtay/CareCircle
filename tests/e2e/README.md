@@ -1,5 +1,10 @@
 # End-to-end tests
 
+Recurring workflows are in `recurring-workflows.spec.mjs`: form creation,
+whole-series claim, one-day handover, cancellation and next-four claims. They run
+on both desktop/mobile projects using the local replica-set test database.
+See [current setup and verification](../../docs/TESTING-RECURRING.md).
+
 Run `npm run test:e2e` from the repository root. Playwright starts the real Vue
 app and Express API, with a fresh local MongoDB process and test-only accounts.
 It never runs `server/seed.js`, loads the server's `.env`, or uses a shared DB.
@@ -7,9 +12,14 @@ It never runs `server/seed.js`, loads the server's `.env`, or uses a shared DB.
 The same workflows run in desktop Chromium and a 390px mobile Chromium context:
 login/logout, language saving, global dark mode, recipient create/edit/archive,
 task creation/claim and family isolation, member roles, invite regeneration,
-care-log translation/cache, and expansion of multiple live trips.
+care-log translation/cache, care-log posting/filtering/editing/deleting, member
+permissions and voice input, consultation notes added from a task, task editing,
+the family Calendar (tasks and follow-up appointments, filters, months), and
+expansion of multiple live trips.
 Application API responses are real. Azure alone uses a controlled provider double
 in the test server; no live translation credential or paid request is needed.
+The voice-input success case replaces only the `/integrations/transcribe` reply in
+the browser, because Groq is paid; the no-key case uses the real 503 reply.
 The language case gates a request to observe its pending
 state before allowing the real request through. Decorative Google fonts are blocked.
 

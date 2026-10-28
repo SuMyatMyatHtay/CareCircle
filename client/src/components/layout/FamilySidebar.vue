@@ -25,6 +25,9 @@ const props = defineProps({
     settingsPath: { type: String, default: '/settings' }
 })
 
+// Dress-up and Avatar studio are opened from My profile, so they count as being there
+const isProfilePage = computed(() => !props.preview && ['profile', 'dress-up', 'avatar-studio'].includes(route.name))
+
 const emit = defineEmits(['select-family', 'navigate', 'collapse', 'open-recipient'])
 
 const showSwitcher = ref(false)
@@ -181,7 +184,11 @@ async function copyInviteCode(inviteCode) {
             My tasks <span class="coming-tag">Soon</span>
             </div>
 
-            <div class="nav-item unavailable">
+            <RouterLink v-if="!preview" to="/calendar" class="nav-item" active-class="active" @click="emit('navigate')">
+            <i class="bi bi-calendar3" aria-hidden="true"></i>
+            Calendar
+            </RouterLink>
+            <div v-else class="nav-item unavailable">
             <i class="bi bi-calendar3"></i>
             Calendar <span class="coming-tag">Soon</span>
             </div>
@@ -218,10 +225,12 @@ async function copyInviteCode(inviteCode) {
                 <i class="bi bi-gear"></i>
                 Family settings
             </RouterLink>
-
+            <!-- The name row is the link to My profile, highlighted like a nav item when you're there -->
             <RouterLink
                 :to="preview ? settingsPath : '/profile'"
-                class="profile-row text-decoration-none text-reset"
+                class="profile-row text-decoration-none"
+                :class="{ active: isProfilePage }"
+                :aria-current="isProfilePage ? 'page' : undefined"
                 @click="emit('navigate')"
                 >
                 <CareAvatar :person="user" />

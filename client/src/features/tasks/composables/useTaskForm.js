@@ -3,6 +3,8 @@
 // NewTaskView (phones) both use this, so the two layouts always behave the same.
 //
 //   const form = useTaskForm({ recipientId: 'abc' })   // or {} for "anyone"
+//   const form = useTaskForm({ task })                 // edit: fields start from the task, submit saves it
+//   const form = useTaskForm({ date: '2026-10-30' })   // new task on a day picked in the Calendar
 //   form.title.value = 'Eye check-up'
 //   const task = await form.submit(familyId)          // null if it failed
 //
@@ -11,11 +13,11 @@
 //
 // Validation mirrors TaskModel.js so most problems are caught before posting.
 import { ref, computed, watch } from 'vue'
-import { createTask, getTaskErrorMessage } from '../services/tasksApi.js'
+import { createTask, updateTask, getTaskErrorMessage } from '../services/tasksApi.js'
 import { useTaskCache } from '../../../composables/useFamilyTasks.js'
 import { useQueryClient } from '@tanstack/vue-query'
 import { queryKeys } from '../../../services/queryClient.js'
-import { parseRecurrence, recurrenceDates, generationHorizon } from '../../../../../shared/recurrence.js'
+import { parseRecurrence, recurrenceDates, generationHorizon, nextWeeklyDate } from '../../../../../shared/recurrence.js'
 
 const TIME_ZONE = 'Asia/Singapore'
 // Singapore has no daylight saving, so the offset is always +08:00
@@ -62,6 +64,12 @@ export function timeLabel(date) {
         .replace(' ', '')
 }
 
+// Date -> "HH:mm" in Singapore time, for <input type="time">
+function timeInput(value) {
+    if (!value) return ''
+    return new Date(value).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: TIME_ZONE })
+}
+
 // Date + time typed in Singapore time -> Date (sent to the API as an ISO string)
 function combine(dateKey, time) {
     if (!dateKey || !time) return null
@@ -91,7 +99,7 @@ const SERVER_FIELDS = [
     [/needsTransit/i, 'needsTransit']
 ]
 
-export function useTaskForm({ recipientId = null, save = null } = {}) {
+export function useTaskForm({ recipientId = null, save = null, task = null, date: initialDate = null } = {}) {
     const { upsertTask } = useTaskCache()
     const queryClient = useQueryClient()
 
@@ -99,7 +107,7 @@ export function useTaskForm({ recipientId = null, save = null } = {}) {
     const recipient = ref(recipientId)       // recipient id, or null for "Household"
     const title = ref('')
     const category = ref('other')
-    const date = ref(todayKey())
+    const date = ref(initialDate || todayKey())
     const startTime = ref('')                // "HH:mm" from <input type="time">
     const endTime = ref('')
     const location = ref(null)               // { name, address, postal, lat?, lng? }
@@ -107,13 +115,32 @@ export function useTaskForm({ recipientId = null, save = null } = {}) {
     const description = ref('')
     const recurrence = ref({ frequency: 'none', interval: 1, end: { mode: 'never' } })
 
+    // Editing: start from the task as it is now
+    if (task) {
+        const idOf = (value) => (value && typeof value === 'object' ? value._id : value)
+        const place = task.location
+        recipient.value = idOf(task.recipient) || null
+        title.value = task.title || ''
+        category.value = task.category || 'other'
+        date.value = new Date(task.startAt).toLocaleDateString('en-CA', { timeZone: TIME_ZONE })
+        startTime.value = timeInput(task.startAt)
+        endTime.value = timeInput(task.endAt)
+        location.value = place && (place.name || place.address || place.postal) ? { ...place } : null
+        needsTransit.value = Boolean(location.value && task.needsTransit)
+        description.value = task.description || ''
+    }
+
     // Transit mode needs somewhere to go
     watch(location, (place) => {
         if (!place) needsTransit.value = false
     })
 
-    const startAt = computed(() => combine(date.value, startTime.value))
-    const endAt = computed(() => combine(date.value, endTime.value))
+    const isWeekly = computed(() => recurrence.value.frequency === 'weekly')
+    const scheduledDate = computed(() => isWeekly.value
+        ? nextWeeklyDate(date.value, startTime.value, recurrence.value.weekdays)
+        : date.value)
+    const startAt = computed(() => combine(scheduledDate.value, startTime.value))
+    const endAt = computed(() => combine(scheduledDate.value, endTime.value))
     const repeatPreview = computed(() => {
         if (recurrence.value.frequency === 'none' || !startAt.value) return { dates: [], error: '' }
         try {
@@ -153,12 +180,13 @@ export function useTaskForm({ recipientId = null, save = null } = {}) {
     const canSubmit = computed(() => Object.keys(errors.value).length === 0)
 
     // One line for the footer: what's still missing before you can post
+    const verb = task ? 'save' : 'post'
     const missingMessage = computed(() => {
         const missingTitle = Boolean(errors.value.title) && !title.value.trim()
         const missingStart = Boolean(errors.value.startAt)
-        if (missingTitle && missingStart) return 'Add what needs doing and a start time to post'
-        if (missingTitle) return 'Add what needs doing to post'
-        if (missingStart) return 'Add a start time to post'
+        if (missingTitle && missingStart) return `Add what needs doing and a start time to ${verb}`
+        if (missingTitle) return `Add what needs doing to ${verb}`
+        if (missingStart) return `Add a start time to ${verb}`
         return Object.values(errors.value)[0] || ''
     })
 
@@ -221,10 +249,12 @@ export function useTaskForm({ recipientId = null, save = null } = {}) {
         submitError.value = ''
         try {
             if (save) return await save(toPayload())
-            const task = await createTask(familyId, toPayload())
-            upsertTask(familyId, task)
-            if (task.recurringSeries) await queryClient.invalidateQueries({ queryKey: queryKeys.family(familyId) })
-            return task
+            const saved = task
+                ? await updateTask(familyId, task._id, toPayload())
+                : await createTask(familyId, toPayload())
+            upsertTask(familyId, saved)
+            if (saved.recurringSeries) await queryClient.invalidateQueries({ queryKey: queryKeys.family(familyId) })
+            return saved
         } catch (error) {
             applyServerErrors(error)
             return null
@@ -249,6 +279,8 @@ export function useTaskForm({ recipientId = null, save = null } = {}) {
         needsTransit,
         description,
         recurrence,
+        isWeekly,
+        scheduledDate,
         repeatPreview,
         postLabel: computed(() => recurrence.value.frequency === 'none' ? 'Post task' : `Post ${repeatPreview.value.dates.length} tasks`),
         startAt,

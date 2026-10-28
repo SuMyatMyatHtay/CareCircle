@@ -1,5 +1,9 @@
 # CareCircle testing
 
+For the current commands, recurring-task coverage, local replica-set setup and
+latest verification status, see [Running the tests](TESTING-RECURRING.md).
+The counts and verification dates below are historical.
+
 The Week 10 lectures distinguish function/unit tests, isolated component tests,
 integration between real components, and complete browser workflows. The tests
 here apply that structure to SangYoon's Family Home, Settings and recipient flows.

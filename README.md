@@ -322,14 +322,19 @@ npm run build
 | Command | Coverage |
 | --- | --- |
 | `npm run test:regression` | All Node regressions in `tests/unit/*.test.mjs` |
+| `npm run test:unit` | Alias for Node unit/regression tests |
+| `npm run test:support` | Test infrastructure isolation guards and fixture helpers |
 | `npm run test:client` | Vitest functions, components and page integration |
 | `npm run test:api` | Express/JWT/Mongoose against isolated real MongoDB |
+| `npm run test:integration` | Alias for API/database integration tests |
 | `npm run test:e2e` | Desktop/mobile Chromium workflows |
 | `npm run test:e2e:headed` | Browser workflows in visible windows |
 | `npm run test:all` | Node, frontend, API and browser suites in sequence |
 | `npm run test:watch --prefix client` | Frontend watch mode |
 
 Before browser tests, install Chromium using `npx playwright install chromium`. API/E2E tests may download a MongoDB binary on their first run. E2E reserves frontend port **5180**; its API and database use available local ports.
+
+Recurring-task API/E2E tests use a local replica set for transaction support. See [the current testing commands and setup](docs/TESTING-RECURRING.md) for focused commands, support helpers, prerequisites and verified/unverified results.
 
 The API/E2E harness generates a loopback `carecircle_test_*` database, validates isolation before resets, and does not load `server/.env` or run the shared seed script. External providers are disabled or doubled where appropriate. Tests cover family isolation, roles, sessions, claims/conflicts, overdue deadlines, unclaiming, recipient preservation, contributions, profile links, assistant confirmation, transit, calendar helpers and translation. Isolated tests do not prove live provider or deployment configuration.
 

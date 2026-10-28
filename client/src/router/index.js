@@ -24,6 +24,8 @@ import RecipientTasksView from '../features/recipients/views/RecipientTasksView.
 import RecipientProfileView from '../features/recipients/views/RecipientProfileView.vue'
 import RecipientNewView from '../features/recipients/views/RecipientNewView.vue'
 import NewTaskView from '../features/tasks/views/NewTaskView.vue'
+import CalendarView from '../features/calendar/views/CalendarView.vue'
+import SearchView from '../features/search/views/SearchView.vue'
 import { verifySession, clearUserSession } from '../features/auth/services/authApi.js'
 const routes = [
   {path:'/login',component:LoginView},
@@ -38,13 +40,16 @@ const routes = [
     {path:'family',redirect:'/home'},
     {path:'profile',name:'profile',component:ProfileView},
     {path:'profile/:userId',name:'public-profile',component:PublicProfileView},
-    {path:'dress-up',name:'dress-up',component:PetDressupView},
-    {path:'avatar-studio',name:'avatar-studio',component:AvatarStudioView},
+    {path:'dress-up',name:'dress-up',component:PetDressupView,meta:{search:false}},
+    {path:'avatar-studio',name:'avatar-studio',component:AvatarStudioView,meta:{search:false}},
     {path:'tasks/new',name:'task-new',component:NewTaskView},
     {path:'my-tasks',name:'my-tasks',component:MyTasksView},
     {path:'family-tasks',redirect:'/home'},
     {path:'contributions',name:'contributions',component:ContributionsView},
-    {path:'transit/:familyId/:taskId',name:'transit',component:TransitView,props:true},
+    {path:'calendar',name:'calendar',component:CalendarView},
+    // meta.search: false hides the search bar at the top of the page (AppLayout)
+    {path:'search',name:'search',component:SearchView,meta:{search:false}},
+    {path:'transit/:familyId/:taskId',name:'transit',component:TransitView,props:true,meta:{search:false}},
     {path:'families/:familyId/tasks/:taskId',name:'task-detail',component:TaskDetailView,props:true},
     {path:'recipients/new',name:'recipient-new',component:RecipientNewView},
     {path:'recipients/:recipientId',component:RecipientHubView,children:[

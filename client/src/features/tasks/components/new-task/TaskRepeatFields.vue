@@ -18,7 +18,15 @@ function toggleDay(day) {
   patch({ weekdays: current.includes(day) ? current.filter(value => value !== day) : [...current, day].sort() })
 }
 function end(mode) { patch({ end: { mode, ...(mode === 'after' ? { count: 4 } : {}), ...(mode === 'on' ? { until: props.date } : {}) } }) }
+const monthlyDay = computed(() => {
+  const day = Number(props.date?.slice(8, 10))
+  if (!day) return ''
+  const suffix = day >= 11 && day <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[day % 10] || 'th')
+  return `${day}${suffix}`
+})
+const monthlySchedule = computed(() => `On the ${monthlyDay.value} ${rule.value.interval > 1 ? `every ${rule.value.interval} months` : 'of every month'}`)
 const summary = computed(() => {
+  if (rule.value.frequency === 'monthly') return monthlySchedule.value
   if (rule.value.frequency === 'none' || !props.preview.dates.length) return ''
   return recurrenceLabel({ ...rule.value, weekdays: rule.value.weekdays || [] })
 })
@@ -30,12 +38,17 @@ const summary = computed(() => {
     <template v-if="rule.frequency !== 'none'">
       <div v-if="choice === 'custom'" class="repeat-custom"><label :for="`${uid}-interval`">Every</label><input :id="`${uid}-interval`" type="number" min="1" max="365" :value="rule.interval" @input="patch({ interval: Number($event.target.value) })"><select aria-label="Repeat interval unit" :value="rule.frequency" @change="patch({ frequency: $event.target.value })"><option value="daily">days</option><option value="weekly">weeks</option><option value="monthly">months</option></select></div>
       <div v-if="rule.frequency === 'weekly'" class="repeat-section"><span class="task-sublabel">On</span><div class="repeat-choices"><button v-for="(day, index) in days" :key="day" type="button" :aria-label="day" :aria-pressed="rule.weekdays?.includes(index) || false" :class="{ selected: rule.weekdays?.includes(index) }" @click="toggleDay(index)">{{ day }}</button></div></div>
+      <div v-if="rule.frequency === 'monthly'" class="repeat-summary" aria-live="polite">
+        <strong>{{ monthlySchedule }}</strong>
+        <small>First session: {{ new Date(`${date}T12:00:00+08:00`).toLocaleDateString('en-SG', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Singapore' }) }}. Change the date above to choose a different day of the month.</small>
+        <small v-if="Number(date?.slice(8, 10)) > 28">Months without a {{ monthlyDay }} are skipped; the task does not move to the last day of the month.</small>
+      </div>
       <div class="repeat-section"><span class="task-sublabel">Ends</span><div class="repeat-choices"><button v-for="option in [{ key: 'never', label: 'Never' }, { key: 'on', label: 'On a date' }, { key: 'after', label: 'After a number of times' }]" :key="option.key" type="button" :aria-pressed="rule.end?.mode === option.key" :class="{ selected: rule.end?.mode === option.key }" @click="end(option.key)">{{ option.label }}</button></div>
         <label v-if="rule.end?.mode === 'on'" class="repeat-end">Last date <input type="date" :min="date" :value="rule.end.until" @input="patch({ end: { mode: 'on', until: $event.target.value } })"></label>
         <label v-if="rule.end?.mode === 'after'" class="repeat-end">Sessions <input type="number" min="1" max="500" :value="rule.end.count" @input="patch({ end: { mode: 'after', count: Number($event.target.value) } })"></label>
       </div>
       <p v-if="preview.error" class="task-field-error" role="alert">{{ preview.error }}</p>
-      <div v-else class="repeat-summary" aria-live="polite"><strong>{{ summary || 'Choose a start time to preview' }}</strong><small v-if="preview.dates.length">{{ preview.dates.length }} sessions{{ rule.end?.mode === 'never' ? ' in the initial four-week window; more are created as the window moves forward.' : '.' }} Claiming the series covers upcoming dates. A released date can be taken by someone else for that day only.</small><small v-if="rule.frequency === 'monthly'">Months without the selected day are skipped.</small></div>
+      <div v-else-if="rule.frequency !== 'monthly'" class="repeat-summary" aria-live="polite"><strong>{{ summary || 'Choose a start time to preview' }}</strong><small v-if="preview.dates.length">First session: {{ new Date(preview.dates[0].startAt).toLocaleDateString('en-SG', { weekday: 'long', day: 'numeric', month: 'short', timeZone: 'Asia/Singapore' }) }}. {{ preview.dates.length }} sessions{{ rule.end?.mode === 'never' ? ' in the initial four-week window; more are created as the window moves forward.' : '.' }} Claiming the series covers upcoming dates. A released date can be taken by someone else for that day only.</small></div>
     </template>
   </fieldset>
 </template>

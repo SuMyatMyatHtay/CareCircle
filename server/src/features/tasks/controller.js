@@ -202,7 +202,8 @@ const ACTIONS = {
         allowed: (task, userId) => isClaimer(task, userId),
         forbidden: 'Only the person who claimed this task can start it',
         conflict: (task) => `Task is ${task.status} and cannot be started`,
-        set: () => ({ status: TASK_STATUS.IN_PROGRESS })
+        set: () => ({ status: TASK_STATUS.IN_PROGRESS }),
+        event: EVENTS.TASK_STARTED
     },
     complete: {
         from: [TASK_STATUS.CLAIMED, TASK_STATUS.IN_PROGRESS],
@@ -445,7 +446,7 @@ export async function updateFamilyTask({ body, familyId, taskId, userId, memberR
     }
 
     const populated = await Task.getPopulatedTaskById(updated._id)
-    announce('task.updated', populated)
+    await announce(EVENTS.TASK_UPDATED, populated)
     return populated
 }
 
@@ -462,6 +463,7 @@ export async function deleteTask(req, res, next) {
             throw httpError(409, `Task is ${task.status} and cannot be deleted. Cancel it instead.`)
         }
 
+        const populated = await Task.getPopulatedTaskById(task._id)
         const result = task.recurringSeries
             ? (await deleteRecurringOccurrence(task), { deletedCount: 1 })
             : await Task.deleteDeletableTask(req.family._id, task._id)
@@ -469,7 +471,7 @@ export async function deleteTask(req, res, next) {
             throw httpError(409, 'Task was changed by someone else. Refresh and try again.')
         }
 
-        announce('task.deleted', { taskId: task._id.toString() })
+        await announce(EVENTS.TASK_DELETED, populated)
         return res.json({ message: 'Task deleted', taskId: task._id.toString() })
     } catch (error) {
         return handleError(error, res, next)

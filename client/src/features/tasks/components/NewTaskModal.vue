@@ -3,11 +3,16 @@
 // New task pop-up for md and up (Figma 09 / 09b). Phones get NewTaskView instead.
 // Pass a recipient to open it pre-filled from their hub ("New task for Grandpa").
 //   <NewTaskModal :recipient="recipient" @created="onCreated" @close="open = false" />
+// Pass a date to start on that day (a day clicked in the Calendar):
+//   <NewTaskModal date="2026-10-30" @created="onCreated" @close="open = false" />
+// Pass a task to edit it instead ("Edit" on Task detail):
+//   <NewTaskModal :task="task" :family-id="familyId" @saved="onSaved" @close="open = false" />
 // The /preview page passes save so posting goes to its sample data instead of the API.
 import './new-task/newTask.css'
 import { ref, computed, onMounted, onUnmounted, useId } from 'vue'
 import { useFamilyWorkspace } from '../../family/composables/useFamilyWorkspace.js'
 import { useTaskForm } from '../composables/useTaskForm.js'
+import { useAnimatedClose } from '../../../composables/useAnimatedClose.js'
 import { displayName, initials } from '../../recipients/recipientLabels.js'
 import TaskPersonPicker from './new-task/TaskPersonPicker.vue'
 import TaskCategoryPicker from './new-task/TaskCategoryPicker.vue'
@@ -20,15 +25,22 @@ import { careFacts } from './new-task/careFacts.js'
 
 const props = defineProps({
     recipient: { type: Object, default: null },
-    save: { type: Function, default: null }
+    save: { type: Function, default: null },
+    task: { type: Object, default: null },        // edit this task instead of posting a new one
+    date: { type: String, default: '' },          // "YYYY-MM-DD" to start a new task on
+    familyId: { type: String, default: '' }      // the task's family, when it isn't the selected one
 })
 
-const emit = defineEmits(['created', 'close'])
+const emit = defineEmits(['created', 'saved', 'close'])
+const isEdit = computed(() => Boolean(props.task))
+
+// Every way out (Escape, backdrop, close, Cancel, after posting) fades the dialog out first
+const { closing, requestClose, onAnimationEnd } = useAnimatedClose(() => emit('close'))
 
 const id = useId()
 // The workspace gives the real family, or the sample one on /preview
 const { selectedFamilyId, selectedFamily, recipients } = useFamilyWorkspace()
-const form = useTaskForm({ recipientId: props.recipient?._id ?? null, save: props.save })
+const form = useTaskForm({ recipientId: props.recipient?._id ?? null, save: props.save, task: props.task, date: props.date || null })
 
 // "Tan family" stays as it is; "Tan" becomes "Tan family"
 const familyLabel = computed(() => {
@@ -38,7 +50,7 @@ const familyLabel = computed(() => {
 
 // Opened from a hub: the person is fixed until "Change person" is clicked
 const changingPerson = ref(false)
-const isPrefilled = computed(() => Boolean(props.recipient) && !changingPerson.value)
+const isPrefilled = computed(() => Boolean(props.recipient) && !isEdit.value && !changingPerson.value)
 
 const selectedRecipient = computed(() =>
     recipients.value.find((r) => r._id === form.recipient.value) ||
@@ -48,10 +60,10 @@ const recipientName = computed(() => displayName(selectedRecipient.value))
 const showHelperStrip = computed(() => isPrefilled.value && careFacts(selectedRecipient.value).length > 0)
 
 async function post() {
-    const task = await form.submit(selectedFamilyId.value)
+    const task = await form.submit(props.familyId || selectedFamilyId.value)
     if (task) {
-        emit('created', task)
-        emit('close')
+        emit(isEdit.value ? 'saved' : 'created', task)
+        requestClose()
     }
 }
 
@@ -59,7 +71,7 @@ async function post() {
 const titleInput = ref(null)
 
 function onKeydown(event) {
-    if (event.key === 'Escape') emit('close')
+    if (event.key === 'Escape') requestClose()
 }
 
 onMounted(() => {
@@ -76,20 +88,28 @@ onUnmounted(() => {
 
 <template>
     <Teleport to="body">
-        <div class="modal-backdrop fade show"></div>
-        <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true"
-            :aria-labelledby="`${id}-title`" @click.self="emit('close')">
+        <!-- Parents mount this with v-if: it animates in with appear and out with `closing`.
+             Bootstrap's own .fade classes are left off so they don't fight these. -->
+        <Transition name="care-backdrop" appear>
+            <div class="modal-backdrop show" :class="{ 'care-backdrop-closing': closing }"></div>
+        </Transition>
+        <div class="modal show d-block" tabindex="-1" role="dialog" aria-modal="true"
+            :aria-labelledby="`${id}-title`" @click.self="requestClose">
             <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable new-task-dialog">
-                <form class="modal-content new-task-content" novalidate @submit.prevent="post">
+                <Transition name="care-pop" appear>
+                <form class="modal-content new-task-content" :class="{ 'care-pop-closing': closing }" novalidate
+                    @submit.prevent="post" @animationend="onAnimationEnd">
                     <header class="new-task-header">
                         <span v-if="isPrefilled" class="header-avatar" aria-hidden="true">
                             {{ initials(recipientName) }}
                         </span>
-                        <span v-else class="header-icon" aria-hidden="true"><i class="bi bi-plus-lg"></i></span>
+                        <span v-else class="header-icon" aria-hidden="true">
+                            <i class="bi" :class="isEdit ? 'bi-pencil' : 'bi-plus-lg'"></i>
+                        </span>
 
                         <div class="header-text">
                             <h2 :id="`${id}-title`">
-                                {{ isPrefilled ? `New task for ${recipientName}` : 'New task' }}
+                                {{ isEdit ? 'Edit task' : isPrefilled ? `New task for ${recipientName}` : 'New task' }}
                             </h2>
                             <p>
                                 <template v-if="isPrefilled">
@@ -98,11 +118,12 @@ onUnmounted(() => {
                                         Change person
                                     </button>
                                 </template>
+                                <template v-else-if="isEdit">Changes are shared with the {{ familyLabel }}.</template>
                                 <template v-else>Posted to the {{ familyLabel }}. Anyone can claim it.</template>
                             </p>
                         </div>
 
-                        <button type="button" class="close-button" aria-label="Close" @click="emit('close')">
+                        <button type="button" class="close-button" aria-label="Close" @click="requestClose">
                             <i class="bi bi-x-lg" aria-hidden="true"></i>
                         </button>
                     </header>
@@ -130,6 +151,7 @@ onUnmounted(() => {
 
                                 <!-- 09b: with the person fixed, "When?" moves up into this column -->
                                 <TaskWhenFields v-if="isPrefilled" v-model:date="form.date.value"
+                                    :weekly="form.isWeekly.value" :first-date="form.scheduledDate.value"
                                     v-model:start-time="form.startTime.value" v-model:end-time="form.endTime.value"
                                     :start-error="form.fieldError('startAt')"
                                     :end-error="form.fieldError('endAt') || form.errors.value.endAt" />
@@ -137,12 +159,13 @@ onUnmounted(() => {
 
                             <div class="col-md-6 d-flex flex-column gap-4">
                                 <TaskWhenFields v-if="!isPrefilled" v-model:date="form.date.value"
+                                    :weekly="form.isWeekly.value" :first-date="form.scheduledDate.value"
                                     v-model:start-time="form.startTime.value" v-model:end-time="form.endTime.value"
                                     :start-error="form.fieldError('startAt')"
                                     :end-error="form.fieldError('endAt') || form.errors.value.endAt" />
 
-                                <TaskRepeatFields v-if="!save" v-model="form.recurrence.value" :date="form.date.value" :preview="form.repeatPreview.value" />
-                                <p v-else class="care-muted">Sign in to a family to create repeating tasks.</p>
+                                <TaskRepeatFields v-if="!save && !isEdit" v-model="form.recurrence.value" :date="form.scheduledDate.value" :preview="form.repeatPreview.value" />
+                                <p v-else-if="save" class="care-muted">Sign in to a family to create repeating tasks.</p>
                                 <TaskPlacePicker v-model="form.location.value"
                                     :suggestion="selectedRecipient?.preferredClinic"
                                     :suggestion-label="selectedRecipient ? `${recipientName}'s preferred clinic` : ''"
@@ -176,16 +199,18 @@ onUnmounted(() => {
                         </p>
                         <p v-else class="footer-note" aria-live="polite">
                             <i class="bi bi-send" aria-hidden="true"></i>
-                            The {{ familyLabel }} Telegram group gets a message when you post
+                            The {{ familyLabel }} Telegram group gets a message when you {{ isEdit ? 'save' : 'post' }}
                         </p>
-                        <button type="button" class="btn btn-light footer-button" @click="emit('close')">Cancel</button>
+                        <button type="button" class="btn btn-light footer-button" @click="requestClose">Cancel</button>
                         <button type="submit" class="btn btn-primary footer-button post-button"
                             :disabled="!form.canSubmit.value || form.isSubmitting.value">
                             <span v-if="form.isSubmitting.value" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                            {{ form.isSubmitting.value ? 'Posting...' : form.postLabel.value }}
+                            <template v-if="isEdit">{{ form.isSubmitting.value ? 'Saving...' : 'Save changes' }}</template>
+                            <template v-else>{{ form.isSubmitting.value ? 'Posting...' : form.postLabel.value }}</template>
                         </button>
                     </footer>
                 </form>
+                </Transition>
             </div>
         </div>
     </Teleport>

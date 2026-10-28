@@ -1,10 +1,21 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { parseRecurrence, recurrenceDates, generationHorizon, sgDay } from '../../shared/recurrence.js'
+import { parseRecurrence, recurrenceDates, generationHorizon, sgDay, nextWeeklyDate } from '../../shared/recurrence.js'
 
 function dates(start, input, end = null, horizon = generationHorizon(start)) {
   return recurrenceDates(parseRecurrence(input, start), start, end, horizon)
 }
+test('weekly selection chooses the next actual weekday without choosing Today/Tomorrow', () => {
+  const now = new Date('2026-10-28T02:00:00Z') // Wednesday 10am Singapore
+  assert.equal(nextWeeklyDate('2026-10-28', '14:30', [0], now), '2026-11-02')
+  assert.equal(nextWeeklyDate('2026-10-28', '14:30', [2], now), '2026-10-28')
+  assert.equal(nextWeeklyDate('2026-10-28', '09:00', [2], now), '2026-11-04')
+  assert.equal(nextWeeklyDate('2026-10-28', '09:00', [2, 4], now), '2026-10-30')
+  assert.equal(nextWeeklyDate('2026-11-10', '14:30', [0], now), '2026-11-16')
+})
+test('weekly selection respects Singapore midnight and year boundaries', () => {
+  assert.equal(nextWeeklyDate('2026-12-31', '09:00', [4], new Date('2026-12-31T16:00:00Z')), '2027-01-01')
+})
 test('Tuesday/Friday recurrence includes the last date and preserves Singapore time/duration', () => {
   const result = dates('2026-11-03T06:30:00Z', { frequency: 'weekly', weekdays: [1, 4], end: { mode: 'on', until: '2026-12-18' } }, '2026-11-03T07:30:00Z')
   assert.equal(result.length, 14)

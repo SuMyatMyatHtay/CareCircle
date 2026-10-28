@@ -20,6 +20,9 @@ import { WORDS, TRIP_STEPS, extraUpdates } from '../utils/wording.js'
 import { startTask, getErrorMessage } from '../../my-tasks/services/myTasksApi.js'
 import { formatTime, recipientName } from '../../my-tasks/utils/formatters.js'
 import { useActiveFamily } from '../../../composables/useActiveFamily.js'
+import ConsultationNoteModal from '../../logs/components/ConsultationNoteModal.vue'
+import VisitNotes from '../../logs/components/VisitNotes.vue'
+import SavedToast from '../../logs/components/SavedToast.vue'
 
 const props = defineProps({
     familyId: { type: String, required: true },
@@ -251,9 +254,22 @@ function startTrip() {
     })
 }
 
+// F (SeungHak): a pop-up, so the trip keeps sharing its location while the note is written
+const noteRecipientId = computed(() => idOf(task.value?.recipient) || '')
+const isNoteOpen = ref(false)
+const visitNotes = ref(null)
+
 function addNote() {
-    // Care logs (F, SeungHak) will own this page: /recipients/:recipientId/log
-    notice.value = 'Consultation notes are part of Care Logs, which is coming soon.'
+    if (!noteRecipientId.value) {
+        notice.value = 'Consultation notes are kept in a care recipient\'s log, and this task is not for a care recipient.'
+        return
+    }
+    isNoteOpen.value = true
+}
+
+function noteSaved(log) {
+    isNoteOpen.value = false
+    visitNotes.value?.add(log)
 }
 
 // Poll while the trip is active so the family sees new steps without reloading
@@ -521,7 +537,21 @@ onUnmounted(stopPolling)
                     </p>
 
                     <span class="push-down"></span>
-                    <button type="button" class="btn-secondary wide" @click="addNote">Add consultation note</button>
+                    <section class="visit-notes-block">
+                        <h3>Notes from this visit</h3>
+                        <VisitNotes ref="visitNotes" :family-id="familyId" :task-id="taskId" empty-text="Add what the doctor said, so the family doesn't need to ask." />
+                    </section>
+                    <button type="button" class="btn-secondary wide" data-testid="transit-add-note" @click="addNote">Add consultation note</button>
+                    <ConsultationNoteModal
+                        v-if="isNoteOpen"
+                        :family-id="familyId"
+                        :recipient-id="noteRecipientId"
+                        :recipient-name="recipientName(task)"
+                        :task-id="taskId"
+                        @close="isNoteOpen = false"
+                        @saved="noteSaved"
+                    />
+                    <SavedToast />
                 </aside>
             </div>
         </template>
@@ -1103,6 +1133,12 @@ h3 {
     line-height: 16px;
     letter-spacing: 0.06px;
     color: var(--theme-muted, #6b7280);
+}
+
+.visit-notes-block h3 {
+    margin: 0 0 8px;
+    font-size: 14px;
+    font-weight: 800;
 }
 
 .push-down {

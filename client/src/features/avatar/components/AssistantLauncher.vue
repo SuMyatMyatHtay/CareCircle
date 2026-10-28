@@ -25,6 +25,8 @@ watch(() => props.user?.id, () => { opened.value = false })
 
 <template>
   <div class="assistant-widget" @keydown.esc.stop="opened && toggle()">
+    <!-- Grows out of the launcher button (transform-origin: bottom right) -->
+    <Transition name="care-grow">
     <section v-if="opened" id="carecircle-assistant-panel" class="assistant-panel" role="region" aria-label="CareCircle assistant">
       <header class="assistant-header">
         <AssistantAvatar :appearance="user.avatarAppearance" />
@@ -39,13 +41,16 @@ watch(() => props.user?.id, () => { opened.value = false })
           <p>{{ selectedFamilyId ? 'Find a task, plan an appointment or change your plans. Just tell me what you need.' : 'Join or select a family to start chatting.' }}</p>
           <div v-if="selectedFamilyId" class="assistant-starters"><button v-for="starter in starters" :key="starter" type="button" :disabled="busy" @click="chat.send(starter)">{{ starter }} <i class="bi bi-arrow-up-right" aria-hidden="true"></i></button></div>
         </div>
+        <!-- New messages fade up into the thread; ones already there don't replay when it opens -->
+        <TransitionGroup name="care-list" tag="div" class="assistant-messages">
         <div v-for="(message, index) in messages" :key="index" class="assistant-message" :class="`assistant-message--${message.role}`">
           <p class="assistant-bubble">{{ message.content }}</p>
           <div v-if="message.tasks?.length" class="assistant-results"><button v-for="task in message.tasks" :key="task.id" type="button" :disabled="busy" @click="chooseTask(task)"><strong>{{ task.title }}</strong><span>{{ task.recipientName }} &middot; {{ dateLabel(task.startAt) }}</span><small>{{ task.location?.name || 'No location' }} &middot; {{ task.status.replaceAll('_', ' ') }}</small></button><p v-if="message.hasMore" class="assistant-more">Showing the first 10 matches. Add a date or keyword to narrow the search.</p></div>
           <AssistantTaskPreview v-if="message.proposal" :proposal="message.proposal" :state="message.proposalState" :busy="busy" @confirm="chat.confirm(message)" @dismiss="chat.dismiss(message)" />
           <div v-if="index === messages.length - 1 && !busy && message.suggestions?.length" class="assistant-suggestions"><button v-for="suggestion in message.suggestions" :key="suggestion" type="button" @click="chat.send(suggestion)">{{ suggestion }}</button></div>
         </div>
-        <div v-if="busy" class="assistant-thinking" role="status"><span></span><span></span><span></span><span class="visually-hidden">Working on it...</span><button type="button" class="assistant-stop" @click="chat.stop">Stop waiting</button></div>
+        </TransitionGroup>
+        <div v-if="busy" class="assistant-thinking" role="status"><span class="assistant-dot"></span><span class="assistant-dot"></span><span class="assistant-dot"></span><span class="assistant-dots-static" aria-hidden="true">…</span><span class="visually-hidden">Working on it...</span><button type="button" class="assistant-stop" @click="chat.stop">Stop waiting</button></div>
         <div v-if="error" class="assistant-error" role="alert">{{ error }}<button v-if="retryable" type="button" :disabled="busy" @click="chat.retry">Try again</button></div>
       </div>
       <footer class="assistant-composer">
@@ -57,6 +62,7 @@ watch(() => props.user?.id, () => { opened.value = false })
         <details><summary>Powered by Gemini</summary><p>Your messages and relevant family task details are sent to Google Gemini. Chat history clears when you switch families or start a new chat.</p></details>
       </footer>
     </section>
+    </Transition>
     <button ref="launcher" type="button" class="assistant-launcher" :class="{ 'is-open': opened }" :aria-label="opened ? 'Minimize CareCircle assistant' : 'Open CareCircle assistant'" :aria-expanded="opened" :aria-controls="opened ? 'carecircle-assistant-panel' : undefined" @click="toggle">
       <AssistantAvatar v-if="!opened" :appearance="user.avatarAppearance" size="large" />
       <i v-else class="bi bi-chevron-down" aria-hidden="true"></i>
@@ -72,7 +78,7 @@ watch(() => props.user?.id, () => { opened.value = false })
 .assistant-launcher:focus-visible { outline: 3px solid #398663; outline-offset: 4px; }
 .assistant-launcher.is-open { width: 60px; height: 60px; font-size: 23px; }
 .assistant-sparkle { position: absolute; right: -2px; bottom: 0; width: 24px; height: 24px; display: grid; place-items: center; border: 2px solid var(--theme-panel, white); border-radius: 50%; background: #2d7d43; color: white; font-size: 12px; }
-.assistant-panel { display: flex; flex-direction: column; height: min(640px, calc(100dvh - 130px)); width: min(410px, calc(100vw - 32px)); max-height: calc(100dvh - 130px); overflow: auto; border: 1px solid var(--theme-border, #e4ece5); border-radius: 22px; background: var(--theme-panel, #fff); color: var(--theme-text, #21312c); box-shadow: 0 12px 50px #243a322b; }
+.assistant-panel { transform-origin: bottom right; display: flex; flex-direction: column; height: min(640px, calc(100dvh - 130px)); width: min(410px, calc(100vw - 32px)); max-height: calc(100dvh - 130px); overflow: auto; border: 1px solid var(--theme-border, #e4ece5); border-radius: 22px; background: var(--theme-panel, #fff); color: var(--theme-text, #21312c); box-shadow: 0 12px 50px #243a322b; }
 .assistant-header { flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 18px; border-bottom: 1px solid var(--theme-border, #e4ece5); }
 .assistant-header h2 { font-size: 16px; font-weight: 750; margin: 0 0 3px; }
 .assistant-header p { font-size: 12px; color: var(--theme-muted, #6d7b75); margin: 0; }
@@ -106,7 +112,13 @@ watch(() => props.user?.id, () => { opened.value = false })
 .assistant-composer details { margin-top: 5px; font-size: 10px; color: var(--theme-muted, #6d7b75); }
 .assistant-error { padding: 12px; border-radius: 12px; background: var(--theme-danger-soft, #fff0ed); color: var(--theme-danger, #a94442); font-size: 12px; }
 .assistant-error button { display: block; margin-top: 8px; border: 0; background: none; color: inherit; text-decoration: underline; padding: 0; }
-.assistant-thinking { display: flex; gap: 4px; padding: 14px; } .assistant-thinking > span:not(.visually-hidden) { width: 6px; height: 6px; border-radius: 50%; background: #6d9c79; }
+.assistant-thinking { display: flex; align-items: center; gap: 4px; padding: 14px; }
+.assistant-dot { width: 6px; height: 6px; border-radius: 50%; background: #6d9c79; animation: assistant-pulse 1.2s ease-in-out infinite; }
+.assistant-dot:nth-child(2) { animation-delay: .2s; } .assistant-dot:nth-child(3) { animation-delay: .4s; }
+.assistant-dots-static { display: none; color: #6d9c79; font-weight: 700; }
+@keyframes assistant-pulse { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+.assistant-messages { position: relative; }
+@media(prefers-reduced-motion: reduce) { .assistant-dot { display: none; } .assistant-dots-static { display: inline; } }
 button:disabled { opacity: .5; cursor: default; }
 .assistant-stop { margin-left: auto; border: 0; background: none; color: var(--theme-muted, #6d7b75); font-size: 11px; text-decoration: underline; }
 @media(max-width: 767px) { .assistant-panel { height: min(590px, calc(100dvh - 200px)); } }

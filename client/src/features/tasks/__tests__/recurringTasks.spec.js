@@ -17,6 +17,18 @@ const task = { _id: 'task', title: 'Therapy', recurringSeries: 'series', startAt
 afterEach(() => { closeRecurringClaim(); vi.clearAllMocks() })
 
 describe('recurring task controls', () => {
+  it('explains the selected monthly date before a time is entered and updates when it changes', async () => {
+    const Host = defineComponent({ components: { TaskRepeatFields }, setup: () => ({ date: ref('2026-10-29'), rule: ref({ frequency: 'none', interval: 1, end: { mode: 'never' } }) }), template: '<TaskRepeatFields v-model="rule" :date="date" />' })
+    const wrapper = mount(Host)
+    await button(wrapper, 'Every month').trigger('click')
+    expect(wrapper.text()).toContain('On the 29th of every month')
+    expect(wrapper.text()).toContain('29 October 2026')
+    expect(wrapper.text()).toContain('Months without a 29th are skipped')
+    wrapper.vm.date = '2026-10-15'; await nextTick()
+    expect(wrapper.text()).toContain('On the 15th of every month')
+    expect(wrapper.text()).not.toContain('Months without a 29th')
+    wrapper.unmount()
+  })
   it('offers a weekly schedule with selectable weekdays and end count', async () => {
     const Host = defineComponent({ components: { TaskRepeatFields }, setup: () => ({ rule: ref({ frequency: 'none', end: { mode: 'never' } }) }), template: '<TaskRepeatFields v-model="rule" date="2026-11-03" />' })
     const wrapper = mount(Host)

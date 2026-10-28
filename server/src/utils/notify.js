@@ -3,9 +3,9 @@
 //
 //   await notify(familyId, EVENTS.TASK_CLAIMED, populatedTask)
 //
-// It saves a row in `notifications`, then sends it. The row's status is:
+// It saves a row in `notifications` (shown in "Recent updates"), then sends it. The row's status is:
 //   sent     delivered to the family's Telegram group
-//   skipped  no group linked yet, or the family muted this event
+//   skipped  no group linked yet, the family muted this event, or the caller passed { send: false }
 //   failed   Telegram refused or timed out (the reason is in `error`)
 //
 // notify() never throws, so a Telegram outage can't make claiming a task fail.
@@ -123,12 +123,32 @@ function transitMilestone(session) {
 // A log (has .recipient) or a care recipient (the care profile was edited)
 const recipientOf = (payload) => (payload.recipient && typeof payload.recipient === 'object' ? payload.recipient : payload)
 
+// Care log events. Only the kind of note and who it is for: never what is in it.
+function logMessage(log, sentence) {
+  const recipient = recipientOf(log)
+  const kind = log.type === 'consultation' ? 'consultation note' : 'care note'
+  return { text: sentence(kind, recipientLabel(recipient) || 'a family member'), refType: 'careRecipient', refId: idOf(recipient) }
+}
+// Whoever edited or deleted it (set by the logs controller), else the author
+const editorName = (log) => shortName(log.changedBy?.name || log.author?.name) || 'Someone'
+const LOG_EVENTS = [EVENTS.LOG_CREATED, EVENTS.LOG_UPDATED, EVENTS.LOG_DELETED]
+
 const BUILDERS = {
   [EVENTS.TASK_CREATED]: (task) => {
     const when = whenLabel(task.startAt)
     const transit = task.needsTransit ? ' Needs someone to take them there.' : ''
     return { text: `New task: ${taskSubject(task)}${when ? `, ${when}` : ''}.${transit} Who can take it?`, ...taskRef(task) }
   },
+  [EVENTS.TASK_UPDATED]: (task) => {
+    const when = whenLabel(task.startAt)
+    return { text: `${shortName(task.createdBy?.name) || 'Someone'} updated: ${taskSubject(task)}${when ? `, ${when}` : ''}.`, ...taskRef(task) }
+  },
+  [EVENTS.TASK_DELETED]: (task) => ({
+    text: `${shortName(task.createdBy?.name) || 'Someone'} removed: ${taskSubject(task)}.`, ...taskRef(task),
+  }),
+  [EVENTS.TASK_STARTED]: (task) => ({
+    text: `${shortName(task.claimedBy?.name) || 'Someone'} started: ${taskSubject(task)}.`, ...taskRef(task),
+  }),
   [EVENTS.TASK_CLAIMED]: (task) => ({
     text: `${shortName(task.claimedBy?.name) || 'Someone'} claimed: ${taskSubject(task)}.`, ...taskRef(task),
   }),
@@ -141,11 +161,9 @@ const BUILDERS = {
   }),
   [EVENTS.TASK_CANCELLED]: (task) => ({ text: `Cancelled: ${taskSubject(task)}.`, ...taskRef(task) }),
   [EVENTS.TRANSIT_MILESTONE]: transitMilestone,
-  [EVENTS.LOG_CREATED]: (log) => {
-    const recipient = recipientOf(log)
-    const kind = log.type === 'consultation' ? 'consultation note' : 'care note' // never say what is in it
-    return { text: `New ${kind} for ${recipientLabel(recipient) || 'a family member'}.`, refType: 'careRecipient', refId: idOf(recipient) }
-  },
+  [EVENTS.LOG_CREATED]: (log) => logMessage(log, (kind, who) => `New ${kind} for ${who}.`),
+  [EVENTS.LOG_UPDATED]: (log) => logMessage(log, (kind, who) => `${editorName(log)} edited a ${kind} for ${who}.`),
+  [EVENTS.LOG_DELETED]: (log) => logMessage(log, (kind, who) => `${editorName(log)} deleted a ${kind} for ${who}.`),
   [EVENTS.MEDICATION_CHANGED]: (payload) => {
     const recipient = recipientOf(payload)
     return {
@@ -169,20 +187,22 @@ export function deepLink({ eventType, refType, refId, familyId }) {
   const base = (process.env.APP_URL || '').replace(/\/+$/, '')
   if (!base || !refId) return ''
   if (refType === 'task') {
+    if (eventType === EVENTS.TASK_DELETED) return '' // the task page no longer exists
     return eventType === EVENTS.TRANSIT_MILESTONE
       ? `${base}/transit/${familyId}/${refId}`
       : `${base}/families/${familyId}/tasks/${refId}`
   }
   if (refType === 'careRecipient') {
-    return eventType === EVENTS.LOG_CREATED ? `${base}/recipients/${refId}/log` : `${base}/recipients/${refId}`
+    return LOG_EVENTS.includes(eventType) ? `${base}/recipients/${refId}/log` : `${base}/recipients/${refId}`
   }
   return ''
 }
 
 // ---------- Notify ----------
-export async function notify(familyId, eventType, payload) {
+// { send: false } records the update for "Recent updates" without a Telegram message
+// (e.g. a care note posted with "Notify the family Telegram group" unticked).
+export async function notify(familyId, eventType, payload, { send = true } = {}) {
   try {
-    // task.updated / task.deleted are socket-only and never go to Telegram
     if (!EVENT_TYPES.includes(eventType)) return null
 
     const id = familyId?._id ?? familyId
@@ -195,7 +215,7 @@ export async function notify(familyId, eventType, payload) {
     if (!family) return null
 
     const chatId = family.telegram?.chatId
-    const skip = !chatId || !isEventEnabled(family.notifyOn, eventType)
+    const skip = !send || !chatId || !isEventEnabled(family.notifyOn, eventType)
 
     const record = await Notification.create({
       family: id,

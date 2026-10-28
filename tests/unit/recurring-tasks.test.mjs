@@ -157,3 +157,18 @@ test('stale edits and invalid series date moves roll back without partial change
   await assert.rejects(updateRecurringTasks(selected, { startAt: new Date(+selected.startAt + 86400000) }, 'all'), { status: 400 })
   assert.deepEqual(all(), before)
 })
+
+test('invalid claim scopes and departed users cannot partially claim a series', async () => {
+  const first = await create(), before = all().map(copy)
+  await assert.rejects(claim(first, helper, 'unsupported'), { status: 400 })
+  members.delete(helper)
+  await assert.rejects(claim(first), { status: 403 })
+  assert.deepEqual(all(), before)
+})
+test('one-date claim leaves future generation unassigned', async t => {
+  const first = await create(true); await claim(first, helper, 'one')
+  const total = all().length
+  t.mock.timers.tick(14 * 86400000); await ensureRecurringTasks(family)
+  assert.ok(all().slice(total).every(t => t.status === 'open' && !t.claimedBy))
+  assert.equal(all().filter(t => t.claimedBy === helper).length, 1)
+})

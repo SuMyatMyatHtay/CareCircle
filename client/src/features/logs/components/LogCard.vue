@@ -6,7 +6,9 @@ import { logTypeLabel, MEDICATION_CHANGE_LABELS, LANGUAGE_LABELS, languageLabel 
 const props = defineProps({
     log: { type: Object, required: true },
     canChange: { type: Boolean, default: false },
-    translate: { type: Function, default: null }
+    translate: { type: Function, default: null },
+    // Narrow columns (the task pages): icon-only buttons so they fit beside the name
+    compact: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['edit', 'delete'])
@@ -106,13 +108,18 @@ async function chooseLanguage(code) {
     }
 }
 
+const translateLabel = computed(() => {
+    if (translatingTo.value) return 'Translating...'
+    return shownLanguage.value ? `Showing ${languageLabel(shownLanguage.value)}. Show the original` : 'Translate'
+})
+
 function closeMenuOnFocusOut(event) {
     if (!event.currentTarget.contains(event.relatedTarget)) menuOpen.value = false
 }
 </script>
 
 <template>
-    <article class="log-card" :data-testid="`log-card-${log._id}`">
+    <article class="log-card" :class="{ 'is-compact': compact }" :data-testid="`log-card-${log._id}`">
         <header class="log-head">
             <span class="author-avatar" aria-hidden="true">{{ initials }}</span>
 
@@ -134,16 +141,20 @@ function closeMenuOnFocusOut(event) {
                         :aria-expanded="shownLanguage ? undefined : menuOpen"
                         :aria-pressed="shownLanguage ? true : undefined"
                         :disabled="Boolean(translatingTo)"
+                        :aria-label="compact ? translateLabel : undefined"
+                        :title="compact ? translateLabel : undefined"
                         data-testid="log-translate"
                         @click="onTranslateButton"
                     >
                         <span v-if="translatingTo" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
                         <i v-else class="bi bi-translate" aria-hidden="true"></i>
-                        <template v-if="translatingTo">Translating...</template>
-                        <template v-else-if="shownLanguage">
-                            <span class="toggle-verb">Showing</span> {{ languageLabel(shownLanguage) }}
-                        </template>
-                        <template v-else>Translate</template>
+                        <span v-if="!compact" class="toggle-text">
+                            <template v-if="translatingTo">Translating...</template>
+                            <template v-else-if="shownLanguage">
+                                <span class="toggle-verb">Showing</span> {{ languageLabel(shownLanguage) }}
+                            </template>
+                            <template v-else>Translate</template>
+                        </span>
                     </button>
 
                     <ul v-if="menuOpen" class="language-menu" role="menu" aria-label="Translate to">
@@ -438,6 +449,26 @@ function closeMenuOnFocusOut(event) {
     margin: 0;
     font-size: 15px;
     color: var(--theme-text, #2F2F2F);
+}
+
+/* Compact: name and badge on the first line, date under them, buttons top right */
+.log-card.is-compact .log-head {
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.log-card.is-compact .log-actions {
+    gap: 0;
+    margin: -4px -6px 0 0;
+}
+
+.log-card.is-compact .translate-toggle {
+    padding: 6px;
+    font-size: 15px;
+}
+
+.log-card.is-compact .log-when {
+    flex-basis: 100%;
 }
 
 @media (max-width: 575px) {
