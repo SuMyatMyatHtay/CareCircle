@@ -93,7 +93,7 @@ async function openAs(userId) {
     await router.isReady()
     const wrapper = mount({ template: '<RouterView />' }, {
         attachTo: document.body,
-        global: { plugins: [router], stubs: { OneMapTiles: true } }
+        global: { plugins: [router], stubs: { OneMapTiles: true, VisitNotesCard: true } } // notes (F) have their own tests
     })
     await flushPromises()
     return wrapper

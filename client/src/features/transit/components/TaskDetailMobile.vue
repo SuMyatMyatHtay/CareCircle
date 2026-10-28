@@ -183,6 +183,11 @@ watch(() => [props.task._id, props.task.status], loadSession, { immediate: true 
             <p>{{ task.description }}</p>
         </section>
 
+        <!-- F (SeungHak): "Notes from this visit" (consultation notes), filled in by TaskDetailView -->
+        <div v-if="$slots.notes" class="visit-notes">
+            <slot name="notes" />
+        </div>
+
         <p v-if="status === 'open' && overdue" role="status">Overdue · Claiming closed</p>
         <footer v-if="mainButton || canUnclaim || (isClaimer && ['claimed', 'in_progress'].includes(status))" class="footer">
             <button v-if="mainButton" type="button" class="btn-main" :disabled="isBusy" @click="emit(mainButton.event)">
@@ -433,6 +438,13 @@ h1 {
     margin: 6px 0 0;
     font-size: 15px;
     line-height: 21.75px;
+}
+
+.visit-notes {
+    padding: 14px 16px;
+    border: 1px solid var(--theme-border, #e4ece5);
+    border-radius: 18px;
+    background: var(--theme-panel, #fff);
 }
 
 .footer {

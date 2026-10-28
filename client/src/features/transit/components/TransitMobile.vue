@@ -208,6 +208,11 @@ function safelyHome() {
             </div>
         </template>
 
+        <!-- F (SeungHak): "Notes from this visit" (consultation notes), filled in by TransitView -->
+        <div v-if="$slots.notes && task" class="visit-notes body">
+            <slot name="notes" />
+        </div>
+
         <!-- Bottom: finish the trip -->
         <footer v-if="isActive && isCompanion" class="footer">
             <button type="button" class="btn-home" :disabled="isPosting" @click="safelyHome">
@@ -220,6 +225,13 @@ function safelyHome() {
 </template>
 
 <style scoped>
+.visit-notes {
+    padding: 14px 16px;
+    border: 1px solid var(--theme-border, #e4ece5);
+    border-radius: 18px;
+    background: var(--theme-panel, #fff);
+}
+
 /* Other family members on a trip right now */
 .also-live {
     display: flex;
