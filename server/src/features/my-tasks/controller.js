@@ -1,8 +1,9 @@
 // Owner: Chaithra (E)
 // GET /api/me/tasks: the logged-in user's claimed tasks across all their families.
-// Reads D's tasks collection (read-only).
+// Reads D's tasks collection and extends open-ended recurring schedules.
 import mongoose from 'mongoose'
 import Task from '../tasks/TaskModel.js'
+import { ensureRecurringTasks } from '../tasks/recurringService.js'
 import Family from '../families/Family.model.js'
 import { TASK_STATUSES } from '../../constants.js'
 import { syncInBackground } from '../calendar-sync/sync.js'
@@ -33,6 +34,7 @@ export async function getMyTasks(req, res, next) {
 
         // Only families the user still belongs to, so leaving a family hides its tasks
         const families = await Family.find({ 'members.userId': userId }).select('_id')
+        for (const family of families) await ensureRecurringTasks(family._id)
         const filter = {
             claimedBy: userId,
             family: { $in: families.map((f) => f._id) }

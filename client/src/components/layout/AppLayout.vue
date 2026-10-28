@@ -4,6 +4,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import AssistantLauncher from '../../features/avatar/components/AssistantLauncher.vue'
 import FamilySidebar from './FamilySidebar.vue'
+import RecurringClaimDialog from '../../features/tasks/components/RecurringClaimDialog.vue'
 import RecipientSummaryModal from '../../features/family/components/RecipientSummaryModal.vue'
 import FamilySearchBar from '../../features/search/components/FamilySearchBar.vue'
 import { provideFamilyWorkspace } from '../../features/family/composables/useFamilyWorkspace.js'
@@ -153,6 +154,7 @@ onUnmounted(() => {
             </div>
           </Transition>
         </RouterView>
+        <RecurringClaimDialog />
       </main>
       <AssistantLauncher v-if="!isPreview" :user="user" :inert="isMobile && sidebarOpen" />
       <RecipientSummaryModal v-if="selectedRecipient" :recipient="selectedRecipient" @close="selectedRecipient = null" />

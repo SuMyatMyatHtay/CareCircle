@@ -1,5 +1,10 @@
 # End-to-end tests
 
+Recurring workflows are in `recurring-workflows.spec.mjs`: form creation,
+whole-series claim, one-day handover, cancellation and next-four claims. They run
+on both desktop/mobile projects using the local replica-set test database.
+See [current setup and verification](../../docs/TESTING-RECURRING.md).
+
 Run `npm run test:e2e` from the repository root. Playwright starts the real Vue
 app and Express API, with a fresh local MongoDB process and test-only accounts.
 It never runs `server/seed.js`, loads the server's `.env`, or uses a shared DB.

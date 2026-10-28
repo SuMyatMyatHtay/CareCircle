@@ -11,6 +11,8 @@ import Log from '../../server/src/features/logs/CareLog.model.js'
 import Notification from '../../server/src/features/notifications/Notifications.model.js'
 import GoogleCalendarLink from '../../server/src/features/calendar-sync/GoogleCalendarLink.model.js'
 import { installTranslationProvider } from '../../server/test/support/translation-provider.js'
+import { chat as prepareAssistantAction } from '../../server/src/features/assistant/service.js'
+import TransitSession from '../../server/src/features/journeys/Journey.model.js'
 
 let database, server, base, tokens, translationProvider
 before(async () => {
@@ -319,4 +321,61 @@ describe('Family APIs with Express, authentication and a real isolated MongoDB',
     assert.equal(url.status, 200)
     assert.ok(!url.data.url.includes('test-secret'))
   })
+})
+
+// Model responses are doubled; proposals, authorization, task writes, notifications
+// and transit use the actual Express routes and isolated MongoDB.
+async function proposeAction(intent, user, assigneeId) {
+  return prepareAssistantAction({
+    body: { messages: [{ role: 'user', content: `${intent} task` }] },
+    familyId: ids.family, familyName: 'Tan family', userId: ids[user], memberRole: user === 'may' ? 'member' : 'admin',
+    generate: async () => ({ intent, taskId: ids.task, assigneeId, message: 'Review this action', suggestions: [] }),
+  })
+}
+
+it('assistant selection and incomplete edits produce clarifications with no write', async () => {
+  const selected = await request(`${family}/assistant/chat`, { method: 'POST', body: {
+    selectedTaskId: ids.task, selectTask: true, messages: [{ role: 'user', content: 'Selected task' }],
+  } })
+  assert.equal(selected.status, 200)
+  assert.match(selected.data.message, /Collect medicine/)
+  const clarification = await prepareAssistantAction({
+    body: { messages: [{ role: 'user', content: 'I want to update this task' }] },
+    familyId: ids.family, userId: ids.jasmine, memberRole: 'admin',
+    generate: async () => ({ intent: 'update', taskId: ids.task, message: 'Update', suggestions: [] }),
+  })
+  assert.equal(clarification.proposal, undefined)
+  assert.match(clarification.message, /What would you like to change/)
+  assert.equal((await Task.findById(ids.task)).title, 'Collect medicine')
+})
+
+it('confirmed assistant assignment, start and completion persist real transit and task state', async () => {
+  await Task.updateOne({ _id: ids.task }, { $set: { startAt: new Date(Date.now() + 3600000), needsTransit: true } })
+  const assignment = await proposeAction('assign', 'jasmine', ids.alex)
+  assert.equal((await Task.findById(ids.task)).status, 'open')
+  const assigned = await request(`${family}/assistant/proposals/${assignment.proposal.id}/confirm`, { method: 'POST', user: 'jasmine' })
+  assert.equal(assigned.status, 200, JSON.stringify(assigned.data))
+  assert.equal(String((await Task.findById(ids.task)).claimedBy), ids.alex)
+  const start = await proposeAction('start', 'alex')
+  assert.equal((await request(`${family}/assistant/proposals/${start.proposal.id}/confirm`, { method: 'POST' })).status, 200)
+  const transit = await TransitSession.findOne({ task: ids.task })
+  assert.equal(String(transit.companion), ids.alex)
+  assert.equal(transit.status, 'active')
+  const completion = await proposeAction('complete', 'alex')
+  const path = `${family}/assistant/proposals/${completion.proposal.id}/confirm`
+  assert.equal((await request(path, { method: 'POST' })).status, 200)
+  assert.equal((await request(path, { method: 'POST' })).status, 200)
+  assert.equal((await Task.findById(ids.task)).status, 'completed')
+  assert.equal((await TransitSession.findOne({ task: ids.task })).status, 'ended')
+  assert.equal(await TransitSession.countDocuments({ task: ids.task }), 1)
+})
+
+it('two separately confirmed assistant claims have exactly one winner in MongoDB', async () => {
+  await Task.updateOne({ _id: ids.task }, { $set: { startAt: new Date(Date.now() + 3600000) } })
+  const proposals = await Promise.all(['alex', 'may'].map(user => proposeAction('claim', user)))
+  const responses = await Promise.all(proposals.map((proposal, index) => request(
+    `${family}/assistant/proposals/${proposal.proposal.id}/confirm`, { method: 'POST', user: ['alex', 'may'][index] },
+  )))
+  assert.deepEqual(responses.map(response => response.status).sort(), [200, 409])
+  assert.equal((await Task.findById(ids.task)).status, 'claimed')
 })

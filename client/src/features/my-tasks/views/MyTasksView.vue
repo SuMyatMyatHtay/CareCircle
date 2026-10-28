@@ -121,7 +121,7 @@ function openTrip(task) {
 }
 
 async function runAction(task, action) {
-    if (action === 'give-back' && !window.confirm(`Give back "${task.title}"? It goes back to the family as available.`)) return
+    if (action === 'give-back' && !window.confirm(task.recurringSeries ? `Give back only this date of "${task.title}"? You keep all your other sessions. Someone else can claim this date only.` : `Give back "${task.title}"? It goes back to the family as available.`)) return
     if (action === 'complete' && !window.confirm(`Mark "${task.title}" as done?`)) return
 
     busyTaskId.value = task._id

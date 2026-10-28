@@ -17,6 +17,7 @@ import { displayName, initials } from '../../recipients/recipientLabels.js'
 import TaskPersonPicker from './new-task/TaskPersonPicker.vue'
 import TaskCategoryPicker from './new-task/TaskCategoryPicker.vue'
 import TaskWhenFields from './new-task/TaskWhenFields.vue'
+import TaskRepeatFields from './new-task/TaskRepeatFields.vue'
 import TaskPlacePicker from './new-task/TaskPlacePicker.vue'
 import TaskTransitToggle from './new-task/TaskTransitToggle.vue'
 import TaskCareFacts from './new-task/TaskCareFacts.vue'
@@ -150,6 +151,7 @@ onUnmounted(() => {
 
                                 <!-- 09b: with the person fixed, "When?" moves up into this column -->
                                 <TaskWhenFields v-if="isPrefilled" v-model:date="form.date.value"
+                                    :weekly="form.isWeekly.value" :first-date="form.scheduledDate.value"
                                     v-model:start-time="form.startTime.value" v-model:end-time="form.endTime.value"
                                     :start-error="form.fieldError('startAt')"
                                     :end-error="form.fieldError('endAt') || form.errors.value.endAt" />
@@ -157,10 +159,13 @@ onUnmounted(() => {
 
                             <div class="col-md-6 d-flex flex-column gap-4">
                                 <TaskWhenFields v-if="!isPrefilled" v-model:date="form.date.value"
+                                    :weekly="form.isWeekly.value" :first-date="form.scheduledDate.value"
                                     v-model:start-time="form.startTime.value" v-model:end-time="form.endTime.value"
                                     :start-error="form.fieldError('startAt')"
                                     :end-error="form.fieldError('endAt') || form.errors.value.endAt" />
 
+                                <TaskRepeatFields v-if="!save && !isEdit" v-model="form.recurrence.value" :date="form.scheduledDate.value" :preview="form.repeatPreview.value" />
+                                <p v-else-if="save" class="care-muted">Sign in to a family to create repeating tasks.</p>
                                 <TaskPlacePicker v-model="form.location.value"
                                     :suggestion="selectedRecipient?.preferredClinic"
                                     :suggestion-label="selectedRecipient ? `${recipientName}'s preferred clinic` : ''"
@@ -201,7 +206,7 @@ onUnmounted(() => {
                             :disabled="!form.canSubmit.value || form.isSubmitting.value">
                             <span v-if="form.isSubmitting.value" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
                             <template v-if="isEdit">{{ form.isSubmitting.value ? 'Saving...' : 'Save changes' }}</template>
-                            <template v-else>{{ form.isSubmitting.value ? 'Posting...' : 'Post task' }}</template>
+                            <template v-else>{{ form.isSubmitting.value ? 'Posting...' : form.postLabel.value }}</template>
                         </button>
                     </footer>
                 </form>

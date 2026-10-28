@@ -35,6 +35,17 @@ export async function createTask(familyId, task) {
     return response.data.task
 }
 
+export async function getRecurringSeries(familyId) {
+    const { data } = await http.get(`/families/${familyId}/tasks/recurring`, { headers: authHeaders() })
+    return data.series
+}
+export async function pauseRecurringSeries(familyId, seriesId, paused) {
+    await http.patch(`/families/${familyId}/tasks/recurring/${seriesId}`, { paused }, { headers: authHeaders() })
+}
+export async function editTask(familyId, taskId, changes) {
+    const { data } = await http.patch(`/families/${familyId}/tasks/${taskId}`, changes, { headers: authHeaders() })
+    return data.task
+}
 // Edit a task (creator only). Same fields as createTask; status and claimedBy are ignored.
 export async function updateTask(familyId, taskId, changes) {
     const response = await http.patch(

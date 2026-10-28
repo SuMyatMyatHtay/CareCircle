@@ -1,5 +1,6 @@
 // B composes existing C/D/E/F endpoints; it does not own their schemas.
 import { http } from '../../../services/http.js'
+import { askRecurringClaim } from '../../tasks/composables/recurringClaimDialog.js'
 
 export function authConfig(extra = {}) {
   const token = sessionStorage.getItem('token')
@@ -50,10 +51,12 @@ export async function listDashboardTasks(familyId, filters) {
   return data.tasks
 }
 
-export async function claimDashboardTask(familyId, taskId) {
+export async function claimDashboardTask(familyId, taskId, task) {
+  const scope = task?.recurringSeries ? await askRecurringClaim(task) : undefined
+  if (scope === null) return null
   const { data } = await http.post(
     `/families/${familyId}/tasks/${taskId}/claim`,
-    {},
+    scope ? { scope } : {},
     authConfig(),
   )
   return data.task

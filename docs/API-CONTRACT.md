@@ -92,7 +92,8 @@ Always filter queries by `family: req.family._id`. Never take a family ID, user 
 | GET | `/api/families/:familyId/members` | member | none | `{ members: [{ user: { _id, name, email, preferredLang, telegramUsername }, role, joinedAt }] }` | Code + local HTTP tests; live DB pending |
 | PATCH | `/api/families/:familyId/members/:userId` | admin | `{ role }` | `{ member }`. `409` if it would remove the last admin or access changed during the request. | Code + local HTTP tests; live DB pending |
 | DELETE | `/api/families/:familyId/members/:userId` | admin, or the user themself (leaving) | none | `204`. `409` if it would remove the last admin or access changed during the request. | Code + local HTTP tests; live DB pending |
-| PATCH | `/api/families/:familyId` | admin | `{ name }` | `{ family }` | Planned |
+
+Family names are set at creation and cannot be changed. There is no family-renaming endpoint.
 | POST | `/api/families/:familyId/invite-code` | admin | none | `{ inviteCode }` (10 hexadecimal characters; the old one stops working) | Code + local HTTP tests; live DB pending |
 | PATCH | `/api/users/me` | logged in | `{ name?, phone?, preferredLang?, telegramUsername? }` | `{ user }` | Planned |
 
@@ -142,7 +143,7 @@ Base: `/api/families/:familyId/tasks`. **Implemented.**
 | POST | `/:taskId/unclaim` | creator or claimer | none | claimed → open. Sends `task.unclaimed`. |
 | POST | `/:taskId/start` | claimer | none | claimed → in_progress, `{ task, transitSession }`. A transit session is created only when `needsTransit` is true. |
 | POST | `/:taskId/complete` | claimer | none | claimed or in_progress → completed. Ends any transit session. Sends `task.completed`. |
-| POST | `/:taskId/cancel` | creator or admin | none | open, claimed or in_progress → cancelled. Ends any transit session. Sends `task.cancelled`. |
+| POST | `/:taskId/cancel` | creator, claimer or admin | none | open, claimed or in_progress → cancelled. Ends any transit session. Sends `task.cancelled`. |
 
 **Task shape**
 
@@ -303,6 +304,51 @@ Optional: `GET /api/families/:familyId/calendar.ics` exports the tasks for Googl
 - **Reminders:** a scheduled job sends reminders for tasks starting soon.
 
 ---
+
+## Assistant task proposals
+
+All assistant routes require authentication and membership of `:familyId`.
+
+| Method | Path | Body | Response |
+| --- | --- | --- | --- |
+| POST | `/api/families/:familyId/assistant/chat` | `{ messages, selectedTaskId?, selectTask?, editField? }` | `{ message, suggestions, tasks?, proposal?, editField? }` |
+| POST | `/api/families/:familyId/assistant/proposals/:proposalId/confirm` | none | `{ task }`, `{ deleted, taskId }`, or `{ requiresSecondConfirmation, message }` |
+| POST | `/api/families/:familyId/assistant/proposals/:proposalId/cancel` | none | Dismisses a pending proposal without changing a task |
+
+Supported proposal actions: `create`, `update`, `claim`, `assign`, `unclaim`, `start`, `complete`, `cancel`, `delete`. All writes require confirmation. Deletion requires two confirmations. Confirmation accepts a proposal ID, never a replacement task payload.
+
+Claim acts for the signed-in person. Assign requires task-creator ownership and a current family-member assignee. Claim/assign require an open task before its start time. Start/complete require the current claimer. Assistant cancellation requires creator or claimer ownership; admin status alone does not qualify. Unclaim requires creator or claimer and claimed status. Update/delete remain creator-only. Confirmation rechecks current state and the original task version, returning a conflict for stale proposals. Status actions share the manual task/transit lifecycle.
+
+`selectedTaskId` explicitly anchors a follow-up to a family task. `selectTask: true` returns a clarification without a provider call. Change time/location follow-ups also ask for the new value directly. Empty model edits never create a proposal.
+
+## Recurring tasks
+
+These endpoints use the existing authenticated family membership middleware. Recurring writes require MongoDB Atlas or a replica set (transactions); standalone MongoDB returns `503` for those writes.
+
+`POST /api/families/:familyId/tasks` accepts the normal task fields plus an optional rule:
+
+```json
+{
+  "recurrence": {
+    "frequency": "weekly",
+    "interval": 1,
+    "weekdays": [1, 4],
+    "end": { "mode": "on", "until": "2026-12-18" }
+  }
+}
+```
+
+Frequencies: `daily`, `weekly`, `monthly`; interval is an integer 1–365. Weekdays use Monday=0 through Sunday=6. End modes: `never`, `on` with a Singapore `YYYY-MM-DD` date, or `after` with `count` 1–500. Finite end dates must be within five years and produce at most 500 sessions. Monthly schedules skip months without the selected day. Omitting recurrence or using `frequency: "none"` preserves ordinary task creation.
+
+Creation returns `{ task }`, the first occurrence, retaining the existing response shape. Refetch the family task list to retrieve every generated occurrence. Each has `recurringSeries`, `occurrenceIndex`, `originalStartAt`, `recurrenceLabel`, `recurrenceDetached` and `recurrencePaused`. Occurrence indexes are stable; deletions leave tombstones. An open-ended series extends four weeks ahead when the family task list, series list or My tasks is read.
+
+- `POST /:taskId/claim` accepts `{ "scope": "series" }` (default), `one`, or `next4`. Series claims reserve every attached open future occurrence and future generated sessions; next4 takes this and up to three later available attached dates. Limited claims detach those dates. Already assigned sessions are never overwritten.
+- `POST /:taskId/unclaim` releases only that occurrence and permanently detaches it. Any later claim of a detached occurrence is forced to `one`, regardless of supplied scope. Creator/claimer permissions and overdue restrictions still apply.
+- `PATCH /:taskId` accepts ordinary editable fields, optional `expectedUpdatedAt` and `scope`: `one` (default), `future`, or `all`. The creator can edit selected/upcoming attached sessions; started, completed, cancelled and independent sessions are preserved. Detached dates accept only `one`. A series-wide time change preserves occurrence dates; moving to another date requires `one`. Recurrence rule changes are not supported by this endpoint.
+- `GET /recurring` returns `{ series: [...] }` with template, rule, creator, usual helper and pause status.
+- `PATCH /recurring/:seriesId` accepts `{ "paused": true }` or `false`, creator only. Pause cancels attached future open/claimed sessions with a pause marker. Resume restores only those marked sessions and extends generation. Historical and detached sessions remain unchanged.
+
+Complete/start/cancel/delete apply to one occurrence. Assistant claim/assign defaults to the series; assistant updates apply to one occurrence. Existing event notifications remain event-triggered; this feature does not schedule Telegram reminders.
 
 ## Cross-module events
 

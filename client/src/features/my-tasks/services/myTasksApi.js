@@ -2,6 +2,7 @@
 // My Tasks: GET /api/me/tasks, plus D's start / unclaim / complete actions on a task.
 import { http } from '../../../services/http.js'
 import { queryClient, queryKeys } from '../../../services/queryClient.js'
+import { askRecurringClaim } from '../../tasks/composables/recurringClaimDialog.js'
 
 export function authHeaders() {
     const token = sessionStorage.getItem('token')
@@ -16,11 +17,11 @@ export async function getMyTasks(filters = {}) {
     return response.data.tasks
 }
 
-async function taskAction(familyId, taskId, action) {
+async function taskAction(familyId, taskId, action, body = null) {
     const token = sessionStorage.getItem('token')
     try {
         const response = await http.post(
-            `/families/${familyId}/tasks/${taskId}/${action}`, null, { headers: authHeaders() }
+            `/families/${familyId}/tasks/${taskId}/${action}`, body, { headers: authHeaders() }
         )
         if (token !== sessionStorage.getItem('token')) return response.data
         const task = response.data.task
@@ -28,6 +29,7 @@ async function taskAction(familyId, taskId, action) {
         if (token !== sessionStorage.getItem('token')) return response.data
         if (task) queryClient.setQueryData(queryKeys.tasks(familyId), old => old?.map(row => row._id === taskId ? task : row))
         await queryClient.invalidateQueries({ queryKey: queryKeys.tasks(familyId) })
+        if (task?.recurringSeries) await queryClient.invalidateQueries({ queryKey: queryKeys.family(familyId) })
         window.dispatchEvent(new CustomEvent('carecircle:task-updated', { detail: { familyId, taskId, task, action } }))
         return response.data
     } catch (error) {
@@ -41,7 +43,11 @@ async function taskAction(familyId, taskId, action) {
 export const startTask = (familyId, taskId) => taskAction(familyId, taskId, 'start')
 export const unclaimTask = (familyId, taskId) => taskAction(familyId, taskId, 'unclaim')
 export const completeTask = (familyId, taskId) => taskAction(familyId, taskId, 'complete')
-export const claimTask = (familyId, taskId) => taskAction(familyId, taskId, 'claim')
+export const claimTask = async (familyId, taskId, options = {}) => {
+    const scope = options.task?.recurringSeries ? await askRecurringClaim(options.task) : undefined
+    if (scope === null) return { cancelled: true }
+    return taskAction(familyId, taskId, 'claim', scope ? { scope } : null)
+}
 
 // D's endpoint: DELETE a task (creator or admin)
 export async function deleteTask(familyId, taskId) {

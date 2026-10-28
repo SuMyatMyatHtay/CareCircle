@@ -10,6 +10,7 @@ import mongoose from 'mongoose'
 import Task, { LOCKED_STATUSES, UNDELETABLE_STATUSES } from './TaskModel.js'
 import { TASK_CATEGORIES, TASK_STATUS, TASK_STATUSES, EVENTS } from '../../constants.js'
 import { notify } from '../../utils/notify.js'
+import { createRecurringTasks, ensureRecurringTasks, changeRecurringClaim, updateRecurringTasks, deleteRecurringOccurrence, listRecurringSeries, setSeriesPaused } from './recurringService.js'
 // ---------- Helpers ----------
 
 function httpError(status, message, errors) {
@@ -214,17 +215,20 @@ const ACTIONS = {
     },
     cancel: {
         from: [TASK_STATUS.OPEN, TASK_STATUS.CLAIMED, TASK_STATUS.IN_PROGRESS],
-        allowed: (task, userId, role) => isCreatorOrAdmin(task, userId, role),
-        forbidden: 'Only the task creator or an admin can cancel this task',
+        allowed: (task, userId, role) => isCreatorOrAdmin(task, userId, role) || isClaimer(task, userId),
+        forbidden: 'Only the task creator, assigned person or an admin can cancel this task',
         conflict: (task) => `Task is ${task.status} and cannot be cancelled`,
         set: () => ({ status: TASK_STATUS.CANCELLED, cancelledAt: new Date() }),
         event: EVENTS.TASK_CANCELLED
     }
 }
 
-async function changeStatus(actionName, { familyId, taskId, userId, memberRole }) {
+async function changeStatus(actionName, { familyId, taskId, userId, memberRole, expectedUpdatedAt, scope }) {
     const action = ACTIONS[actionName]
     const task = await findTaskInFamily(familyId, taskId)
+    if (expectedUpdatedAt && +new Date(task.updatedAt) !== +new Date(expectedUpdatedAt)) {
+        throw httpError(409, 'This task changed. Please prepare a new proposal.')
+    }
 
     // Status first: an open task has no claimer, so "not allowed" would be misleading
     if (!action.from.includes(task.status)) {
@@ -235,6 +239,10 @@ async function changeStatus(actionName, { familyId, taskId, userId, memberRole }
     }
     if (actionName === 'claim' && new Date(task.startAt).getTime() <= Date.now()) {
         throw httpError(409, 'This task is overdue and can no longer be claimed')
+    }
+    if (task.recurringSeries && ['claim', 'unclaim'].includes(actionName)) {
+        await changeRecurringClaim(actionName, { familyId, taskId, userId, scope, expectedUpdatedAt })
+        return Task.getTaskInFamily(familyId, taskId)
     }
 
     // Two people claiming at once: only the first update matches, the other gets null
@@ -252,12 +260,31 @@ async function changeStatus(actionName, { familyId, taskId, userId, memberRole }
 
 // Shared completion function for E's "home" milestone (see docs/OWNERSHIP.md).
 // Same rules as POST /:taskId/complete. Throws errors with .status on failure.
-export async function completeTask({ familyId, taskId, userId, memberRole = 'member' }) {
-    const task = await changeStatus('complete', { familyId, taskId, userId, memberRole })
+export async function completeTask({ familyId, taskId, userId, memberRole = 'member', expectedUpdatedAt }) {
+    const task = await changeStatus('complete', { familyId, taskId, userId, memberRole, expectedUpdatedAt })
     await Task.endTransitSession(task)
     const populated = await Task.getPopulatedTaskById(task._id)
     await announce(EVENTS.TASK_COMPLETED, populated)
     return populated
+}
+
+// Used by both HTTP actions and confirmed assistant proposals.
+export async function performFamilyTaskAction(actionName, context) {
+    if (!Object.hasOwn(ACTIONS, actionName)) throw httpError(400, 'Unsupported task action')
+    if (actionName === 'complete') return { task: await completeTask(context) }
+    const task = await changeStatus(actionName, context)
+    if (actionName === 'cancel') await Task.endTransitSession(task)
+    let transitSession = null
+    if (actionName === 'start') {
+        try { transitSession = await Task.startTransitSession(task) }
+        catch (error) {
+            await Task.updateTaskStatus(task, { status: TASK_STATUS.CLAIMED })
+            throw error
+        }
+    }
+    const populated = await Task.getPopulatedTaskById(task._id)
+    if (ACTIONS[actionName].event) await announce(ACTIONS[actionName].event, populated)
+    return actionName === 'start' ? { task: populated, transitSession } : { task: populated }
 }
 
 function statusHandler(actionName) {
@@ -267,35 +294,11 @@ function statusHandler(actionName) {
                 familyId: req.family._id,
                 taskId: req.params.taskId,
                 userId: req.user.userId,
-                memberRole: req.memberRole
+                memberRole: req.memberRole,
+                scope: req.body?.scope
             }
 
-            if (actionName === 'complete') {
-                const task = await completeTask(context)
-                return res.json({ task })
-            }
-
-            const task = await changeStatus(actionName, context)
-
-            if (actionName === 'cancel') await Task.endTransitSession(task)
-
-            let transitSession = null
-            if (actionName === 'start') {
-                try {
-                    transitSession = await Task.startTransitSession(task)
-                } catch (error) {
-                    // Put the task back so the claimer can try again
-                    await Task.updateTaskStatus(task, { status: TASK_STATUS.CLAIMED })
-                    throw error
-                }
-            }
-
-            const populated = await Task.getPopulatedTaskById(task._id)
-            if (ACTIONS[actionName].event) await announce(ACTIONS[actionName].event, populated)
-
-            return actionName === 'start'
-                ? res.json({ task: populated, transitSession })
-                : res.json({ task: populated })
+            return res.json(await performFamilyTaskAction(actionName, context))
         } catch (error) {
             return handleError(error, res, next)
         }
@@ -351,6 +354,7 @@ export async function listTasks(req, res, next) {
 
         if (errors.length) throw httpError(400, 'Validation failed', errors)
 
+        await ensureRecurringTasks(req.family._id)
         const tasks = await Task.getTasksByFamily(req.family._id, filter)
         return res.json({ tasks })
     } catch (error) {
@@ -383,7 +387,7 @@ export async function createTask(req, res, next) {
 export async function updateTask(req, res, next) {
     try {
         const populated = await updateFamilyTask({ body: req.body, familyId: req.family._id,
-            taskId: req.params.taskId, userId: req.user.userId, memberRole: req.memberRole })
+            taskId: req.params.taskId, userId: req.user.userId, memberRole: req.memberRole, expectedUpdatedAt: req.body?.expectedUpdatedAt })
         return res.json({ task: populated })
     } catch (error) {
         return handleError(error, res, next)
@@ -396,6 +400,11 @@ export async function createFamilyTask({ body, familyId, userId, taskId }) {
     await assertRecipientInFamily(data.recipient, familyId)
     if (data.endAt && data.endAt < data.startAt) {
         throw httpError(400, 'End time must be after the start time')
+    }
+    if (body.recurrence && body.recurrence.frequency !== 'none') {
+        const first = await createRecurringTasks(data, body.recurrence, familyId, userId)
+        await announce(EVENTS.TASK_CREATED, first)
+        return first
     }
     const task = await Task.createTask({ ...data, ...(taskId ? { _id: taskId } : {}),
         family: familyId, createdBy: userId, status: TASK_STATUS.OPEN })
@@ -429,7 +438,9 @@ export async function updateFamilyTask({ body, familyId, taskId, userId, memberR
     }
 
     // Status guard: if it was completed/cancelled meanwhile, don't edit it
-    const updated = await Task.updateEditableTask(familyId, task._id, changes, expectedUpdatedAt)
+    const updated = task.recurringSeries
+        ? { _id: await updateRecurringTasks(task, changes, body.scope || 'one', expectedUpdatedAt) }
+        : await Task.updateEditableTask(familyId, task._id, changes, expectedUpdatedAt)
     if (!updated) {
         throw httpError(409, 'Task was changed by someone else. Refresh and try again.')
     }
@@ -452,9 +463,10 @@ export async function deleteTask(req, res, next) {
             throw httpError(409, `Task is ${task.status} and cannot be deleted. Cancel it instead.`)
         }
 
-        // Load the title and names now: they can't be looked up once the task is gone
         const populated = await Task.getPopulatedTaskById(task._id)
-        const result = await Task.deleteDeletableTask(req.family._id, task._id)
+        const result = task.recurringSeries
+            ? (await deleteRecurringOccurrence(task), { deletedCount: 1 })
+            : await Task.deleteDeletableTask(req.family._id, task._id)
         if (!result.deletedCount) {
             throw httpError(409, 'Task was changed by someone else. Refresh and try again.')
         }
@@ -472,3 +484,15 @@ export const unclaimTask = statusHandler('unclaim')
 export const startTask = statusHandler('start')
 export const completeTaskHandler = statusHandler('complete')
 export const cancelTask = statusHandler('cancel')
+
+export async function getRecurringSeries(req, res, next) {
+    try { return res.json({ series: await listRecurringSeries(req.family._id) }) }
+    catch (error) { return handleError(error, res, next) }
+}
+export async function pauseRecurringSeries(req, res, next) {
+    try {
+        if (!mongoose.isValidObjectId(req.params.seriesId)) throw httpError(404, 'Repeating task not found')
+        await setSeriesPaused(req.params.seriesId, req.family._id, req.user.userId, req.body?.paused)
+        return res.json({ ok: true })
+    } catch (error) { return handleError(error, res, next) }
+}

@@ -1,5 +1,5 @@
 import mongoose from 'mongoose'
-import { MongoMemoryServer } from 'mongodb-memory-server-core'
+import { MongoMemoryReplSet } from 'mongodb-memory-server-core'
 
 // These helpers never read .env or accept a shared/remote database URI.
 // A real mongod runs in a fresh temporary directory and is removed on shutdown.
@@ -9,7 +9,8 @@ export async function startTestDatabase(label) {
   for (const key of ['GEMINI_API_KEY', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REDIRECT_URI',
     'AZURE_TRANSLATOR_KEY', 'AZURE_TRANSLATOR_REGION', 'GROQ_API_KEY']) delete process.env[key]
   const dbName = `carecircle_test_${label}_${process.pid}`
-  const mongo = await MongoMemoryServer.create({ instance: { ip: '127.0.0.1', dbName } })
+  // One real local replica-set member enables multi-document transactions.
+  const mongo = await MongoMemoryReplSet.create({ replSet: { count: 1, ip: '127.0.0.1', storageEngine: 'wiredTiger' } })
   const uri = mongo.getUri(dbName)
   try {
     await connectTestDatabase(uri)
@@ -23,12 +24,16 @@ export async function startTestDatabase(label) {
 }
 
 export async function connectTestDatabase(uri) {
+  validateTestDatabaseUri(uri)
+  await mongoose.connect(uri)
+}
+
+export function validateTestDatabaseUri(uri) {
   const parsed = new URL(uri)
   if (parsed.protocol !== 'mongodb:' || parsed.hostname !== '127.0.0.1' ||
       !/^\/carecircle_test_[a-z0-9_]+$/.test(parsed.pathname)) {
     throw new Error('Tests require a generated local carecircle_test_ database')
   }
-  await mongoose.connect(uri)
 }
 
 export function assertTestDatabase() {

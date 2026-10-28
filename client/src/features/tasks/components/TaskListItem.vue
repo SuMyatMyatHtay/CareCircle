@@ -6,6 +6,7 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useActiveFamily } from '../../../composables/useActiveFamily.js'
 import TaskStatusBadge from './TaskStatusBadge.vue'
+import RecurringTaskBadge from './RecurringTaskBadge.vue'
 
 const props = defineProps({
     task: { type: Object, required: true }
@@ -66,6 +67,7 @@ function initials(name = '') {
 
         <div class="task-text">
             <h3 class="task-title"><RouterLink v-if="!route.meta.preview && familyId" :to="{ name: 'task-detail', params: { familyId, taskId: task._id } }" class="text-reset text-decoration-none">{{ task.title }}</RouterLink><template v-else>{{ task.title }}</template></h3>
+            <RecurringTaskBadge :task="task" />
             <p class="task-meta">
                 {{ time }}<template v-if="place"> · {{ place }}</template>
                 <template v-if="recipientName"> · for {{ recipientName }}</template>

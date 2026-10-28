@@ -13,7 +13,7 @@ watch(() => props.task._id, () => { error.value = '' })
 async function claim() {
   if (busy.value || props.task.status !== 'open' || isTaskOverdue(props.task)) return
   busy.value = true; error.value = ''
-  try { await claimTask(familyId.value, props.task._id) }
+  try { await claimTask(familyId.value, props.task._id, { task: props.task }) }
   catch (err) { error.value = getErrorMessage(err) }
   finally { busy.value = false }
 }

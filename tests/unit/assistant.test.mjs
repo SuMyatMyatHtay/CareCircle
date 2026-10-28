@@ -66,7 +66,17 @@ beforeEach(async t => {
     startAt: '2026-10-23T02:30:00.000Z', endAt: '2026-10-23T03:30:00.000Z', location: { name: 'Eye Centre' },
     category: 'appointment', status: 'open', createdBy: admin, updatedAt: new Date('2026-10-20T01:00:00Z') }]])
   people = [{ _id: recipientId, family: familyId, name: 'Grandpa Tan', nickname: 'Grandpa', isActive: true }]
-  t.mock.method(User, 'findById', async value => ({ _id: String(value), tokenVersion: 0 }))
+  t.mock.method(User, 'findById', async value => ({ _id: String(value), name: String(value) === member ? 'Jasmine' : 'Sera', tokenVersion: 0 }))
+  t.mock.method(User, 'find', () => query([{ _id: admin, name: 'Sera' }, { _id: member, name: 'Jasmine' }]))
+  t.mock.method(Task, 'getTaskById', async value => clone(tasks.get(String(value))))
+  t.mock.method(Task, 'findOneAndUpdate', async (filter, update) => {
+    const found = [...tasks.values()].find(task => matches(task, filter))
+    if (!found) return null
+    writes++; Object.assign(found, clone(update.$set), { updatedAt: new Date(Date.now() + writes) })
+    return clone(found)
+  })
+  t.mock.method(Task, 'startTransitSession', async task => task.needsTransit ? { task: task._id, companion: task.claimedBy, status: 'active' } : null)
+  t.mock.method(Task, 'endTransitSession', async () => {})
   t.mock.method(Family, 'findById', async value => eq(value, familyId) ? { _id: familyId, name: 'Tan family',
     members: [{ userId: admin, role: 'admin' }, { userId: member, role: 'member' },
       // Give each rate-limit test a fresh authenticated member.
@@ -361,5 +371,167 @@ test('manual endpoints also reject admin deletion and unclaiming for someone els
     await handler(req, res, error => { throw error })
     assert.equal(res.code, 403)
   }
+  assert.equal(writes, 0)
+})
+
+test('selecting a task and choosing Change time never calls Gemini or prepares an empty edit', async () => {
+  const selected = await request('chat', { body: { selectedTaskId: taskId, selectTask: true, messages: [{ role: 'user', content: 'Selected task' }] } })
+  assert.equal(selected.status, 200)
+  assert.match(selected.data.message, /Existing eye check/)
+  assert.equal(selected.data.proposal, undefined)
+  const followup = await request('chat', { body: { selectedTaskId: taskId, messages: [{ role: 'user', content: 'Change time' }] } })
+  assert.equal(followup.status, 200)
+  assert.match(followup.data.message, /new date and time/)
+  assert.equal(providerCalls.length, 0)
+  assert.equal(writes, 0)
+})
+
+test('an incomplete model edit asks a follow-up instead of failing intermittently', async () => {
+  reply = { intent: 'update', taskId, message: 'Change task', suggestions: [] }
+  const response = await chat()
+  assert.equal(response.status, 200)
+  assert.match(response.data.message, /What would you like to change/)
+  assert.equal(response.data.proposal, undefined)
+  assert.equal(writes, 0)
+})
+
+test('assistant claims only after confirmation and starts/completes the assigned task', async () => {
+  Object.assign(tasks.get(taskId), { startAt: new Date(Date.now() + 86400000), needsTransit: true, claimedBy: null })
+  for (const [action, expected] of [['claim', 'claimed'], ['start', 'in_progress'], ['complete', 'completed']]) {
+    reply = { intent: action, taskId, message: 'Review action', suggestions: [] }
+    const proposed = await chat()
+    assert.equal(proposed.status, 200)
+    const beforeWrites = writes
+    const path = `proposals/${proposed.data.proposal.id}/confirm`
+    const confirmed = await request(path)
+    assert.equal(confirmed.status, 200, JSON.stringify(confirmed.data))
+    assert.equal(tasks.get(taskId).status, expected)
+    assert.equal(tasks.get(taskId).claimedBy, admin)
+    assert.equal(writes, beforeWrites + 1)
+    assert.equal((await request(path)).status, 200)
+    assert.equal(writes, beforeWrites + 1)
+  }
+  assert.ok(tasks.get(taskId).completedAt)
+})
+
+test('creator can assign an open task only to a current member, and the preview names the assignee', async () => {
+  Object.assign(tasks.get(taskId), { startAt: new Date(Date.now() + 86400000), claimedBy: null })
+  reply = { intent: 'assign', taskId, assigneeId: outsider, message: 'Review', suggestions: [] }
+  assert.equal((await chat()).status, 403)
+  reply.assigneeId = member
+  assert.equal((await chat({ user: member })).status, 403)
+  const proposed = await chat()
+  assert.equal(proposed.status, 200)
+  assert.equal(proposed.data.proposal.task.assigneeName, 'Jasmine')
+  const confirmed = await request(`proposals/${proposed.data.proposal.id}/confirm`)
+  assert.equal(confirmed.status, 200)
+  assert.equal(tasks.get(taskId).claimedBy, member)
+})
+
+test('assignment rechecks family membership at confirmation', async t => {
+  Object.assign(tasks.get(taskId), { startAt: new Date(Date.now() + 86400000), claimedBy: null })
+  reply = { intent: 'assign', taskId, assigneeId: member, message: 'Review', suggestions: [] }
+  const proposed = await chat()
+  t.mock.method(Family, 'findById', async () => ({ _id: familyId, members: [{ userId: admin, role: 'admin' }] }))
+  assert.equal((await request(`proposals/${proposed.data.proposal.id}/confirm`)).status, 403)
+  assert.equal(tasks.get(taskId).status, 'open')
+})
+
+test('assistant status actions enforce ownership even for admins', async () => {
+  Object.assign(tasks.get(taskId), { status: 'claimed', createdBy: outsider, claimedBy: member })
+  for (const intent of ['start', 'complete', 'cancel']) {
+    reply = { intent, taskId, message: 'Review', suggestions: [] }
+    assert.equal((await chat()).status, 403)
+  }
+  reply = { intent: 'cancel', taskId, message: 'Review', suggestions: [] }
+  const proposed = await chat({ user: member })
+  assert.equal(proposed.status, 200)
+  assert.equal((await request(`proposals/${proposed.data.proposal.id}/confirm`, { user: member })).status, 200)
+  assert.equal(tasks.get(taskId).status, 'cancelled')
+})
+
+test('overdue claims and stale confirmations cannot overwrite a newer assignment', async () => {
+  reply = { intent: 'claim', taskId, message: 'Review', suggestions: [] }
+  assert.equal((await chat()).status, 409)
+  tasks.get(taskId).startAt = new Date(Date.now() + 86400000)
+  const proposed = await chat()
+  tasks.get(taskId).status = 'claimed'; tasks.get(taskId).claimedBy = member; tasks.get(taskId).updatedAt = new Date()
+  assert.equal((await request(`proposals/${proposed.data.proposal.id}/confirm`)).status, 409)
+  assert.equal(tasks.get(taskId).claimedBy, member)
+})
+
+test('selected title edit preserves the exact answer and confirms only the title without Gemini', async () => {
+  const baseBody = { selectedTaskId: taskId }
+  const question = await request('chat', { body: { ...baseBody, messages: [{ role: 'user', content: 'Change title' }] } })
+  assert.equal(question.status, 200)
+  assert.equal(question.data.editField, 'title')
+  // Deliberately leave the provider configured with an unrelated create response.
+  const proposed = await request('chat', { body: { ...baseBody, editField: question.data.editField,
+    messages: [{ role: 'user', content: 'Change title' }, { role: 'assistant', content: question.data.message }, { role: 'user', content: 'Visit Friend' }] } })
+  assert.equal(proposed.status, 200)
+  assert.equal(proposed.data.proposal.action, 'update')
+  assert.deepEqual(proposed.data.proposal.changes, { title: 'Visit Friend' })
+  assert.equal(providerCalls.length, 0)
+  assert.equal(writes, 0)
+  assert.equal((await request(`proposals/${proposed.data.proposal.id}/confirm`)).status, 200)
+  assert.equal(tasks.get(taskId).title, 'Visit Friend')
+  assert.equal(tasks.get(taskId).startAt, '2026-10-23T02:30:00.000Z')
+  assert.equal(tasks.get(taskId).location.name, 'Eye Centre')
+})
+
+test('edit questions explain non-ownership and locked status before asking for changes', async () => {
+  tasks.get(taskId).createdBy = member
+  for (const body of [
+    { selectedTaskId: taskId, selectTask: true, messages: [{ role: 'user', content: 'Select task' }] },
+    { selectedTaskId: taskId, messages: [{ role: 'user', content: 'Change title' }] },
+    { selectedTaskId: taskId, editField: 'title', messages: [{ role: 'user', content: 'Visit Friend' }] },
+  ]) {
+    const response = await request('chat', { body })
+    assert.equal(response.status, 200)
+    assert.match(response.data.message, /cannot edit.*not its creator/)
+    assert.equal(response.data.editField, undefined)
+    assert.equal(response.data.proposal, undefined)
+  }
+  await assert.rejects(validateDraft({ intent: 'update', taskId }, { familyId, userId: admin }), error => error.status === 403 && /not its creator/.test(error.message))
+  tasks.get(taskId).createdBy = admin
+  for (const status of ['completed', 'cancelled']) {
+    tasks.get(taskId).status = status
+    const response = await request('chat', { body: { selectedTaskId: taskId, messages: [{ role: 'user', content: 'Change title' }] } })
+    assert.match(response.data.message, new RegExp(`cannot edit.*${status}`))
+    assert.equal(response.data.proposal, undefined)
+  }
+  assert.equal(providerCalls.length, 0)
+  assert.equal(writes, 0)
+})
+
+test('incomplete creation asks for missing details, then complete creation confirms exactly once', async () => {
+  for (const fields of [undefined, {}, { title: 'Grocery run' }, { title: 'Grocery run', recipient: null },
+    { title: 'Grocery run', recipient: null, startAt: new Date(Date.now() + 86400000).toISOString() }]) {
+    reply = { intent: 'create', task: fields, message: 'Create', suggestions: [] }
+    const result = await chat()
+    assert.equal(result.status, 200)
+    assert.equal(result.data.proposal, undefined)
+    assert.equal(writes, 0)
+  }
+  reply = draft({ title: 'Grocery run', recipient: null, startAt: new Date(Date.now() + 86400000).toISOString(), location: null })
+  const proposed = await chat()
+  assert.equal(proposed.status, 200)
+  const path = `proposals/${proposed.data.proposal.id}/confirm`
+  assert.equal((await request(path)).status, 200)
+  assert.equal((await request(path)).status, 200)
+  assert.equal(writes, 1)
+})
+
+test('deletion refuses non-creators and locked tasks with explicit reasons', async () => {
+  reply = { intent: 'delete', taskId, message: 'Delete', suggestions: [] }
+  tasks.get(taskId).createdBy = member
+  const notOwner = await chat()
+  assert.equal(notOwner.status, 403)
+  assert.match(notOwner.data.message, /cannot delete.*not its creator/)
+  tasks.get(taskId).createdBy = admin
+  tasks.get(taskId).status = 'completed'
+  const locked = await chat()
+  assert.equal(locked.status, 409)
+  assert.match(locked.data.message, /cannot delete.*completed/)
   assert.equal(writes, 0)
 })

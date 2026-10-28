@@ -12,6 +12,7 @@ import TaskLocationCard from '../components/TaskLocationCard.vue'
 import TaskTransitActions from '../components/TaskTransitActions.vue'
 import PersonAvatar from '../../my-tasks/components/PersonAvatar.vue'
 import TaskDetailMobile from '../components/TaskDetailMobile.vue'
+import RecurringTaskEditModal from '../../tasks/components/RecurringTaskEditModal.vue'
 import { useIsMobile } from '../../my-tasks/utils/useIsMobile.js'
 import { startTask } from '../../my-tasks/services/myTasksApi.js'
 import { useTaskOverdue, isTaskOverdue } from '../../tasks/composables/useTaskOverdue.js'
@@ -33,6 +34,11 @@ const router = useRouter()
 const isMobile = useIsMobile()
 
 const task = ref(null)
+const editingRecurring = ref(false)
+function editCurrentTask() {
+    if (task.value?.recurringSeries) editingRecurring.value = true
+    else isEditing.value = true
+}
 const overdue = useTaskOverdue(task)
 const isLoading = ref(true)
 const loadError = ref('')
@@ -46,7 +52,7 @@ try { me = JSON.parse(sessionStorage.getItem('user') || '{}') } catch { me = {} 
 const idOf = (value) => (value && typeof value === 'object' ? value._id : value)
 const isClaimer = computed(() => Boolean(me.id) && idOf(task.value?.claimedBy) === me.id)
 const isCreator = computed(() => Boolean(me.id) && idOf(task.value?.createdBy) === me.id)
-const canEdit = computed(() => isCreator.value && !['completed', 'cancelled'].includes(task.value?.status))
+const canEdit = computed(() => isCreator.value && !['completed', 'cancelled'].includes(task.value?.status) && !(task.value?.recurringSeries && task.value.status === 'in_progress'))
 const canUnclaim = computed(() => (isCreator.value || isClaimer.value) && task.value?.status === 'claimed')
 const canDelete = computed(() => Boolean(me.id) && idOf(task.value?.createdBy) === me.id && !['in_progress', 'completed'].includes(task.value?.status))
 const status = computed(() => task.value?.status)
@@ -140,7 +146,8 @@ async function run(action, message) {
     isBusy.value = true
     actionError.value = ''
     try {
-        await action()
+        const result = await action()
+        if (result?.cancelled) return
         if (message) notice.value = message
         await load()
     } catch (error) {
@@ -153,14 +160,14 @@ async function run(action, message) {
 
 const claim = () => {
     if (isTaskOverdue(task.value)) { actionError.value = 'This task is overdue and can no longer be claimed.'; return }
-    return run(() => claimTask(props.familyId, props.taskId), 'You claimed this task.')
+    return run(() => claimTask(props.familyId, props.taskId, { task: task.value }), 'You claimed this task.')
 }
 const markDone = () => {
     if (window.confirm(`Mark "${task.value.title}" as done?`)) run(() => completeTask(props.familyId, props.taskId), 'Marked as done.')
 }
 const giveBack = () => {
     if (!canUnclaim.value || isBusy.value) return
-    if (window.confirm(`Give back "${task.value.title}"? It goes back to the family as available.`)) {
+    if (window.confirm(task.value.recurringSeries ? `Give back only this date of "${task.value.title}"? You keep your other sessions. Someone else can claim this date only.` : `Give back "${task.value.title}"? It goes back to the family as available.`)) {
         run(() => unclaimTask(props.familyId, props.taskId), 'Given back to the family.')
     }
 }
@@ -201,10 +208,11 @@ onMounted(() => {
     window.addEventListener('carecircle:task-updated', onAssistantUpdate)
 })
 onUnmounted(() => window.removeEventListener('carecircle:task-updated', onAssistantUpdate))
-watch(() => [props.familyId, props.taskId], load)
+watch(() => [props.familyId, props.taskId], () => { editingRecurring.value = false; load() })
 </script>
 
 <template>
+    <RecurringTaskEditModal v-if="editingRecurring && task" :key="task._id" :task="task" :family-id="familyId" @close="editingRecurring = false" @saved="editingRecurring = false; load()" />
     <!-- Phones: Figma "Mobile prototype" → 09 · Task detail -->
     <div v-if="isMobile">
         <p v-if="isLoading && !task" class="status" role="status">Loading task...</p>
@@ -226,7 +234,7 @@ watch(() => [props.familyId, props.taskId], load)
             @complete="markDone"
             @unclaim="giveBack"
             @claim="claim"
-            @edit="isEditing = true"
+            @edit="editCurrentTask()"
             @delete="remove"
             @dismiss="notice = ''"
         />
@@ -265,7 +273,7 @@ watch(() => [props.familyId, props.taskId], load)
                     </div>
                     <span class="spacer"></span>
                     <!-- D (Marcus) owns editing; the task form isn't built yet -->
-                    <button v-if="canEdit" type="button" class="btn-secondary" data-testid="task-edit" @click="isEditing = true">Edit</button>
+                    <button v-if="canEdit" type="button" class="btn-secondary" data-testid="task-edit" @click="editCurrentTask()">Edit</button>
                     <button v-if="canDelete" type="button" class="btn-secondary danger" :disabled="isBusy" @click="remove">Delete</button>
                 </div>
 
