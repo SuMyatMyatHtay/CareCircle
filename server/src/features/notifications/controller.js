@@ -49,6 +49,7 @@ export async function getNotifySettings(req, res, next) {
       notifyOn: effectiveEvents(req.family.notifyOn),
       telegram: { linked, linkedAt: linked ? telegram.linkedAt || null : null, linkedBy },
       botUsername: process.env.TELEGRAM_BOT_USERNAME || null,
+      reminders: reminderFlags(req.family)
     })
   } catch (error) {
     return next(error)
@@ -58,11 +59,22 @@ export async function getNotifySettings(req, res, next) {
 // PATCH /api/families/:familyId/notify-settings   (admin)   { notifyOn: [eventType] }
 export async function updateNotifySettings(req, res, next) {
   try {
-    const parsed = parseNotifyOn(req.body?.notifyOn)
-    if (parsed.error) return res.status(400).json({ error: 'Validation failed', errors: [parsed.error] })
-    const family = await Family.findOneAndUpdate({ _id: req.family._id }, { $set: { notifyOn: parsed.value } }, { new: true })
+    const set = {}
+    if (req.body?.notifyOn !== undefined || req.body?.reminders === undefined) {
+      const parsed = parseNotifyOn(req.body?.notifyOn)
+      if (parsed.error) return res.status(400).json({ error: 'Validation failed', errors: [parsed.error] })
+      set.notifyOn = parsed.value
+    }
+    const reminders = req.body?.reminders
+    if (reminders !== undefined) {
+      const bad = !reminders || typeof reminders !== 'object' ||
+        Object.entries(reminders).some(([k, v]) => !['beforeTask', 'unclaimedTask','dailySummary'].includes(k) || typeof v !== 'boolean')
+      if (bad) return res.status(400).json({ error: 'Validation failed', errors: ['reminders must be { beforeTask, dailySummary } true or false'] })
+      for (const [k, v] of Object.entries(reminders)) set[`reminders.${k}`] = v
+    }
+    const family = await Family.findOneAndUpdate({ _id: req.family._id }, { $set: set }, { new: true })
     if (!family) return res.status(404).json({ error: 'Family not found' })
-    return res.json({ notifyOn: effectiveEvents(family.notifyOn) })
+    return res.json({ notifyOn: effectiveEvents(family.notifyOn), reminders: reminderFlags(family) })
   } catch (error) {
     return next(error)
   }
@@ -95,3 +107,9 @@ export async function unlinkTelegram(req, res, next) {
     return next(error)
   }
 }
+
+const reminderFlags = (family) => ({
+  beforeTask: family.reminders?.beforeTask === true,
+  unclaimedTask: family.reminders?.unclaimedTask === true,
+  dailySummary: family.reminders?.dailySummary === true
+})

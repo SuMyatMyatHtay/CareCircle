@@ -100,7 +100,10 @@ const taskSchema = new mongoose.Schema({
     recurrenceEdited: { type: Boolean, default: false },
     claimedAt: { type: Date, default: null },
     completedAt: { type: Date, default: null },
-    cancelledAt: { type: Date, default: null }
+    cancelledAt: { type: Date, default: null },
+
+    unclaimedReminderAt: { type: Date, default: null },
+    beforeReminderAt: { type: Date, default: null }
 }, {
     timestamps: true,
     collection: 'tasks'

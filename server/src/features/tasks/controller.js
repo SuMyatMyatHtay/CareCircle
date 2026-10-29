@@ -11,6 +11,7 @@ import Task, { LOCKED_STATUSES, UNDELETABLE_STATUSES } from './TaskModel.js'
 import { TASK_CATEGORIES, TASK_STATUS, TASK_STATUSES, EVENTS } from '../../constants.js'
 import { notify } from '../../utils/notify.js'
 import { createRecurringTasks, ensureRecurringTasks, changeRecurringClaim, updateRecurringTasks, deleteRecurringOccurrence, listRecurringSeries, setSeriesPaused } from './recurringService.js'
+
 // ---------- Helpers ----------
 
 function httpError(status, message, errors) {
@@ -283,6 +284,7 @@ export async function performFamilyTaskAction(actionName, context) {
         }
     }
     const populated = await Task.getPopulatedTaskById(task._id)
+    if (actionName === 'unclaim' && within24h(populated)) await markAlerted(populated._id)
     if (ACTIONS[actionName].event) await announce(ACTIONS[actionName].event, populated)
     return actionName === 'start' ? { task: populated, transitSession } : { task: populated }
 }
@@ -306,6 +308,8 @@ function statusHandler(actionName) {
 }
 
 // ---------- Handlers ----------
+const within24h = (task) => new Date(task.startAt).getTime() - Date.now() <= 24 * 3600e3
+const markAlerted = (id) => Task.updateOne({ _id: id }, { $set: { unclaimedReminderAt: new Date() } })
 
 // GET /api/families/:familyId/tasks
 // Query (all optional): status=open,claimed  recipient=<id>|none
@@ -403,11 +407,13 @@ export async function createFamilyTask({ body, familyId, userId, taskId }) {
     }
     if (body.recurrence && body.recurrence.frequency !== 'none') {
         const first = await createRecurringTasks(data, body.recurrence, familyId, userId)
+        if (within24h(first)) await markAlerted(first._id)
         await announce(EVENTS.TASK_CREATED, first)
         return first
     }
     const task = await Task.createTask({ ...data, ...(taskId ? { _id: taskId } : {}),
         family: familyId, createdBy: userId, status: TASK_STATUS.OPEN })
+    if (within24h(task)) await markAlerted(task._id)
     const populated = await Task.getPopulatedTaskById(task._id)
     await announce(EVENTS.TASK_CREATED, populated)
     return populated

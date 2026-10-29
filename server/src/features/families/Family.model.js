@@ -54,6 +54,13 @@ const familySchema = new mongoose.Schema({
     notifyOn: {
         type: [mongoose.Schema.Types.Mixed],
         default: []
+    },
+
+    reminders: {
+    beforeTask: { type: Boolean, default: false },
+    dailySummary: { type: Boolean, default: false },
+    unclaimedTask: { type: Boolean, default: false },
+    lastSummaryDay: { type: String, default: '' }
     }
 
 }, {

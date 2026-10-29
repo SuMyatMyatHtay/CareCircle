@@ -4,6 +4,7 @@
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { apiError } from '../../family/services/dashboardApi.js'
 import { getNotifications, getNotifySettings, saveNotifyEvents, sendTestMessage, unlinkTelegram } from '../services/notificationsApi.js'
+import { saveReminders } from '../services/notificationsApi.js'
 
 // ---------------------------------------------------------------- Switches <-> events
 // The settings card has five switches; the server stores event names (EVENTS in server/src/constants.js).
@@ -33,6 +34,8 @@ export function useTelegramSettings(source) {
   const error = ref(''), feedback = ref('')
   const linked = ref(false), linkedAt = ref(''), linkedByName = ref(''), botUsername = ref('CareCircleBot')
   const groups = ref(groupsFromEvents(ALL_EVENTS))
+  const reminders = ref({ beforeTask: false,  unclaimedTask: false, dailySummary: false})
+  const asFlags = (r) => ({ beforeTask: Boolean(r?.beforeTask), unclaimedTask: Boolean(r?.unclaimedTask), dailySummary: Boolean(r?.dailySummary) })
   let version = 0
 
   async function load() {
@@ -56,6 +59,7 @@ export function useTelegramSettings(source) {
       linkedByName.value = data.telegram.linkedBy?.name || ''
       if (data.botUsername) botUsername.value = data.botUsername
       groups.value = groupsFromEvents(data.notifyOn)
+      reminders.value = asFlags(data.reminders)
     } catch (err) {
       if (current === version) error.value = apiError(err, 'Telegram settings')
     } finally {
@@ -81,6 +85,29 @@ export function useTelegramSettings(source) {
     } catch (err) {
       if (familyId === resolve(source)) {
         groups.value = previous
+        error.value = apiError(err, 'Telegram settings')
+      }
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function toggleReminder(key, value) {
+    const familyId = resolve(source)
+    if (!familyId || saving.value) return
+    const previous = { ...reminders.value }
+    reminders.value = { ...previous, [key]: value }
+    saving.value = true
+    error.value = ''
+    feedback.value = ''
+    try {
+      const saved = await saveReminders(familyId, { [key]: value })
+      if (familyId !== resolve(source)) return
+      reminders.value = asFlags(saved)
+      feedback.value = 'Reminder preferences saved.'
+    } catch (err) {
+      if (familyId === resolve(source)) {
+        reminders.value = previous
         error.value = apiError(err, 'Telegram settings')
       }
     } finally {
@@ -122,7 +149,7 @@ export function useTelegramSettings(source) {
   }
 
   watch(() => resolve(source), load, { immediate: true })
-  return { loading, saving, testing, error, feedback, linked, linkedAt, linkedByName, botUsername, groups, toggle, sendTest, unlink }
+  return { loading, saving, testing, error, feedback, linked, linkedAt, linkedByName, botUsername, groups, toggle, sendTest, unlink, toggleReminder, reminders, asFlags}
 }
 
 // ---------------------------------------------------------------- "Recent updates" feed

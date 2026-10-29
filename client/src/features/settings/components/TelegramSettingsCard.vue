@@ -13,14 +13,15 @@ const props = defineProps({
 const emit = defineEmits(['change'])
 const workspace = useFamilyWorkspace()
 const events = [
-  { key: 'taskPosted', label: 'A task is posted, edited or removed' },
+  { key: 'taskPosted', label: 'A task is posted' },
   { key: 'taskClaimed', label: 'Someone claims or gives back a task' },
   { key: 'transitMilestone', label: 'A transit milestone is marked' },
-  { key: 'careNote', label: 'A care note is added, edited or deleted, or medication changes' },
-  { key: 'taskCompleted', label: 'A task is started, completed or cancelled' },
+  { key: 'careNote', label: 'A note or medication change is added' },
+  { key: 'taskCompleted', label: 'A task is completed' },
 ]
 const reminders = [
   { key: 'beforeTask', label: 'Remind me 1 hour before a task I’ve claimed' },
+  { key: 'unclaimedTask', label: 'Alert the group if a task is still unclaimed 24 hours before' },
   { key: 'dailySummary', label: 'Daily summary at 8am' },
 ]
 
@@ -67,6 +68,13 @@ const showHowToLink = computed(() => props.preview || (live.value && !loading.va
 function confirmUnlink() {
   if (window.confirm('Stop sending CareCircle updates to this Telegram group?')) telegram.unlink()
 }
+
+const { reminders: reminderState } = telegram
+const isReminderOn = (key) => (live.value ? Boolean(reminderState.value[key]) : Boolean(props.preferences[key]))
+function onReminderChange(key, value) {
+  if (live.value) telegram.toggleReminder(key, value)
+  else emit('change', key, value)
+}
 </script>
 <template>
   <SectionCard title="Telegram group" class="care-telegram-card">
@@ -97,12 +105,12 @@ function confirmUnlink() {
       v-for="option in reminders"
       :key="option.key"
       :label="option.label"
-      :checked="Boolean(preferences[option.key])"
-      :disabled="!preview"
-      @change="emit('change', option.key, $event)"
+      :checked="isReminderOn(option.key)"
+      :disabled="!canEdit"
+      @change="onReminderChange(option.key, $event)"
     />
     
-    <p v-if="live" class="care-muted care-tiny">Reminders are coming soon.</p>
+    <p v-if="!live" class="care-muted care-tiny">Reminders are coming soon.</p>
  
     <div v-if="live && linked && isAdmin" class="care-telegram-actions">
       <button type="button" class="care-button" :disabled="testing" @click="telegram.sendTest()">
@@ -115,3 +123,13 @@ function confirmUnlink() {
     <p v-else-if="feedback" class="care-feedback" role="status">{{ feedback }}</p>
   </SectionCard>
 </template>
+
+<style scoped>
+.care-telegram-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+</style>
