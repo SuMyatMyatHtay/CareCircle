@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import TaskPermissionsCard from '../components/TaskPermissionsCard.vue'
 import SettingsHeader from '../components/SettingsHeader.vue'
 import FamilyMembersCard from '../components/FamilyMembersCard.vue'
 import InviteCodeCard from '../components/InviteCodeCard.vue'
@@ -231,6 +232,7 @@ function requestMobileLogout() {
               "
               @remove="askToRemove"
             />
+            <TaskPermissionsCard :key="selectedFamilyId" />
             <LanguagePreferencesCard
               :language="language"
               :busy="busy"
@@ -328,6 +330,7 @@ function requestMobileLogout() {
           @manage="manageMobileMember"
         />
       </section>
+      <TaskPermissionsCard v-if="selectedFamily" :key="selectedFamilyId" />
       <p v-if="logoutError" class="care-error care-small" role="alert">
         {{ logoutError }}
       </p>

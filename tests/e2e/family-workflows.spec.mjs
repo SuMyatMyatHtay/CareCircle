@@ -88,13 +88,19 @@ test('creates and claims a family task, then isolates the selected family', asyn
   await page.goto('/tasks/new')
   await page.getByRole('button', { name: /Grandpa/ }).click()
   await page.getByLabel('What needs doing?', { exact: true }).fill('E2E grocery pickup')
+  await page.getByRole('button', { name: 'Tomorrow', exact: true }).click()
   await page.getByLabel('Starts', { exact: true }).fill('23:30')
   await page.getByRole('button', { name: 'Post task', exact: true }).click()
   await expect(page).toHaveURL(/\/home$/)
+  if (isMobile) await page.getByRole('button', { name: 'Tasks', exact: true }).click()
+  await page.getByRole('button', { name: 'Needs someone', exact: true }).filter({ visible: true }).click()
   const task = page.getByRole('article').filter({ has: page.getByRole('heading', { name: 'E2E grocery pickup', exact: true }) })
   await task.getByRole('button', { name: 'I’ll take it', exact: true }).click()
+  await page.getByRole('button', { name: 'Claimed', exact: true }).filter({ visible: true }).click()
   await expect(task).toContainText('Claimed')
   await page.reload()
+  if (isMobile) await page.getByRole('button', { name: 'Tasks', exact: true }).click()
+  await page.getByRole('button', { name: 'Claimed', exact: true }).filter({ visible: true }).click()
   await expect(task).toContainText('Claimed')
   await expect(task).toContainText('Alex Tan')
   await page.goto('/settings')
@@ -168,7 +174,7 @@ test('collapses multiple live trips, expands them and clears them when switching
   const taskIds = []
   for (const recipient of [ids.grandpa, grandma._id]) {
     const created = await api(`${root}/tasks`, { method: 'POST', data: {
-      title: 'Fixture clinic visit', recipient, category: 'appointment', startAt: new Date().toISOString(),
+      title: 'Fixture clinic visit', recipient, category: 'appointment', startAt: new Date(Date.now() + 3600000).toISOString(),
       needsTransit: true, location: { name: 'Test Clinic' }, description: 'Isolated live trip fixture',
     } })
     expect(created.status()).toBe(201)

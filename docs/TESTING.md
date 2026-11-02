@@ -1,5 +1,10 @@
 # CareCircle testing
 
+For a Korean walkthrough with actual examples, Vitest syntax, props/emits and
+the latest main audit, see [Testing explained](TESTING-EXPLAINED.ko.md).
+For recurring-task coverage and the local replica-set setup, see
+[Running the tests](TESTING-RECURRING.md).
+
 The Week 10 lectures distinguish function/unit tests, isolated component tests,
 integration between real components, and complete browser workflows. The tests
 here apply that structure to SangYoon's Family Home, Settings and recipient flows.
@@ -8,18 +13,28 @@ assistant, public-profile and profile-picture regressions. The original family
 regressions are retained. The focused `test:family` and `test:settings` commands
 remain available, while `npm test` runs all Node regressions and Vitest cases.
 
-Verified on **26 October 2026** after integrating the current main and SangYoon:
+Verified on **2 November 2026** against main `2081b4d` plus this audit:
 
 | Layer | Passed |
 | --- | ---: |
-| Node regressions (including assistant/profile and Calendar OAuth) | 78 |
-| Vitest function/component/integration tests | 28 |
-| Real isolated MongoDB API integration | 16 |
-| Playwright desktop/mobile Chromium workflows | 16 |
-| **Total** | **138** |
+| Node unit/regressions | 148 |
+| Test infrastructure guards and fixtures | 2 |
+| Vitest function/component/integration tests | 180 |
+| Isolated MongoDB API suite | 50 |
+| Playwright desktop/mobile Chromium workflows | 62 |
+| **Total** | **442** |
 
-`npm run test:all` and `npm run build` passed. This update adds 29 cases beyond
-the combined main/SangYoon baseline. Tests reproduced and now protect against:
+Each test layer and `npm run build` passed. This audit adds 24 Vitest cases and
+four E2E scenarios run in both browser projects (8 executions). It covers native
+invite sharing/fallback/errors, live notification switches/reminders, deletion
+permissions, signup/create/join onboarding, and selected overdue deletion.
+The notification integration tests reproduced a real bug: the child switches
+received preview defaults instead of saved server values. The card now reads
+the live settings. Existing Node doubles were updated for reminder bookkeeping;
+API/live-trip fixtures now use future times and the repeating-task E2E checks
+the real mobile Tasks panel rather than a desktop-only heading.
+
+Earlier integration updates also protect against:
 
 - The log adapter reading the wrong translation response field, and late replies
   showing an old translation after a note edit.
@@ -64,13 +79,15 @@ free loopback ports. An existing server on 5180 is not reused or stopped.
 | --- | --- | --- |
 | Function/unit | `client/src/features/family/__tests__/singapore-dates.spec.js` | Singapore midnight/year boundaries and infant birthday calculations |
 | Component | `client/src/features/settings/__tests__/FamilyMembersCard.spec.js` | Admin actions, emitted role change, outside click/Escape dismissal, last-admin UI protection, non-admin restrictions, load errors |
+| Component | `client/src/features/settings/__tests__/MobileInviteCodeCard.spec.js`, `TaskPermissionsCard.spec.js` | Props/emits, native share cancellation/failure/clipboard fallback, permission saving/rollback, non-admin restrictions and late replies |
+| Settings integration | `client/src/features/settings/__tests__/TelegramSettings.integration.spec.js` | Real child switches, composable and adapter use saved settings; pending state, rollback/retry, reminders, family isolation, preview and unlink confirmation |
 | Component integration | `client/src/features/family/__tests__/MobileTodayTasks.spec.js` | Real task cards pass claims to their parent, busy state blocks another claim, saved status appears, load errors recover |
 | Page integration | `client/src/features/settings/__tests__/FamilySettings.integration.spec.js` | Real page/panels/router/adapters keep the roster and pending selection visible, roll back failed saves, share theme across navigation |
 | Log integration | `client/src/features/logs/__tests__/LogCard.integration.spec.js` | Translation response contract, local reuse, late replies after edits, malformed responses and retry |
 | Transit integration | `client/src/features/transit/__tests__/active-transit.spec.js` | Family-scoped banners, navigation, delayed replies, selection clearing, preview isolation and polling cleanup |
 | Calendar unit | `client/src/features/transit/__tests__/calendar-links.spec.js`, `tests/unit/calendar-oauth.test.mjs` | UTC calendar dates/encoding, user-bound expiring OAuth state, rejection/cancellation and optional configuration |
 | API/DB integration | `tests/integration/family-api.test.mjs` | Membership, recipient persistence/archive, roles and last-admin concurrency, invites, profile saving/logout, creator-only task writes, concurrent claims, transit milestones, translation cache/errors and Calendar token privacy |
-| E2E | `tests/e2e/family-workflows.spec.mjs` | Complete existing workflows plus care-log translation/cache and multiple live trips, expansion/collapse and family switching, at desktop/mobile sizes |
+| E2E | `tests/e2e/*.spec.mjs` | Login/preferences, recipients, tasks/recurrence, logs, calendar and transit; signup/create/join, notification persistence/permissions and selected overdue deletion at desktop/mobile sizes |
 | Existing regressions | `tests/unit/*.test.mjs` | Family, assistant proposal/confirmation safety, public profiles, profile pictures, session and cache regressions |
 
 Tests assert visible output, disabled states, emitted public events and persisted

@@ -16,7 +16,7 @@ async function post(familyId, path, body, signal) {
     throw error
   }
 }
-export const sendAssistantMessage = (familyId, messages, signal) => post(familyId, 'chat', { messages }, signal)
+export const sendAssistantMessage = (familyId, messages, signal, selection = {}) => post(familyId, 'chat', { messages, ...selection }, signal)
 export const confirmAssistantProposal = (familyId, id, signal) => post(familyId, `proposals/${id}/confirm`, {}, signal)
 export const cancelAssistantProposal = (familyId, id, signal) => post(familyId, `proposals/${id}/cancel`, {}, signal)
 export function assistantErrorMessage(error) {

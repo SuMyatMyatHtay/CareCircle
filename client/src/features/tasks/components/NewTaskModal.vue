@@ -12,10 +12,12 @@ import './new-task/newTask.css'
 import { ref, computed, onMounted, onUnmounted, useId } from 'vue'
 import { useFamilyWorkspace } from '../../family/composables/useFamilyWorkspace.js'
 import { useTaskForm } from '../composables/useTaskForm.js'
+import { useAnimatedClose } from '../../../composables/useAnimatedClose.js'
 import { displayName, initials } from '../../recipients/recipientLabels.js'
 import TaskPersonPicker from './new-task/TaskPersonPicker.vue'
 import TaskCategoryPicker from './new-task/TaskCategoryPicker.vue'
 import TaskWhenFields from './new-task/TaskWhenFields.vue'
+import TaskRepeatFields from './new-task/TaskRepeatFields.vue'
 import TaskPlacePicker from './new-task/TaskPlacePicker.vue'
 import TaskTransitToggle from './new-task/TaskTransitToggle.vue'
 import TaskCareFacts from './new-task/TaskCareFacts.vue'
@@ -31,6 +33,9 @@ const props = defineProps({
 
 const emit = defineEmits(['created', 'saved', 'close'])
 const isEdit = computed(() => Boolean(props.task))
+
+// Every way out (Escape, backdrop, close, Cancel, after posting) fades the dialog out first
+const { closing, requestClose, onAnimationEnd } = useAnimatedClose(() => emit('close'))
 
 const id = useId()
 // The workspace gives the real family, or the sample one on /preview
@@ -58,7 +63,7 @@ async function post() {
     const task = await form.submit(props.familyId || selectedFamilyId.value)
     if (task) {
         emit(isEdit.value ? 'saved' : 'created', task)
-        emit('close')
+        requestClose()
     }
 }
 
@@ -66,7 +71,7 @@ async function post() {
 const titleInput = ref(null)
 
 function onKeydown(event) {
-    if (event.key === 'Escape') emit('close')
+    if (event.key === 'Escape') requestClose()
 }
 
 onMounted(() => {
@@ -83,11 +88,17 @@ onUnmounted(() => {
 
 <template>
     <Teleport to="body">
-        <div class="modal-backdrop fade show"></div>
-        <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true"
-            :aria-labelledby="`${id}-title`" @click.self="emit('close')">
+        <!-- Parents mount this with v-if: it animates in with appear and out with `closing`.
+             Bootstrap's own .fade classes are left off so they don't fight these. -->
+        <Transition name="care-backdrop" appear>
+            <div class="modal-backdrop show" :class="{ 'care-backdrop-closing': closing }"></div>
+        </Transition>
+        <div class="modal show d-block" tabindex="-1" role="dialog" aria-modal="true"
+            :aria-labelledby="`${id}-title`" @click.self="requestClose">
             <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable new-task-dialog">
-                <form class="modal-content new-task-content" novalidate @submit.prevent="post">
+                <Transition name="care-pop" appear>
+                <form class="modal-content new-task-content" :class="{ 'care-pop-closing': closing }" novalidate
+                    @submit.prevent="post" @animationend="onAnimationEnd">
                     <header class="new-task-header">
                         <span v-if="isPrefilled" class="header-avatar" aria-hidden="true">
                             {{ initials(recipientName) }}
@@ -112,7 +123,7 @@ onUnmounted(() => {
                             </p>
                         </div>
 
-                        <button type="button" class="close-button" aria-label="Close" @click="emit('close')">
+                        <button type="button" class="close-button" aria-label="Close" @click="requestClose">
                             <i class="bi bi-x-lg" aria-hidden="true"></i>
                         </button>
                     </header>
@@ -140,6 +151,7 @@ onUnmounted(() => {
 
                                 <!-- 09b: with the person fixed, "When?" moves up into this column -->
                                 <TaskWhenFields v-if="isPrefilled" v-model:date="form.date.value"
+                                    :weekly="form.isWeekly.value" :first-date="form.scheduledDate.value"
                                     v-model:start-time="form.startTime.value" v-model:end-time="form.endTime.value"
                                     :start-error="form.fieldError('startAt')"
                                     :end-error="form.fieldError('endAt') || form.errors.value.endAt" />
@@ -147,10 +159,13 @@ onUnmounted(() => {
 
                             <div class="col-md-6 d-flex flex-column gap-4">
                                 <TaskWhenFields v-if="!isPrefilled" v-model:date="form.date.value"
+                                    :weekly="form.isWeekly.value" :first-date="form.scheduledDate.value"
                                     v-model:start-time="form.startTime.value" v-model:end-time="form.endTime.value"
                                     :start-error="form.fieldError('startAt')"
                                     :end-error="form.fieldError('endAt') || form.errors.value.endAt" />
 
+                                <TaskRepeatFields v-if="!save && !isEdit" v-model="form.recurrence.value" :date="form.scheduledDate.value" :preview="form.repeatPreview.value" />
+                                <p v-else-if="save" class="care-muted">Sign in to a family to create repeating tasks.</p>
                                 <TaskPlacePicker v-model="form.location.value"
                                     :suggestion="selectedRecipient?.preferredClinic"
                                     :suggestion-label="selectedRecipient ? `${recipientName}'s preferred clinic` : ''"
@@ -186,15 +201,16 @@ onUnmounted(() => {
                             <i class="bi bi-send" aria-hidden="true"></i>
                             The {{ familyLabel }} Telegram group gets a message when you {{ isEdit ? 'save' : 'post' }}
                         </p>
-                        <button type="button" class="btn btn-light footer-button" @click="emit('close')">Cancel</button>
+                        <button type="button" class="btn btn-light footer-button" @click="requestClose">Cancel</button>
                         <button type="submit" class="btn btn-primary footer-button post-button"
                             :disabled="!form.canSubmit.value || form.isSubmitting.value">
                             <span v-if="form.isSubmitting.value" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
                             <template v-if="isEdit">{{ form.isSubmitting.value ? 'Saving...' : 'Save changes' }}</template>
-                            <template v-else>{{ form.isSubmitting.value ? 'Posting...' : 'Post task' }}</template>
+                            <template v-else>{{ form.isSubmitting.value ? 'Posting...' : form.postLabel.value }}</template>
                         </button>
                     </footer>
                 </form>
+                </Transition>
             </div>
         </div>
     </Teleport>

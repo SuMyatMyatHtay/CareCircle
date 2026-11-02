@@ -15,6 +15,9 @@
 import { ref, computed, watch } from 'vue'
 import { createTask, updateTask, getTaskErrorMessage } from '../services/tasksApi.js'
 import { useTaskCache } from '../../../composables/useFamilyTasks.js'
+import { useQueryClient } from '@tanstack/vue-query'
+import { queryKeys } from '../../../services/queryClient.js'
+import { parseRecurrence, recurrenceDates, generationHorizon, nextWeeklyDate } from '../../../../../shared/recurrence.js'
 
 const TIME_ZONE = 'Asia/Singapore'
 // Singapore has no daylight saving, so the offset is always +08:00
@@ -98,6 +101,7 @@ const SERVER_FIELDS = [
 
 export function useTaskForm({ recipientId = null, save = null, task = null, date: initialDate = null } = {}) {
     const { upsertTask } = useTaskCache()
+    const queryClient = useQueryClient()
 
     // ---- Fields ----
     const recipient = ref(recipientId)       // recipient id, or null for "Household"
@@ -109,6 +113,7 @@ export function useTaskForm({ recipientId = null, save = null, task = null, date
     const location = ref(null)               // { name, address, postal, lat?, lng? }
     const needsTransit = ref(false)
     const description = ref('')
+    const recurrence = ref({ frequency: 'none', interval: 1, end: { mode: 'never' } })
 
     // Editing: start from the task as it is now
     if (task) {
@@ -130,8 +135,20 @@ export function useTaskForm({ recipientId = null, save = null, task = null, date
         if (!place) needsTransit.value = false
     })
 
-    const startAt = computed(() => combine(date.value, startTime.value))
-    const endAt = computed(() => combine(date.value, endTime.value))
+    const isWeekly = computed(() => recurrence.value.frequency === 'weekly')
+    const scheduledDate = computed(() => isWeekly.value
+        ? nextWeeklyDate(date.value, startTime.value, recurrence.value.weekdays)
+        : date.value)
+    const startAt = computed(() => combine(scheduledDate.value, startTime.value))
+    const endAt = computed(() => combine(scheduledDate.value, endTime.value))
+    const repeatPreview = computed(() => {
+        if (recurrence.value.frequency === 'none' || !startAt.value) return { dates: [], error: '' }
+        try {
+            const rule = parseRecurrence(recurrence.value, startAt.value)
+            if (+startAt.value <= Date.now()) return { dates: [], error: 'The first repeating session must be in the future' }
+            return { dates: recurrenceDates(rule, startAt.value, endAt.value, generationHorizon(startAt.value)), error: '' }
+        } catch (error) { return { dates: [], error: error.message } }
+    })
 
     // ---- Validation (same rules as TaskModel.js) ----
     const errors = computed(() => {
@@ -155,6 +172,7 @@ export function useTaskForm({ recipientId = null, save = null, task = null, date
             result.location = 'Postal code must be 6 digits'
         }
         if (needsTransit.value && !location.value) result.needsTransit = 'Pick a place first'
+        if (repeatPreview.value.error) result.recurrence = repeatPreview.value.error
 
         return result
     })
@@ -190,7 +208,8 @@ export function useTaskForm({ recipientId = null, save = null, task = null, date
                     ...(Number.isFinite(place.lng) ? { lng: place.lng } : {})
                 }
                 : null,
-            needsTransit: place ? needsTransit.value : false
+            needsTransit: place ? needsTransit.value : false,
+            ...(recurrence.value.frequency !== 'none' ? { recurrence: recurrence.value } : {})
         }
     }
 
@@ -234,6 +253,7 @@ export function useTaskForm({ recipientId = null, save = null, task = null, date
                 ? await updateTask(familyId, task._id, toPayload())
                 : await createTask(familyId, toPayload())
             upsertTask(familyId, saved)
+            if (saved.recurringSeries) await queryClient.invalidateQueries({ queryKey: queryKeys.family(familyId) })
             return saved
         } catch (error) {
             applyServerErrors(error)
@@ -258,6 +278,11 @@ export function useTaskForm({ recipientId = null, save = null, task = null, date
         location,
         needsTransit,
         description,
+        recurrence,
+        isWeekly,
+        scheduledDate,
+        repeatPreview,
+        postLabel: computed(() => recurrence.value.frequency === 'none' ? 'Post task' : `Post ${repeatPreview.value.dates.length} tasks`),
         startAt,
         endAt,
         errors,

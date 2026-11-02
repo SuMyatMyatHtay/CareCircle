@@ -33,6 +33,10 @@ defineEmits(['switch-family'])
     </div>
     <div class="care-mobile-header-actions">
       <!-- F (SeungHak): phones have no sidebar on Home, so the Calendar is reached from here -->
+      <!-- D (Marcus): phones have no search bar, so search opens from here -->
+      <RouterLink v-if="!preview" to="/search" class="care-mobile-calendar care-mobile-search" aria-label="Search the family">
+        <i class="bi bi-search" aria-hidden="true"></i>
+      </RouterLink>
       <RouterLink v-if="!preview" to="/calendar" class="care-mobile-calendar" aria-label="Open the family calendar">
         <i class="bi bi-calendar3" aria-hidden="true"></i>
       </RouterLink>
@@ -64,5 +68,14 @@ defineEmits(['switch-family'])
   background: var(--theme-panel, #fff);
   color: var(--care-green, #2d7d43);
   font-size: 16px;
+}
+/* 44px touch target around the 36px circle */
+.care-mobile-search {
+  position: relative;
+}
+.care-mobile-search::after {
+  position: absolute;
+  inset: -4px;
+  content: '';
 }
 </style>

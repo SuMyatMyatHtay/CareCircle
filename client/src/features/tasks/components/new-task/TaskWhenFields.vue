@@ -7,7 +7,9 @@ import { quickDates, dateLabel, todayKey } from '../../composables/useTaskForm.j
 
 defineProps({
     startError: { type: String, default: '' },
-    endError: { type: String, default: '' }
+    endError: { type: String, default: '' },
+    weekly: { type: Boolean, default: false },
+    firstDate: { type: String, default: '' }
 })
 
 const date = defineModel('date', { type: String, default: '' })
@@ -31,7 +33,11 @@ function pickQuick(value) {
     <fieldset class="task-field">
         <legend class="task-label">When?</legend>
 
-        <div class="date-chips">
+        <div v-if="weekly" class="weekly-first-session">
+            <p aria-live="polite">First session: <strong>{{ dateLabel(firstDate || date) }}</strong><br><small>Scheduled automatically on your selected weekdays.</small></p>
+            <button type="button" class="date-chip" @click="picking = !picking">Start later…</button>
+        </div>
+        <div v-else class="date-chips">
             <button v-for="chip in chips" :key="chip.value" type="button" class="date-chip"
                 :class="{ selected: date === chip.value && !picking }" :aria-pressed="date === chip.value && !picking"
                 @click="pickQuick(chip.value)">
@@ -43,8 +49,8 @@ function pickQuick(value) {
             </button>
         </div>
 
-        <div v-if="showPicker" class="mt-2">
-            <label class="task-sublabel" :for="`${id}-date`">Date</label>
+        <div v-if="weekly ? picking : showPicker" class="mt-2">
+            <label class="task-sublabel" :for="`${id}-date`">{{ weekly ? 'Start on or after (optional)' : 'Date' }}</label>
             <input :id="`${id}-date`" v-model="date" type="date" class="task-input" :min="todayKey()">
         </div>
 
@@ -66,6 +72,7 @@ function pickQuick(value) {
 </template>
 
 <style scoped>
+.weekly-first-session{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.weekly-first-session p{margin:0;font-size:14px}.weekly-first-session small{color:var(--theme-muted,#717b8e);font-size:12px}
 .date-chips {
     display: flex;
     flex-wrap: wrap;

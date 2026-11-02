@@ -1,0 +1,261 @@
+/* Shared motion for the whole app. Calm and short: some of our users are elderly.
+   Use these classes with Vue's <Transition> / <TransitionGroup> instead of writing
+   new ones in components. Exits run at about 70% of the enter duration.
+   Everything here turns into a short opacity fade under "Reduce motion" (bottom of file). */
+:root {
+  --motion-fast: 150ms; /* chips, toggles, tabs, dropdowns */
+  --motion-base: 220ms; /* pages, panels, cards */
+  --motion-slow: 300ms; /* modals, transit mode, podium */
+  --ease-enter: cubic-bezier(0.2, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+}
+
+/* ---- Pages: <Transition name="care-page" mode="out-in"> around the RouterView ----
+   Pages move with `top` rather than transform: a transform would make the page the
+   containing block for its position: fixed children (phone bottom nav, toasts),
+   and they would jump for the length of the animation. */
+.care-page-enter-active {
+  position: relative;
+  transition:
+    opacity var(--motion-base) var(--ease-enter),
+    top var(--motion-base) var(--ease-enter);
+}
+.care-page-leave-active {
+  transition: opacity 150ms var(--ease-exit);
+}
+.care-page-enter-from {
+  opacity: 0;
+  top: 8px;
+}
+.care-page-leave-to {
+  opacity: 0;
+}
+
+/* ---- Transit mode: slides up like a sheet ---- */
+.care-sheet-enter-active {
+  position: relative;
+  transition:
+    opacity var(--motion-slow) var(--ease-enter),
+    top var(--motion-slow) var(--ease-enter);
+}
+.care-sheet-leave-active {
+  transition: opacity calc(var(--motion-slow) * 0.7) var(--ease-exit);
+}
+.care-sheet-enter-from {
+  opacity: 0;
+  top: 24px;
+}
+.care-sheet-leave-to {
+  opacity: 0;
+}
+
+/* ---- Crossfade (recipient hub tab content) ---- */
+.care-fade-enter-active {
+  transition: opacity var(--motion-fast) var(--ease-enter);
+}
+.care-fade-leave-active {
+  transition: opacity calc(var(--motion-fast) * 0.7) var(--ease-exit);
+}
+.care-fade-enter-from,
+.care-fade-leave-to {
+  opacity: 0;
+}
+
+/* ---- Modal backdrop ---- */
+.care-backdrop-enter-active {
+  transition: opacity 200ms var(--ease-enter);
+}
+.care-backdrop-enter-from {
+  opacity: 0;
+}
+
+/* ---- Modal panel (care-pop) ---- */
+.care-pop-enter-active {
+  transition:
+    opacity var(--motion-base) var(--ease-enter),
+    transform var(--motion-base) var(--ease-enter);
+}
+.care-pop-leave-active {
+  transition:
+    opacity calc(var(--motion-base) * 0.7) var(--ease-exit),
+    transform calc(var(--motion-base) * 0.7) var(--ease-exit);
+}
+.care-pop-enter-from,
+.care-pop-leave-to {
+  opacity: 0;
+  transform: scale(0.96);
+}
+
+/* Modals are mounted with v-if by their parents, so they can't use a leave transition.
+   They add these classes instead, wait for animationend, then emit 'close'. */
+.care-pop-closing {
+  pointer-events: none;
+  animation: care-pop-out calc(var(--motion-base) * 0.7) var(--ease-exit) forwards;
+}
+.care-backdrop-closing {
+  pointer-events: none;
+  animation: care-fade-out calc(var(--motion-base) * 0.7) var(--ease-exit) forwards;
+}
+@keyframes care-pop-out {
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+@keyframes care-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* ---- Panel that grows from its launcher (assistant). Set transform-origin on the panel. ---- */
+.care-grow-enter-active {
+  transition:
+    opacity var(--motion-base) var(--ease-enter),
+    transform var(--motion-base) var(--ease-enter);
+}
+.care-grow-leave-active {
+  transition:
+    opacity calc(var(--motion-base) * 0.7) var(--ease-exit),
+    transform calc(var(--motion-base) * 0.7) var(--ease-exit);
+}
+.care-grow-enter-from,
+.care-grow-leave-to {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+/* ---- Lists: <TransitionGroup name="care-list">, never with `appear` ----
+   The list element needs position: relative so leaving rows are placed inside it. */
+.care-list-enter-active {
+  transition:
+    opacity var(--motion-fast) var(--ease-enter),
+    transform var(--motion-fast) var(--ease-enter);
+}
+.care-list-leave-active {
+  position: absolute;
+  width: 100%;
+  transition: opacity calc(var(--motion-fast) * 0.7) var(--ease-exit);
+}
+.care-list-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.care-list-leave-to {
+  opacity: 0;
+}
+.care-list-move {
+  transition: transform var(--motion-base) var(--ease-enter);
+}
+
+/* ---- Dropdowns (search results etc.) ---- */
+.care-drop-enter-active {
+  transition:
+    opacity var(--motion-fast) var(--ease-enter),
+    transform var(--motion-fast) var(--ease-enter);
+}
+.care-drop-leave-active {
+  transition:
+    opacity calc(var(--motion-fast) * 0.7) var(--ease-exit),
+    transform calc(var(--motion-fast) * 0.7) var(--ease-exit);
+}
+.care-drop-enter-from,
+.care-drop-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* ---- Sliding tab underline (useTabIndicator). The tab bar needs position: relative. ---- */
+.care-tab-indicator {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--care-green);
+  pointer-events: none;
+}
+.care-tab-indicator.is-ready {
+  transition:
+    transform var(--motion-base) var(--ease-enter),
+    width var(--motion-base) var(--ease-enter);
+}
+
+/* ---- Row changed by someone else (live update). Remove the class on animationend. ---- */
+.care-flash {
+  animation: care-flash 1.5s var(--ease-exit);
+}
+@keyframes care-flash {
+  /* No `to`: it fades back to the row's own background */
+  from {
+    background-color: var(--care-soft);
+  }
+}
+
+/* ---- Check mark drawn once (claim button). Use on an <svg> with a <polyline>. ---- */
+.care-check polyline {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: care-check-draw 250ms var(--ease-enter) forwards;
+}
+@keyframes care-check-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ---- Reduce motion: every class above becomes a 100ms opacity fade, nothing moves ---- */
+@media (prefers-reduced-motion: reduce) {
+  .care-page-enter-active,
+  .care-page-leave-active,
+  .care-sheet-enter-active,
+  .care-sheet-leave-active,
+  .care-fade-enter-active,
+  .care-fade-leave-active,
+  .care-backdrop-enter-active,
+  .care-pop-enter-active,
+  .care-pop-leave-active,
+  .care-grow-enter-active,
+  .care-grow-leave-active,
+  .care-list-enter-active,
+  .care-list-leave-active,
+  .care-drop-enter-active,
+  .care-drop-leave-active {
+    transition: opacity 100ms linear;
+  }
+  .care-page-enter-from,
+  .care-sheet-enter-from {
+    top: 0;
+  }
+  .care-pop-enter-from,
+  .care-pop-leave-to,
+  .care-grow-enter-from,
+  .care-grow-leave-to,
+  .care-list-enter-from,
+  .care-drop-enter-from,
+  .care-drop-leave-to {
+    transform: none;
+  }
+  /* Rows don't glide; a leaving row just fades where it is */
+  .care-list-leave-active {
+    position: static;
+  }
+  .care-list-move,
+  .care-tab-indicator.is-ready {
+    transition: none;
+  }
+  .care-pop-closing,
+  .care-backdrop-closing {
+    animation: none;
+    opacity: 0;
+    transition: opacity 100ms linear;
+  }
+  .care-check polyline {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  /* The flash is a colour fade only (nothing moves), so it stays, just quicker */
+  .care-flash {
+    animation-duration: 600ms;
+  }
+}

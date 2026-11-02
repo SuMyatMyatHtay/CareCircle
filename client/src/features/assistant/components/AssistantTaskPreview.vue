@@ -3,8 +3,8 @@ import { computed } from 'vue'
 const props = defineProps({ proposal: { type: Object, required: true }, state: { type: String, default: 'pending' }, busy: Boolean })
 defineEmits(['confirm', 'dismiss'])
 const labels = { title: 'Task', recipient: 'For', startAt: 'Starts', endAt: 'Ends', location: 'Location', category: 'Category', needsTransit: 'Transport', description: 'Notes' }
-const actionLabels = { create: 'New task', update: 'Task changes', unclaim: 'Unclaim your task', delete: 'Delete task' }
-const confirmLabel = computed(() => ({ create: 'Confirm task', update: 'Confirm changes', unclaim: 'Confirm unclaim', delete: props.proposal.deletionAcknowledged ? 'Yes, permanently delete' : 'Review deletion' })[props.proposal.action])
+const actionLabels = { create: 'New task', update: 'Task changes', unclaim: 'Unclaim task', delete: 'Delete task', claim: 'Claim task for yourself', assign: 'Assign task', start: 'Start task', complete: 'Complete task', cancel: 'Cancel task' }
+const confirmLabel = computed(() => ({ create: 'Confirm task', update: 'Confirm changes', unclaim: 'Confirm unclaim', delete: props.proposal.deletionAcknowledged ? 'Yes, permanently delete' : 'Review deletion', claim: 'Confirm claim', assign: 'Confirm assignment', start: 'Confirm start', complete: 'Confirm completion', cancel: 'Confirm cancellation' })[props.proposal.action])
 function format(field, task) {
   const value = task?.[field]
   if (field === 'recipient') return task?.recipientName || 'Household'
@@ -23,6 +23,9 @@ const rows = computed(() => Object.keys(labels).filter(field => props.proposal.a
   <div class="assistant-task-preview">
     <div class="preview-label"><i class="bi bi-calendar-check" aria-hidden="true"></i> {{ actionLabels[proposal.action] }}</div>
     <h3>{{ proposal.task.title }}</h3>
+    <p v-if="proposal.task.recurringSeries">{{ proposal.task.recurrenceDetached ? 'This is a one-day exception; only this date is affected.' : proposal.action === 'claim' || proposal.action === 'assign' ? 'This claims every upcoming session in the series, including future generated dates.' : 'Only this occurrence is affected; other sessions stay unchanged.' }}</p>
+    <p v-if="proposal.action === 'assign'">Assign to: <strong>{{ proposal.task.assigneeName || proposal.changes.assigneeName }}</strong></p>
+    <p v-if="['claim', 'assign', 'start', 'complete', 'cancel', 'unclaim'].includes(proposal.action)">Status: {{ proposal.before?.status?.replaceAll('_', ' ') }} → {{ proposal.task.status?.replaceAll('_', ' ') }}</p>
     <dl><div v-for="row in rows" :key="row.label"><dt>{{ row.label }}</dt><dd><span v-if="proposal.action === 'update' && row.before !== row.after" class="preview-before">{{ row.before }}</span>{{ row.after }}</dd></div></dl>
     <p class="preview-timezone">Times shown in Singapore time.</p>
     <p v-if="proposal.action === 'delete' && state === 'pending'" class="text-danger" role="alert">{{ proposal.confirmationWarning || 'Deleting permanently removes this task. You will be asked to confirm again.' }}</p>

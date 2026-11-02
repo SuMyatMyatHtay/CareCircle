@@ -153,3 +153,46 @@ test('conversation payload is bounded, user-first, and includes task search IDs'
   assert.ok(result.length <= 24); assert.ok(result.reduce((sum, message) => sum + message.content.length, 0) <= 22000)
   assert.ok(result.some(message => message.content.includes('task-123')))
 })
+
+test('task selection is sent as structured context and persists through follow-up messages', async t => {
+  const bodies = []
+  t.mock.method(http, 'post', async (_path, body) => {
+    bodies.push(body)
+    return { data: { message: body.selectTask ? 'What would you like to do?' : 'What new date and time?', suggestions: [] } }
+  })
+  await mounted.chat.selectTask({ id: 'task-selected', title: 'Visit Grandma' })
+  assert.equal(bodies[0].selectedTaskId, 'task-selected')
+  assert.equal(bodies[0].selectTask, true)
+  await mounted.chat.send('Change time')
+  assert.equal(bodies[1].selectedTaskId, 'task-selected')
+  assert.equal(bodies[1].selectTask, false)
+  mounted.familyId.value = 'another-family'
+  await mounted.tick()
+  await mounted.chat.send('Find tasks')
+  assert.equal(bodies[2].selectedTaskId, undefined)
+})
+
+test('permission refusals are normal chat replies without a retry button', async t => {
+  t.mock.method(http, 'post', async () => { throw { response: { status: 403, data: { message: 'You cannot edit this task because you are not its creator.' } } } })
+  await mounted.chat.send('Update this task')
+  assert.match(mounted.chat.messages.value.at(-1).content, /not its creator/)
+  assert.equal(mounted.chat.error.value, '')
+  assert.equal(mounted.chat.retryable.value, false)
+})
+
+test('edit-field context persists for the answer and clears after a proposal', async t => {
+  const bodies = []
+  t.mock.method(http, 'post', async (_path, body) => {
+    bodies.push(body)
+    if (bodies.length === 1) return { data: { message: 'Selected task' } }
+    if (bodies.length === 2) return { data: { message: 'What should the new title be?', editField: 'title' } }
+    return { data: { message: 'Review', proposal: { ...proposal, action: 'update' } } }
+  })
+  await mounted.chat.selectTask({ id: 'task-1', title: 'Old title' })
+  await mounted.chat.send('Change title')
+  await mounted.chat.send('Visit Friend')
+  assert.equal(bodies[2].selectedTaskId, 'task-1')
+  assert.equal(bodies[2].editField, 'title')
+  await mounted.chat.send('Another request')
+  assert.equal(bodies[3].editField, undefined)
+})

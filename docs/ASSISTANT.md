@@ -1,6 +1,21 @@
 # CareCircle assistant
 
-The floating mascot uses the signed-in user's saved dress-up appearance. The chat supports task search, task creation and editing task details. It asks for missing details and presents a confirmation card before writing. It cannot delete, assign, claim, cancel or complete tasks.
+The floating mascot uses the signed-in user's saved dress-up appearance. Chat supports task search and confirmed proposals to create, edit, claim, assign, unclaim, start, complete, cancel or delete tasks. It asks for missing details before showing a confirmation card. Deletion requires a second confirmation. It does not provide medical advice.
+
+## Ownership and task actions
+
+- Claim: claim an open, future family task for yourself. Overdue tasks cannot be claimed.
+- Assign: the creator can assign an open, future task to a current family member. Existing claims must be released first.
+- Start/complete: only the assigned person can act, using the same task/transit lifecycle as the manual UI.
+- Cancel: creator or assigned person; admin status alone does not grant assistant ownership.
+- Unclaim: creator or claimer, while the task is still claimed.
+- Edit/delete: creator only; lifecycle restrictions remain in force.
+
+Permissions, assignee membership, status, deadlines and task version are rechecked on confirmation. Changes refresh shared task caches/listeners; status actions use the shared lifecycle handlers for notifications and transit.
+
+Selecting a result sends `selectedTaskId` and `selectTask: true` with the conversation. The server validates its family and returns a deterministic follow-up without Gemini. Subsequent messages retain `selectedTaskId`; Change time/Change location asks for the new value directly. An incomplete model update becomes a clarification instead of an empty-edit error. Selection clears on family/account changes or a new chat.
+
+Edit questions also return an `editField` that the client carries with the next answer. Title and notes answers become exact, validated update proposals without a Gemini call; time/location questions give the model the explicit field context. Ownership and locked-status checks run before asking for changes and again on confirmation. Non-retryable validation/permission failures appear as explanatory chat replies without a Try again button. Incomplete creation drafts ask for missing details rather than attempting to save them.
 
 ## Setup
 
@@ -35,7 +50,7 @@ Gemini returns a structured intent; it never receives database tools. The server
 
 Messages stay in browser memory and clear on family/account changes or a new chat. Requests are cancelled and late replies discarded on context changes. A bounded window of conversation and up to 80 recent/upcoming tasks plus 100 recipient names is sent to Gemini for context. Database searches can find tasks outside that snapshot and return up to 10 matching cards. Medical records, passwords, contact details, profile pictures and API credentials are excluded from the context. Task titles, locations and user messages can still contain personal information. The chat includes a data-use disclosure; Google's free tier may use submitted content to improve products, as described on its pricing page. Use sample data for a class demonstration.
 
-Chat requests have a per-user, per-server-process limit of 10/minute, a 20-second Gemini timeout, and bounded input/output. A deployment with multiple instances needs a shared rate limiter for a global quota. No chat transcript persistence, voice input, recurring tasks, location lookup or proactive reminders are implemented.
+Chat requests have a per-user, per-server-process limit of 10/minute, a 45-second Gemini timeout, and bounded input/output. The client has a 55-second request deadline and a Stop waiting button. A deployment with multiple instances needs a shared rate limiter for a global quota. No chat transcript persistence, voice input, recurring tasks, location lookup or proactive reminders are implemented.
 
 ## Validation
 

@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import ProfileAvatar from '../../../components/common/ProfileAvatar.vue'
 import TaskStatusBadge from '../../tasks/components/TaskStatusBadge.vue'
+import RecurringTaskBadge from '../../tasks/components/RecurringTaskBadge.vue'
 import { useTaskOverdue } from '../../tasks/composables/useTaskOverdue.js'
 const props = defineProps({
   task: { type: Object, required: true },
@@ -52,6 +53,7 @@ const context = computed(() =>
       <ProfileAvatar :person="recipient" recipient size="small" />
       <div class="care-mobile-task-copy">
         <h3>{{ task.title }}</h3>
+        <RecurringTaskBadge :task="task" />
         <p>
           <template v-if="showDate">{{ date }} ·</template>
           {{ time }}

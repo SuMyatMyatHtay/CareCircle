@@ -73,9 +73,14 @@ function replaceRecipient(updated) {
 
             <div class="hub-tab-content">
                 <RouterView v-slot="{ Component }">
-                    <!-- The Log tab is F's view; it loads its own data and takes no props -->
-                    <component :is="Component" v-if="route.name === 'recipient-log'" />
-                    <component :is="Component" v-else :recipient="recipient" @updated="replaceRecipient" />
+                    <!-- Crossfade between tabs. The wrapper gives each tab one element to fade. -->
+                    <Transition name="care-fade" mode="out-in">
+                        <div :key="route.name">
+                            <!-- The Log tab is F's view; it loads its own data and takes no props -->
+                            <component :is="Component" v-if="route.name === 'recipient-log'" />
+                            <component :is="Component" v-else :recipient="recipient" @updated="replaceRecipient" />
+                        </div>
+                    </Transition>
                 </RouterView>
             </div>
         </template>

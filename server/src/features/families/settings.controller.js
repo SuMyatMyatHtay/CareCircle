@@ -168,3 +168,18 @@ export async function regenerateInviteCode(req, res, next) {
     next(error)
   }
 }
+
+export async function updateTaskPermissions(req, res, next) {
+  try {
+    const keys = Object.keys(req.body || {})
+    if (keys.length !== 1 || keys[0] !== 'overdueTaskDeletion' || !['admin', 'member'].includes(req.body.overdueTaskDeletion))
+      return res.status(400).json({ error: 'Choose admin or member for overdue task deletion' })
+    const family = await Family.findOneAndUpdate(
+      { _id: req.family._id, members: { $elemMatch: { userId: req.user.userId, role: 'admin' } } },
+      { $set: { overdueTaskDeletion: req.body.overdueTaskDeletion } },
+      { new: true, runValidators: true },
+    )
+    if (!family) return res.status(403).json({ error: 'Only family admins can change task permissions' })
+    return res.json({ overdueTaskDeletion: family.overdueTaskDeletion })
+  } catch (error) { next(error) }
+}

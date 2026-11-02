@@ -16,6 +16,7 @@ import Family from '../features/families/Family.model.js'
 import Notification from '../features/notifications/Notifications.model.js'
 import { sendTelegramMessage } from '../features/integrations/telegram.js'
 import { EVENTS, EVENT_TYPES, NOTIFICATION_STATUS, NOTIFY_NONE } from '../constants.js'
+const REMINDER_EVENTS = [EVENTS.TASK_STARTING_SOON, EVENTS.TASK_UNCLAIMED_SOON, EVENTS.DAILY_SUMMARY]
 
 // ---------- Switches ----------
 // family.notifyOn is a list of event names:
@@ -23,6 +24,7 @@ import { EVENTS, EVENT_TYPES, NOTIFICATION_STATUS, NOTIFY_NONE } from '../consta
 //   ['none']   an admin switched everything off (an empty list can't mean "off")
 //   [...]      only these events are on
 export function isEventEnabled(notifyOn, eventType) {
+  if (REMINDER_EVENTS.includes(eventType)) return true
   if (!Array.isArray(notifyOn) || notifyOn.length === 0) return true
   return notifyOn.includes(eventType)
 }
@@ -143,9 +145,12 @@ const BUILDERS = {
     const when = whenLabel(task.startAt)
     return { text: `${shortName(task.createdBy?.name) || 'Someone'} updated: ${taskSubject(task)}${when ? `, ${when}` : ''}.`, ...taskRef(task) }
   },
-  [EVENTS.TASK_DELETED]: (task) => ({
-    text: `${shortName(task.createdBy?.name) || 'Someone'} removed: ${taskSubject(task)}.`, ...taskRef(task),
-  }),
+  [EVENTS.TASK_DELETED]: (task) => {
+    if (Number.isInteger(task.deletedCount) && task.deletedCount > 0) {
+      return { text: `${shortName(task.changedBy?.name) || 'Someone'} deleted ${task.deletedCount} overdue task${task.deletedCount === 1 ? '' : 's'}.` }
+    }
+    return { text: `${shortName(task.changedBy?.name || task.createdBy?.name) || 'Someone'} removed: ${taskSubject(task)}.`, ...taskRef(task) }
+  },
   [EVENTS.TASK_STARTED]: (task) => ({
     text: `${shortName(task.claimedBy?.name) || 'Someone'} started: ${taskSubject(task)}.`, ...taskRef(task),
   }),
@@ -171,6 +176,17 @@ const BUILDERS = {
       refType: 'careRecipient', refId: idOf(recipient),
     }
   },
+  [EVENTS.TASK_UNCLAIMED_SOON]: (task) => ({
+    text: `Still unclaimed: ${taskSubject(task)}, ${whenLabel(task.startAt)}. Can anyone take it?`, ...taskRef(task),
+  }),
+  [EVENTS.TASK_STARTING_SOON]: (task) => ({
+    text: `Reminder for ${shortName(task.claimedBy?.name) || 'the person who claimed it'}: ${taskSubject(task)}, ${whenLabel(task.startAt)}.`, ...taskRef(task),
+  }),
+  [EVENTS.DAILY_SUMMARY]: ({ tasks }) => ({
+    text: `Today's tasks:\n${tasks.map((t) =>
+      `• ${whenLabel(t.startAt).replace(/^today /, '')} ${taskSubject(t)} (${t.claimedBy ? shortName(t.claimedBy.name) : 'unclaimed'})`,
+    ).join('\n')}`,
+  }),
 }
 
 // Returns { text, refType, refId } or null when there is nothing to send

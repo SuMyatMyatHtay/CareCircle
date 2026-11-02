@@ -21,3 +21,7 @@ export async function getNotifications(familyId, limit = 8) {
   if (!Array.isArray(data.notifications)) throw new Error('Invalid notification data from server.')
   return data.notifications
 }
+export async function saveReminders(familyId, reminders) {
+  const { data } = await http.patch(`/families/${familyId}/notify-settings`, { reminders }, authConfig())
+  return data.reminders
+}

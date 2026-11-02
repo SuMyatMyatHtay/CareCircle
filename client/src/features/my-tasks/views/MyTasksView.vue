@@ -11,6 +11,7 @@ import { useIsMobile } from '../utils/useIsMobile.js'
 import { getMyTasks, startTask, unclaimTask, completeTask, getErrorMessage } from '../services/myTasksApi.js'
 import AddToCalendar from '../../transit/components/AddToCalendar.vue'
 import GoogleCalendarSync from '../components/GoogleCalendarSync.vue'
+import { useTabIndicator } from '../../../composables/useTabIndicator.js'
 
 const router = useRouter()
 const isMobile = useIsMobile()
@@ -33,6 +34,10 @@ const actionError = ref('')
 const notice = ref('')
 const busyTaskId = ref('')
 const now = ref(Date.now())
+
+// One underline that slides to the active tab
+const tabBar = ref(null)
+const indicator = useTabIndicator(tabBar, () => activeTab.value)
 
 // Families that appear in my tasks, in a stable order, each with its own pill colour
 const families = computed(() => {
@@ -116,7 +121,7 @@ function openTrip(task) {
 }
 
 async function runAction(task, action) {
-    if (action === 'give-back' && !window.confirm(`Give back "${task.title}"? It goes back to the family as available.`)) return
+    if (action === 'give-back' && !window.confirm(task.recurringSeries ? `Give back only this date of "${task.title}"? You keep all your other sessions. Someone else can claim this date only.` : `Give back "${task.title}"? It goes back to the family as available.`)) return
     if (action === 'complete' && !window.confirm(`Mark "${task.title}" as done?`)) return
 
     busyTaskId.value = task._id
@@ -168,7 +173,10 @@ onUnmounted(() => {
     <!-- Phones: Figma "Mobile prototype" layout -->
     <MyTasksMobile
         v-if="isMobile"
+        v-model:family-filter="familyFilter"
         :tasks="filteredTasks"
+        :open-tasks="openTasks"
+        :families="families"
         :active-tab="activeTab"
         :counts="counts"
         :visible-tasks="visibleTasks"
@@ -176,9 +184,20 @@ onUnmounted(() => {
         :is-loading="isLoading"
         :error-message="errorMessage"
         :now="now"
+        :expanded-id="expandedId"
+        :busy-task-id="busyTaskId"
+        :tone-for="toneFor"
+        :notice="notice"
+        :action-error="actionError"
         @select-tab="selectTab"
         @retry="loadTasks"
         @calendar="calendarOpen = true"
+        @toggle="toggle"
+        @start="(task) => runAction(task, 'start')"
+        @give-back="(task) => runAction(task, 'give-back')"
+        @complete="(task) => runAction(task, 'complete')"
+        @open-trip="openTrip"
+        @dismiss="notice = ''"
     />
 
     <!-- Laptops: Figma "Web wireframes" layout -->
@@ -204,7 +223,7 @@ onUnmounted(() => {
             </button>
         </header>
 
-        <div class="tabs" role="tablist" aria-label="Task status">
+        <div ref="tabBar" class="tabs" role="tablist" aria-label="Task status">
             <button
                 v-for="tab in TABS"
                 :key="tab.key"
@@ -217,6 +236,8 @@ onUnmounted(() => {
             >
                 {{ tab.label }} · {{ counts[tab.key] }}
             </button>
+            <span class="care-tab-indicator" :class="{ 'is-ready': indicator.ready }" :style="indicator.style"
+                aria-hidden="true"></span>
         </div>
 
         <div class="columns">
@@ -241,7 +262,9 @@ onUnmounted(() => {
                     {{ TABS.find((t) => t.key === activeTab).empty }}
                 </p>
 
-                <template v-else>
+                <!-- Cards that move to another tab (start, give back, complete) fade out and the
+                     rest glide up. Keyed on the tab so switching tabs swaps the list without animating. -->
+                <TransitionGroup v-else :key="activeTab" name="care-list" tag="div" class="task-cards">
                 <MyTaskCard
                     v-for="task in visibleTasks"
                     :key="task._id"
@@ -256,7 +279,7 @@ onUnmounted(() => {
                     @complete="runAction(task, 'complete')"
                     @open-trip="openTrip(task)"
                 />
-                </template>
+                </TransitionGroup>
             </main>
 
             <aside class="side">
@@ -364,6 +387,7 @@ h1 {
 
 /* Tabs */
 .tabs {
+    position: relative;
     display: flex;
     gap: 28px;
     border-bottom: 1px solid var(--theme-border, #e5e7eb);
@@ -385,7 +409,6 @@ h1 {
 }
 
 .tab.active {
-    border-bottom-color: var(--theme-accent-border, #2f7a3f);
     color: var(--theme-green, #2f7a3f);
     font-weight: 600;
 }
@@ -399,10 +422,16 @@ h1 {
 }
 
 .task-list {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 12px;
     min-width: 0;
+}
+
+/* Wrapper for the card TransitionGroup; the cards still lay out as children of .task-list */
+.task-cards {
+    display: contents;
 }
 
 .side {

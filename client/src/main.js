@@ -6,5 +6,6 @@ import { queryClient } from './services/queryClient.js'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 import './styles/theme.css'
+import './styles/motion.css'
 import './styles/global.css'
 createApp(App).use(router).use(VueQueryPlugin, { queryClient }).mount('#app')

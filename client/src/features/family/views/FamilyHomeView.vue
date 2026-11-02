@@ -6,7 +6,9 @@ import NewTaskButton from '../../tasks/components/NewTaskButton.vue'
 import FamilyEmptyState from '../components/FamilyEmptyState.vue'
 import TransitBanner from '../components/TransitBanner.vue'
 import RecipientOverview from '../components/RecipientOverview.vue'
+import DeleteOverdueTasks from '../../tasks/components/DeleteOverdueTasks.vue'
 import TodayTasks from '../components/TodayTasks.vue'
+import RecurringSeriesPanel from '../../tasks/components/RecurringSeriesPanel.vue'
 import RecentUpdates from '../components/RecentUpdates.vue'
 import LiveUpdateToast from '../components/LiveUpdateToast.vue'
 import NewTaskModal from '../../tasks/components/NewTaskModal.vue'
@@ -26,6 +28,7 @@ import { useActiveTransit } from '../../transit/utils/useActiveTransit.js' // E:
 const router = useRouter()
 const {
   user,
+  isAdmin,
   selectedFamily,
   selectedFamilyId,
   families,
@@ -49,6 +52,8 @@ const {
   loading,
   error,
   busyId,
+  claimedId,
+  flashIds,
   toast,
   toastError,
   openTaskCount,
@@ -106,6 +111,23 @@ const mobilePanel = ref('')
 // claim, and stays in view as "Claimed" after you take it
 const taskFilter = ref('upcoming')
 const taskNow = useTaskClock()
+const selectedOverdueIds = ref([])
+const deletingOverdue = ref(false)
+const canSelectOverdue = computed(() => taskFilter.value === 'overdue' && (isAdmin.value || selectedFamily.value?.overdueTaskDeletion === 'member'))
+const overdueTaskIds = computed(() => displayTasks.value.filter(task => task.status === 'open' && isTaskOverdue(task, taskNow.value)).map(task => task._id))
+function toggleOverdue(id, checked) {
+  if (!canSelectOverdue.value || deletingOverdue.value) return
+  selectedOverdueIds.value = checked ? [...new Set([...selectedOverdueIds.value, id])] : selectedOverdueIds.value.filter(value => value !== id)
+}
+function selectAllOverdue(checked) {
+  if (!canSelectOverdue.value || deletingOverdue.value) return
+  selectedOverdueIds.value = checked ? [...overdueTaskIds.value] : []
+}
+async function afterOverdueDeleted() {
+  selectedOverdueIds.value = []
+  await loadTasks()
+}
+watch([selectedFamilyId, taskFilter, canSelectOverdue], () => { selectedOverdueIds.value = [] })
 const taskFilters = [
   { key: 'upcoming', label: 'Upcoming' },
   { key: 'today', label: 'Today' },
@@ -171,6 +193,7 @@ const displayTasks = computed(() =>
         .sort((a, b) => new Date(a.startAt) - new Date(b.startAt))
     : taskBoardTasks.value,
 )
+watch(overdueTaskIds, ids => { selectedOverdueIds.value = selectedOverdueIds.value.filter(id => ids.includes(id)) })
 function openRecipient(recipient) {
   if (!isPreview) {
     router.push({ name: 'recipient-overview', params: { recipientId: recipient._id } })
@@ -247,14 +270,21 @@ watch(selectedFamilyId, () => {
           @open="openRecipient"
           @show-open-tasks="filterRecipient = $event"
         />
+        <RecurringSeriesPanel v-if="!isPreview && allTasks.some(task => task.recurringSeries)" :tasks="allTasks" />
         <div class="care-dashboard-grid">
           <TodayTasks
+            :selectable="canSelectOverdue"
+            :selected-ids="selectedOverdueIds"
+            :selection-busy="deletingOverdue"
+            @select-task="toggleOverdue"
             :filter="taskFilter"
             :filters="taskFilters"
             :tasks="displayTasks"
             :loading="loading"
             :error="error"
             :busy-id="busyId"
+            :claimed-id="claimedId"
+            :flash-ids="flashIds"
             :filter-label="
               filterRecipient?.nickname || filterRecipient?.name || ''
             "
@@ -262,7 +292,11 @@ watch(selectedFamilyId, () => {
             @claim="claimTask"
             @clear-filter="filterRecipient = null"
             @filter="taskFilter = $event; filterRecipient = null"
-          />
+          >
+            <template #bulk-actions>
+              <DeleteOverdueTasks v-if="taskFilter === 'overdue'" :selected-ids="selectedOverdueIds" :task-ids="overdueTaskIds" :disabled="loading || Boolean(error)" @select-all="selectAllOverdue" @busy="deletingOverdue = $event" @deleted="afterOverdueDeleted" />
+            </template>
+          </TodayTasks>
           <RecentUpdates :updates="activity" :preview="isPreview" />
         </div>
       </template>
@@ -337,9 +371,14 @@ watch(selectedFamilyId, () => {
       <div v-if="mobilePanel === 'tasks'" class="care-home-task-filters" role="group" aria-label="Filter family tasks">
         <button v-for="option in taskFilters" :key="option.key" type="button" :aria-pressed="taskFilter === option.key" :class="{ selected: taskFilter === option.key }" @click="taskFilter = option.key">{{ option.label }}</button>
       </div>
+      <DeleteOverdueTasks v-if="mobilePanel === 'tasks' && taskFilter === 'overdue'" :selected-ids="selectedOverdueIds" :task-ids="overdueTaskIds" :disabled="loading || Boolean(error)" @select-all="selectAllOverdue" @busy="deletingOverdue = $event" @deleted="afterOverdueDeleted" />
       <MobileTodayTasks
         v-if="mobilePanel === 'tasks'"
         :tasks="upcomingTasks"
+        :selectable="canSelectOverdue"
+        :selected-ids="selectedOverdueIds"
+        :selection-busy="deletingOverdue"
+        @select-task="toggleOverdue"
         :loading="loading"
         :error="error"
         :busy-id="busyId"

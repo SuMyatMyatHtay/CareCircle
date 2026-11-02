@@ -84,7 +84,19 @@
   color: var(--care-muted);
 }
 .app-layout .profile-row {
+  color: var(--care-text);
+}
+.app-layout .profile-row::before {
   border-color: var(--care-border);
+}
+.app-layout .profile-row:hover {
+  background: var(--care-neutral);
+}
+.app-layout .profile-row.active {
+  background: var(--care-soft);
+}
+.app-layout .profile-row.active strong {
+  color: var(--care-green);
 }
 .app-layout .profile-avatar {
   background: var(--care-soft);
@@ -552,6 +564,25 @@
   padding: 6px 10px;
   font-size: 11px;
 }
+/* Just claimed: a check on green for a moment before the row updates */
+.care-claim-button.is-claimed,
+.care-claim-button.is-claimed:disabled {
+  display: inline-grid;
+  place-items: center;
+  min-width: 74px;
+  background: var(--care-green);
+  border-color: var(--care-green);
+  color: var(--care-panel);
+  opacity: 1;
+}
+.care-claim-button .care-check {
+  width: 16px;
+  height: 16px;
+}
+/* Leaving rows are placed inside the list while the rest glide up (motion.css care-list) */
+.care-activity-list {
+  position: relative;
+}
 .care-task-filter {
   display: flex;
   justify-content: space-between;
@@ -1001,16 +1032,21 @@
 .care-live-toast .care-icon-button {
   color: #ccd3ce;
 }
-.care-toast-enter-active,
-.care-toast-leave-active {
+/* Slides in from the side; leaves with a fade only (timings from motion.css) */
+.care-toast-enter-active {
   transition:
-    opacity 0.2s,
-    transform 0.2s;
+    opacity var(--motion-base) var(--ease-enter),
+    transform var(--motion-base) var(--ease-enter);
 }
-.care-toast-enter-from,
+.care-toast-leave-active {
+  transition: opacity calc(var(--motion-base) * 0.7) var(--ease-exit);
+}
+.care-toast-enter-from {
+  opacity: 0;
+  transform: translateX(12px);
+}
 .care-toast-leave-to {
   opacity: 0;
-  transform: translateY(12px);
 }
 @media (max-width: 1199px) {
   .care-recipient-grid {

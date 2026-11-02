@@ -9,17 +9,23 @@ import {
   createTask,
   updateTask,
   deleteTask,
+  deleteOverdueTasks,
   claimTask,
   unclaimTask,
   startTask,
   completeTaskHandler,
-  cancelTask
+  cancelTask,
+  getRecurringSeries,
+  pauseRecurringSeries
 } from './controller.js'
 
 const router = Router()
 
 router.get('/', listTasks)                          // ?status=&recipient=&claimedBy=&from=&to=
 router.post('/', createTask)                        // member
+router.get('/recurring', getRecurringSeries)
+router.patch('/recurring/:seriesId', pauseRecurringSeries)
+router.delete('/overdue', deleteOverdueTasks)
 router.get('/:taskId', getTask)                     // member
 router.patch('/:taskId', updateTask)                // creator only
 router.delete('/:taskId', deleteTask)               // creator only

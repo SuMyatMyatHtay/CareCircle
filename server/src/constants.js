@@ -46,6 +46,9 @@ export const EVENTS = {
   LOG_UPDATED: 'log.updated',
   LOG_DELETED: 'log.deleted',
   MEDICATION_CHANGED: 'medication.changed',
+  TASK_UNCLAIMED_SOON: 'task.unclaimed_soon',
+  TASK_STARTING_SOON: 'task.starting_soon',
+  DAILY_SUMMARY: 'summary.daily',
 }
 export const EVENT_TYPES = Object.values(EVENTS)
 
