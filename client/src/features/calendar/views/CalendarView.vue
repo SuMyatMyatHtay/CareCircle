@@ -1,29 +1,27 @@
 <script setup>
 // Owner: SeungHak (F)
-// Family Calendar: every task in the family (whoever claimed it) and every follow-up
-// appointment written in a consultation note, on one month grid.
+// Family Calendar: every task (whoever claimed it) and every follow-up appointment written
+// in a consultation note, on one month grid. Like My tasks it shows all your families,
+// or one of them.
 // Click a day to see its list; each item opens the task, or the note's care log.
 // Double-click a day, or "+ Add task" in its list, to post a task on that day (like Apple Calendar).
 // Google Calendar sync (E, Chaithra) sits by the title for people who want it on their phone.
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { useFamilyWorkspace } from '../../family/composables/useFamilyWorkspace.js'
-import { useFamilyTasks } from '../../../composables/useFamilyTasks.js'
-import { queryKeys } from '../../../services/queryClient.js'
+import { getFamilyTasks, getTaskErrorMessage } from '../../tasks/services/tasksApi.js'
 import { getLogs } from '../../logs/services/logsApi.js'
-import { displayName } from '../../recipients/recipientLabels.js'
 import FamilyEmptyState from '../../family/components/FamilyEmptyState.vue'
 import NewTaskModal from '../../tasks/components/NewTaskModal.vue'
 import GoogleCalendarSync from '../../my-tasks/components/GoogleCalendarSync.vue'
 import {
     dayKey, monthOf, shiftMonth, monthGrid, gridRange, monthLabel, dayLabel, shortTime,
-    buildEvents, filterEvents, groupByDay, WEEKDAYS, STATE_LABELS
+    buildEvents, filterEvents, groupByDay, recipientOptions, WEEKDAYS, STATE_LABELS
 } from '../calendarDays.js'
 
 const MAX_CHIPS = 3
 
-const { selectedFamily, selectedFamilyId, recipients, isLoading, errorMessage, loadFamilies } = useFamilyWorkspace()
-const { tasks, isLoading: tasksLoading, errorMessage: tasksError, refetch } = useFamilyTasks()
+const { families, selectedFamily, isLoading, errorMessage, loadFamilies } = useFamilyWorkspace()
 
 // ---- Which month and day ----
 const now = ref(Date.now())
@@ -40,29 +38,48 @@ const goToday = () => showMonth(monthOf(today.value))
 
 const days = computed(() => monthGrid(month.value))
 
-// ---- Follow-up appointments from consultation notes (only for the shown weeks) ----
-const appointmentsQuery = useQuery({
-    queryKey: computed(() => [...queryKeys.logs(selectedFamilyId.value), 'appointments', month.value]),
+// ---- Which families: all of them (like My tasks), or one ----
+const familyScope = ref('all')
+const shownFamilies = computed(() =>
+    familyScope.value === 'all' ? families.value : families.value.filter((f) => f.id === familyScope.value)
+)
+const manyFamilies = computed(() => shownFamilies.value.length > 1)
+
+// ---- Tasks and follow-up appointments for the shown weeks, from each family ----
+const calendarQuery = useQuery({
+    queryKey: computed(() => ['calendar', shownFamilies.value.map((f) => f.id).join(','), month.value]),
     queryFn: () => {
         const { from, to } = gridRange(month.value)
-        return getLogs(selectedFamilyId.value, { appointmentFrom: from.toISOString(), appointmentTo: to.toISOString(), limit: 50 })
+        const range = { from: from.toISOString(), to: to.toISOString() }
+        return Promise.all(shownFamilies.value.map(async (family) => ({
+            family,
+            tasks: await getFamilyTasks(family.id, range),
+            // A missing note list shouldn't hide the tasks
+            notes: await getLogs(family.id, { appointmentFrom: range.from, appointmentTo: range.to, limit: 50 }).catch(() => [])
+        })))
     },
-    enabled: computed(() => Boolean(selectedFamilyId.value))
+    enabled: computed(() => shownFamilies.value.length > 0)
 })
+const isLoadingEvents = computed(() => calendarQuery.isLoading.value)
+const loadError = computed(() =>
+    calendarQuery.error.value && !calendarQuery.data.value ? getTaskErrorMessage(calendarQuery.error.value) : ''
+)
+const refetch = () => calendarQuery.refetch()
 
 // ---- Events ----
-const recipientFilter = ref('all')
-watch(selectedFamilyId, () => { recipientFilter.value = 'all' })
+const allEvents = computed(() =>
+    (calendarQuery.data.value ?? [])
+        .flatMap(({ family, tasks, notes }) => buildEvents({
+            tasks, appointmentNotes: notes, familyId: family.id, familyName: family.name, now: now.value
+        }))
+        .sort((a, b) => a.at - b.at)
+)
+const people = computed(() => recipientOptions(allEvents.value))
 
-const events = computed(() => filterEvents(
-    buildEvents({
-        tasks: tasks.value,
-        appointmentNotes: appointmentsQuery.data.value ?? [],
-        familyId: selectedFamilyId.value,
-        now: now.value
-    }),
-    recipientFilter.value
-))
+const recipientFilter = ref('all')
+watch(familyScope, () => { recipientFilter.value = 'all' })
+
+const events = computed(() => filterEvents(allEvents.value, recipientFilter.value))
 const byDay = computed(() => groupByDay(events.value))
 const dayEvents = computed(() => byDay.value[selectedDay.value] ?? [])
 const monthCount = computed(() => events.value.filter((event) => monthOf(event.day) === month.value).length)
@@ -94,13 +111,14 @@ function onCreated(task) {
     const key = dayKey(task.startAt)
     month.value = monthOf(key)
     selectedDay.value = key
+    refetch()
 }
 
 // ---- Keep it current ----
 let clock
 const onAssistantUpdate = () => refetch()
 onMounted(() => {
-    // Other pages may have cached the task list a while ago; others in the family may have added tasks since
+    // Others in the family may have changed tasks since this month was last loaded
     refetch()
     clock = setInterval(() => { now.value = Date.now() }, 60 * 1000)
     window.addEventListener('carecircle:task-updated', onAssistantUpdate)
@@ -110,7 +128,7 @@ onUnmounted(() => {
     window.removeEventListener('carecircle:task-updated', onAssistantUpdate)
 })
 
-const familyName = computed(() => selectedFamily.value?.name || 'Your family')
+const eyebrow = computed(() => (manyFamilies.value ? 'All your families' : shownFamilies.value[0]?.name || 'Your family'))
 const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appointment']
 </script>
 
@@ -118,7 +136,7 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
     <div class="calendar-page">
         <header class="calendar-header">
             <div>
-                <div class="calendar-eyebrow">{{ familyName }}</div>
+                <div class="calendar-eyebrow">{{ eyebrow }}</div>
                 <h1>Calendar</h1>
                 <p>Every family task and follow-up appointment, in one place.</p>
             </div>
@@ -148,20 +166,27 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
                     </button>
                 </div>
 
-                <label class="recipient-filter">
-                    <span>Show</span>
-                    <select v-model="recipientFilter" data-testid="calendar-filter">
-                        <option value="all">Everyone</option>
-                        <option v-for="recipient in recipients" :key="recipient._id" :value="recipient._id">
-                            {{ displayName(recipient) }}
-                        </option>
-                        <option value="household">Household tasks</option>
-                    </select>
-                </label>
+                <div class="calendar-filters">
+                    <label v-if="families.length > 1" class="recipient-filter">
+                        <span>Family</span>
+                        <select v-model="familyScope" data-testid="calendar-family">
+                            <option value="all">All families</option>
+                            <option v-for="family in families" :key="family.id" :value="family.id">{{ family.name }}</option>
+                        </select>
+                    </label>
+                    <label class="recipient-filter">
+                        <span>Show</span>
+                        <select v-model="recipientFilter" data-testid="calendar-filter">
+                            <option value="all">Everyone</option>
+                            <option v-for="person in people" :key="person.id" :value="person.id">{{ person.name }}</option>
+                            <option value="household">Household tasks</option>
+                        </select>
+                    </label>
+                </div>
             </div>
 
-            <div v-if="tasksError" class="calendar-error" role="alert">
-                {{ tasksError }}
+            <div v-if="loadError" class="calendar-error" role="alert">
+                {{ loadError }}
                 <button type="button" @click="refetch()">Try again</button>
             </div>
 
@@ -171,7 +196,7 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
                         <span v-for="weekday in WEEKDAYS" :key="weekday">{{ weekday }}</span>
                     </div>
 
-                    <div class="month-grid" :class="{ 'is-loading': tasksLoading }">
+                    <div class="month-grid" :class="{ 'is-loading': isLoadingEvents }">
                         <button
                             v-for="day in days"
                             :key="day.key"
@@ -239,7 +264,7 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
                             </button>
                         </header>
 
-                        <p v-if="tasksLoading" class="agenda-empty" role="status">Loading the family's plans…</p>
+                        <p v-if="isLoadingEvents" class="agenda-empty" role="status">Loading the family's plans…</p>
 
                         <ol v-else-if="dayEvents.length" class="agenda-list">
                             <li v-for="event in dayEvents" :key="event.id">
@@ -258,6 +283,7 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
                                             {{ event.title }}
                                         </strong>
                                         <small>{{ [event.recipientName, event.place].filter(Boolean).join(' · ') }}</small>
+                                        <small v-if="manyFamilies" class="family-tag">{{ event.familyName }}</small>
                                         <span class="state-badge">{{ stateText(event) }}</span>
                                     </span>
                                     <i v-if="event.to" class="bi bi-chevron-right agenda-arrow" aria-hidden="true"></i>
@@ -269,9 +295,6 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
                             Nothing planned{{ recipientFilter === 'all' ? '' : ' for this person' }}.
                         </p>
 
-                        <p v-if="appointmentsQuery.isError.value" class="agenda-note">
-                            Follow-up appointments couldn't be loaded. Tasks are still shown.
-                        </p>
                     </section>
 
                 </aside>
@@ -389,6 +412,21 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
     border-radius: 12px;
     background: var(--theme-panel, #fff);
     color: var(--theme-text, #30332f);
+}
+
+.calendar-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+}
+
+.family-tag {
+    justify-self: start;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: var(--theme-soft, #eaf5eb);
+    color: var(--theme-green, #2d7d43) !important;
+    font-weight: 700;
 }
 
 .calendar-error {
@@ -698,16 +736,10 @@ a.agenda-item:hover {
     color: var(--theme-muted, #9aa1ad);
 }
 
-.agenda-empty,
-.agenda-note {
+.agenda-empty {
     margin: 0;
     color: var(--theme-muted, #717b8e);
     font-size: 14px;
-}
-
-.agenda-note {
-    margin-top: 10px;
-    font-size: 12px;
 }
 
 .calendar-page button:focus-visible,
@@ -739,6 +771,11 @@ a.agenda-item:hover {
     .month-nav h2 {
         min-width: 0;
         font-size: 17px;
+    }
+
+    .calendar-filters {
+        flex-direction: column;
+        width: 100%;
     }
 
     .recipient-filter,

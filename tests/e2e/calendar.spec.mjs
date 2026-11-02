@@ -99,3 +99,28 @@ test('adds a task straight onto a day, like Apple Calendar', async ({ page, isMo
   await openDay(page, yesterday)
   await expect(page.getByTestId('calendar-add-task')).toHaveCount(0)
 })
+
+test('shows every family\'s tasks, like My tasks, and can narrow to one family', async ({ page, isolatedData }) => {
+  await login(page)
+  const api = await authenticatedApi(page, isolatedData.apiURL)
+  const { day, at } = tomorrow()
+  // Alex is in both fixture families
+  for (const [familyId, title] of [[ids.family, 'Tan family errand'], [ids.otherFamily, 'Lee family errand']]) {
+    expect((await api(`/families/${familyId}/tasks`, { method: 'POST', data: { title, category: 'errand', startAt: at(11) } })).status()).toBe(201)
+  }
+
+  const agenda = await openDay(page, day)
+  const items = agenda.locator('.agenda-item')
+  await expect(items).toHaveCount(2)
+  await expect(items.filter({ hasText: 'Lee family errand' })).toContainText('Lee family')
+  await expect(items.filter({ hasText: 'Tan family errand' })).toContainText('Tan family')
+
+  await page.getByTestId('calendar-family').selectOption(ids.otherFamily)
+  await expect(items).toHaveCount(1)
+  await expect(items).toContainText('Lee family errand')
+  await expect(items.locator('.family-tag')).toHaveCount(0)
+
+  // Each item opens in its own family
+  await items.click()
+  await expect(page).toHaveURL(new RegExp(`/families/${ids.otherFamily}/tasks/`))
+})
