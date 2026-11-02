@@ -14,7 +14,7 @@
 import mongoose from 'mongoose'
 import Family from '../features/families/Family.model.js'
 import Notification from '../features/notifications/Notifications.model.js'
-import { sendTelegramMessage } from '../features/integrations/telegram.js'
+import { sendToGroup } from '../features/integrations/telegram.js'
 import { EVENTS, EVENT_TYPES, NOTIFICATION_STATUS, NOTIFY_NONE } from '../constants.js'
 const REMINDER_EVENTS = [EVENTS.TASK_STARTING_SOON, EVENTS.TASK_UNCLAIMED_SOON, EVENTS.DAILY_SUMMARY]
 
@@ -245,7 +245,7 @@ export async function notify(familyId, eventType, payload, { send = true } = {})
 
     const link = deepLink({ eventType, refType: message.refType, refId: message.refId, familyId: String(id) })
     try {
-      await sendTelegramMessage(chatId, link ? `${message.text}\n${link}` : message.text)
+      await sendToGroup(chatId, link ? `${message.text}\n${link}` : message.text)
       record.status = NOTIFICATION_STATUS.SENT
       record.sentAt = new Date()
     } catch (error) {

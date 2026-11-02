@@ -107,7 +107,7 @@ This README describes the implementation in this repository. External integratio
 
 ### Telegram and updates
 
-- Link a Telegram group with `/link <inviteCode>`, unlink with `/unlink`, and get instructions through `/start` or `/help`.
+- Link a Telegram group with `/link <inviteCode>`, unlink with `/unlink`, and get instructions through `/start` or `/help`. If Telegram upgrades the group to a supergroup (its id changes), the link follows it automatically.
 - Configure notification categories in Family settings. Admins can send a test message or unlink the group from the app.
 - Generate notifications for task creation, claims/unclaims, completion/cancellation, transit milestones, care notes and medication updates where handlers call the shared notification utility.
 - Store notification history with pending, sent, failed or skipped status, and display the history in Home's Recent updates.
@@ -281,6 +281,7 @@ The updated `server/.env.example` groups settings for Groq, Google Calendar, Gem
 | Google Calendar sync | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | Enable Calendar API and configure OAuth consent/test users and the exact callback URI |
 | Telegram | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, optional `TELEGRAM_BOT_USERNAME` | Register a public webhook at `/api/integrations/telegram/webhook` with the matching secret token |
 | Telegram task links | `APP_URL` | Frontend origin, e.g. `http://localhost:5173` locally |
+| Telegram reminders | `CRON_SECRET` | A cron service (e.g. cron-job.org) calls `POST /api/cron/reminders` every 5 minutes with `Authorization: Bearer <CRON_SECRET>` |
 | OneMap search and maps | No credentials in the current implementation | Network access; location permission for live sharing |
 
 For local Google OAuth, use `http://localhost:5173/api/google/callback` as the callback: Vite proxies `/api` to port 3000, and the callback returns to the frontend origin. Register the same URI in Google and `GOOGLE_REDIRECT_URI`.
