@@ -10,8 +10,8 @@ const permission = computed(() => selectedFamily.value?.overdueTaskDeletion || '
 const busy = ref(false), error = ref(''), saved = ref(false), pending = ref('')
 const groupId = useId()
 const options = [
-  { value: 'admin', title: 'Admins only', description: 'Keep overdue task deletion with family admins.', icon: 'bi-shield-check' },
-  { value: 'member', title: 'All family members', description: 'Let anyone in the family clear overdue tasks.', icon: 'bi-people' },
+  { value: 'admin', title: 'Admins only', description: 'Keep these task actions with family admins.', icon: 'bi-shield-check' },
+  { value: 'member', title: 'All family members', description: 'Let anyone in the family clear overdue tasks and stop or resume repeating schedules.', icon: 'bi-people' },
 ]
 async function change(value) {
   const familyId = selectedFamilyId.value
@@ -36,8 +36,8 @@ async function change(value) {
       <span class="permission-badge"><i class="bi bi-shield-lock" aria-hidden="true"></i> Admin managed</span>
     </template>
     <fieldset :disabled="!isAdmin || busy" :aria-busy="busy">
-      <legend>Who can delete overdue tasks?</legend>
-      <p class="permission-description">Choose who can remove overdue open tasks, individually or all at once.</p>
+      <legend>Who can delete overdue tasks or stop repeating tasks?</legend>
+      <p class="permission-description">Choose who can delete overdue tasks and stop or resume repeating schedules.</p>
       <div class="permission-options">
         <label v-for="option in options" :key="option.value" class="permission-option" :class="{ selected: (pending || permission) === option.value }">
           <input type="radio" :name="`overdue-deletion-${groupId}`" :value="option.value" :checked="(pending || permission) === option.value" @change="change(option.value)" />

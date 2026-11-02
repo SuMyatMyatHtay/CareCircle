@@ -16,6 +16,7 @@ import CareModal from '../../../components/common/CareModal.vue'
 import { useFamilyWorkspace } from '../composables/useFamilyWorkspace.js'
 import { useFamilyDashboard } from '../composables/useFamilyDashboard.js'
 import { isTaskOverdue, useTaskClock } from '../../tasks/composables/useTaskOverdue.js'
+import { groupRecurringTasks } from '../../tasks/composables/groupRecurringTasks.js'
 import { previewState } from '../data/previewFamily.js'
 import MobileHomeHeader from '../components/MobileHomeHeader.vue'
 import MobileTransitCard from '../components/MobileTransitCard.vue'
@@ -142,7 +143,7 @@ const taskBoardTasks = computed(() => taskFilter.value === 'today' ? todayTasks.
       return taskFilter.value === 'all' || task.status === taskFilter.value
     }))
 const upcomingTasks = computed(() =>
-  [...taskBoardTasks.value].sort((a, b) => new Date(a.startAt) - new Date(b.startAt)),
+  groupRecurringTasks(taskBoardTasks.value, taskNow.value),
 )
 async function openMobileTaskForm() {
   mobilePanel.value = ''
@@ -176,7 +177,7 @@ const filterRecipient = ref(null),
   showNewTask = ref(false),
   showTransit = ref(false)
 const displayTasks = computed(() =>
-  filterRecipient.value
+  groupRecurringTasks(filterRecipient.value
     ? allTasks.value
         .filter(
           (task) =>
@@ -184,7 +185,7 @@ const displayTasks = computed(() =>
               filterRecipient.value._id && task.status === 'open' && !isTaskOverdue(task, taskNow.value),
         )
         .sort((a, b) => new Date(a.startAt) - new Date(b.startAt))
-    : taskBoardTasks.value,
+    : taskBoardTasks.value, taskNow.value),
 )
 watch(overdueTaskIds, ids => { selectedOverdueIds.value = selectedOverdueIds.value.filter(id => ids.includes(id)) })
 function openRecipient(recipient) {
@@ -329,6 +330,7 @@ watch(selectedFamilyId, () => {
           {{ moreTripsLabel }}
           <i class="bi" :class="showAllTrips ? 'bi-chevron-up' : 'bi-chevron-down'" aria-hidden="true"></i>
         </button>
+        <RecurringSeriesPanel v-if="!isPreview && allTasks.some(task => task.recurringSeries)" :tasks="allTasks" />
         <MobileTodayTasks
           :tasks="todayTasks"
           :loading="loading"

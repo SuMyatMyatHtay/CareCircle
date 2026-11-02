@@ -62,7 +62,7 @@ This README describes the implementation in this repository. External integratio
 - Prevent double claims with a conditional database update: simultaneous requests have one winner; the other receives a conflict.
 - Close claiming at the scheduled start time. Both the UI and database write condition enforce the deadline. An overdue task can be unclaimed, but cannot be reclaimed unless its schedule changes.
 - Start and complete claimed tasks. Starting a transport task creates a real transit session.
-- View task details, status, location, assignment and timestamp-based activity. Creator-only edit/delete APIs and creator/admin cancellation APIs enforce lifecycle restrictions.
+- View task details, status, location, assignment and timestamp-based activity. Editing is creator-only. Overdue deletion follows the family setting across the task board and assistant; other deletion remains creator-only. Cancellation and lifecycle restrictions are enforced on the server.
 - Make confirmed task edits through the assistant. Repeating tasks also have an Edit dialog with occurrence/series scope; the conventional Edit button for ordinary tasks remains a placeholder.
 
 ### Repeating tasks
@@ -70,10 +70,10 @@ This README describes the implementation in this repository. External integratio
 - Create daily, weekly, fortnightly, monthly or custom-interval tasks. Weekly schedules can include several weekdays. End on a date, after a session count, or choose **Never**.
 - Each session is its own task, with its own status, transit journey, calendar event and completed-task contribution. Finite schedules support up to 500 sessions; months without the selected day (such as the 31st) are skipped.
 - **Never** generates tasks four weeks ahead and extends that window when family tasks or My tasks are loaded. It does not depend on a scheduled worker.
-- Claim **Every upcoming session** by default, **Just this date**, or **The next 4 sessions**. Whole-series claims also cover newly generated sessions. Other members cannot take an already claimed session or series.
+- Claim **Every upcoming session** by default or **Just this date**. Whole-series claims also cover newly generated sessions. Other members cannot take an already claimed session or series.
 - Give back one session when unavailable. That date becomes a permanent one-day exception; its replacement helper takes only that date. The original helper keeps the other sessions. Limited-scope claims also remain independent of later whole-series claims.
 - Creators can edit only the selected date, that date and future sessions, or every upcoming session. Series edits preserve started/completed sessions and independent exceptions; time changes keep each session's calendar date. Moving to another date requires **Only this date**.
-- Creators can pause/resume a series from Home or the recipient's Tasks tab. Pausing cancels attached future, unstarted sessions; resuming restores them and extends the window. Completed work and independent dates are preserved.
+- Family members allowed by **Task permissions** (admins only by default) can stop/resume a series from Home (desktop and mobile) or the recipient's Tasks tab. Every unclaimed recurring task, including future sessions, has a top-right three-dot menu with **Stop repeating** for permitted members. Stopping cancels attached future, unstarted sessions and prevents further generation; resuming restores them and extends the window. Completed work and independent dates are preserved.
 - Assistant claims/assignments follow the same whole-series default, while assistant edits, cancellation, completion and deletion act on the selected session. Deleted sessions are recorded so generation cannot recreate them.
 - Recurring writes use MongoDB transactions and a unique series/occurrence index. Use **MongoDB Atlas or a replica set**; a standalone MongoDB server supports ordinary tasks but cannot create/change recurring series. Existing ordinary tasks need no migration.
 
@@ -130,7 +130,7 @@ This README describes the implementation in this repository. External integratio
 - Select a search result to retain that task as explicit chat context. Choosing Change time or Change location asks for the new value without a model-generated edit.
 - Claim only for yourself; assign an open future task only if you created it, and only to a current family member. Start/complete only your assigned tasks, and cancel only tasks you created or are assigned to. Every write requires confirmation.
 - Ask for missing details and present a confirmation card before writes. Deletion requires a second confirmation.
-- Enforce family scope, current permissions, proposal expiry and stale-update checks on the server. Repeated confirmations do not create duplicate tasks.
+- Enforce family scope, current permissions, proposal expiry and stale-update checks on the server. Assistant overdue deletion reads each family's current setting at proposal and confirmation time and records one actual-deleter/count summary. Repeated confirmations do not create duplicate tasks.
 - Clear chat on family/account changes. Messages stay in browser memory; task proposals are stored separately and expire after 15 minutes.
 - Customise an Avatar Studio character with dresses, tops, skirts/shorts and accessories, and save the outfit to your account. The earlier pet dress-up screen is also retained.
 - Available Avatar Studio characters include cat, dog, fox, elephant and dinosaur. Rabbit, chick and duck are locked as Coming soon.
@@ -154,14 +154,16 @@ Completing directly from `claimed` is also supported. The transit `home` milesto
 | Unclaim | Creator or claimer; task is still claimed |
 | Start / complete | Claimer; valid current status required |
 | Edit task | Creator; completed/cancelled tasks are locked |
-| Delete task | Creator; in-progress/completed tasks cannot be deleted |
+| Delete a future task | Creator; in-progress/completed tasks cannot be deleted |
+| Delete overdue open tasks | Family task-permission setting; admins only by default |
+| Stop / resume a repeating schedule | Same family task-permission setting; admins only by default |
 | Cancel task | Creator, assigned person or family admin; active tasks only. The assistant requires creator/assignee ownership |
 | Add / edit recipient | Family member; only your own account can be newly linked |
 | Archive recipient | Family admin |
 | Edit / delete care log | Author or family admin |
 | Manage other members, invitations or Telegram settings | Family admin; last-admin protection applies |
 
-Admin status alone does not allow editing/deleting someone else's task or starting it on their behalf.
+Editing remains creator-only. Overdue deletion and stopping/resuming a repeating schedule follow the family task-permission setting. Starting or completing a task requires being its assigned person.
 
 ## Technology and structure
 

@@ -44,7 +44,7 @@ beforeEach(t => {
     queue = run.catch(() => {}); return run
   } }))
   t.mock.method(Family, 'exists', filter => query(() => members.has(String(filter['members.userId'])) ? { _id: family } : null))
-  t.mock.method(Family, 'findOne', filter => query(() => members.has(String(filter['members.userId'])) ? { _id: family } : null))
+  t.mock.method(Family, 'findOne', filter => query(() => members.has(String(filter['members.userId'])) ? { _id: family, members: [...members].map(userId => ({ userId, role: userId === creator ? 'admin' : 'member' })) } : null))
   t.mock.method(Series, 'create', async ([data]) => {
     const doc = copy(new Series(data).toObject()); series.set(doc._id, doc); return [seriesDoc(doc)]
   })
@@ -88,11 +88,14 @@ test('simultaneous whole-series claims have one winner and no split assignment',
   assert.equal(results.find(r => r.status === 'rejected').reason.status, 409)
   assert.equal(new Set(all().map(t => t.claimedBy)).size, 1)
 })
-test('next four and just this date remain independent of the usual helper', async () => {
-  const first = await create(); await claim(first, helper, 'next4')
-  assert.equal(all().filter(t => t.claimedBy === helper && t.recurrenceDetached).length, 4)
-  await claim(all()[4], backup)
-  assert.equal(all().filter(t => t.claimedBy === backup).length, 4)
+test('one-session claims leave all other dates available for a series claim', async () => {
+  const first = await create()
+  await assert.rejects(claim(first, helper, 'next4'), { status: 400 })
+  await claim(first, helper, 'one')
+  assert.equal(all().filter(t => t.claimedBy === helper && t.recurrenceDetached).length, 1)
+  assert.equal(all().filter(t => t.status === 'open').length, 7)
+  await claim(all()[1], backup)
+  assert.equal(all().filter(t => t.claimedBy === backup).length, 7)
 })
 test('Never extends the rolling window without duplicates, retaining the usual helper', async t => {
   const first = await create(true); await claim(first)
@@ -171,4 +174,25 @@ test('one-date claim leaves future generation unassigned', async t => {
   t.mock.timers.tick(14 * 86400000); await ensureRecurringTasks(family)
   assert.ok(all().slice(total).every(t => t.status === 'open' && !t.claimedBy))
   assert.equal(all().filter(t => t.claimedBy === helper).length, 1)
+})
+
+test('a family admin can stop another creators repeating series', async t => {
+  const first = await create(true)
+  t.mock.method(Family, 'findOne', () => query(() => ({ _id: family, members: [{ userId: backup, role: 'admin' }] })))
+  await setSeriesPaused(first.recurringSeries, family, backup, true)
+  assert.equal(series.get(String(first.recurringSeries)).paused, true)
+})
+test('a creator who has left the family cannot stop the series through the service', async () => {
+  const first = await create(true)
+  members.delete(creator)
+  await assert.rejects(setSeriesPaused(first.recurringSeries, family, creator, true), { status: 403 })
+})
+
+test('member access to stopping schedules is controlled by the family setting, not task ownership', async t => {
+  const first = await create(true)
+  t.mock.method(Family, 'findOne', () => query(() => ({ _id: family, members: [{ userId: creator, role: 'member' }] })))
+  await assert.rejects(setSeriesPaused(first.recurringSeries, family, creator, true), { status: 403 })
+  t.mock.method(Family, 'findOne', () => query(() => ({ _id: family, overdueTaskDeletion: 'member', members: [{ userId: helper, role: 'member' }] })))
+  await setSeriesPaused(first.recurringSeries, family, helper, true)
+  assert.equal(series.get(String(first.recurringSeries)).paused, true)
 })

@@ -168,7 +168,7 @@ test('collapses multiple live trips, expands them and clears them when switching
   const taskIds = []
   for (const recipient of [ids.grandpa, grandma._id]) {
     const created = await api(`${root}/tasks`, { method: 'POST', data: {
-      title: 'Fixture clinic visit', recipient, category: 'appointment', startAt: new Date().toISOString(),
+      title: 'Fixture clinic visit', recipient, category: 'appointment', startAt: new Date(Date.now() + 3600000).toISOString(),
       needsTransit: true, location: { name: 'Test Clinic' }, description: 'Isolated live trip fixture',
     } })
     expect(created.status()).toBe(201)

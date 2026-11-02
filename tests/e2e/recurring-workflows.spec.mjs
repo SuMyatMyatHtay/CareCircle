@@ -1,4 +1,5 @@
 import { test, expect, ids, login, authenticatedApi } from './fixtures.mjs'
+import Task from '../../server/src/features/tasks/TaskModel.js'
 import { recurringTaskPayload } from '../support/recurring-fixtures.mjs'
 
 const path = `/families/${ids.family}/tasks`
@@ -58,7 +59,7 @@ test('default series claim and a one-day handover preserve other assignments', a
   expect(saved.filter(t => t._id !== task._id).every(t => t.claimedBy?._id === ids.may)).toBe(true)
 })
 
-test('claim cancellation writes nothing; next-four limits the assignment', async ({ page, isolatedData }) => {
+test('claim cancellation writes nothing; one-session claims leave later dates available', async ({ page, isolatedData }) => {
   const { api, task } = await seed(page, isolatedData.apiURL)
   await login(page, 'may'); await page.goto(`${path}/${task._id}`)
   await take(page).click()
@@ -67,8 +68,79 @@ test('claim cancellation writes nothing; next-four limits the assignment', async
   expect((await sessions(api, task.recurringSeries)).every(t => t.status === 'open')).toBe(true)
   await take(page).click()
   dialog = page.getByRole('dialog', { name: `Take ${task.title}?` })
-  await dialog.getByRole('radio', { name: /The next 4 sessions/ }).check()
+  await dialog.getByRole('radio', { name: /Just this date/ }).check()
   await dialog.getByRole('button', { name: "I'll take it", exact: true }).click()
-  await expect.poll(async () => (await sessions(api, task.recurringSeries)).filter(t => t.claimedBy?._id === ids.may).length).toBe(4)
-  expect((await sessions(api, task.recurringSeries)).filter(t => t.status === 'open')).toHaveLength(2)
+  await expect.poll(async () => (await sessions(api, task.recurringSeries)).filter(t => t.claimedBy?._id === ids.may).length).toBe(1)
+  expect((await sessions(api, task.recurringSeries)).filter(t => t.status === 'open')).toHaveLength(5)
+})
+
+async function overdueWeeklySeries(page, apiURL) {
+  const api = await authenticatedApi(page, apiURL)
+  const payload = recurringTaskPayload({ never: true })
+  payload.recurrence.frequency = 'weekly'
+  payload.recurrence.weekdays = [(new Date(payload.startAt).getUTCDay() + 6) % 7]
+  const created = await api(path, { method: 'POST', data: payload })
+  expect(created.status()).toBe(201)
+  const task = (await created.json()).task
+  await Task.updateOne({ _id: task._id }, { $set: { startAt: new Date(Date.now() - 86400000) } })
+  return { api, task }
+}
+async function overdueBoard(page, isMobile) {
+  if (isMobile) await page.getByRole('navigation', { name: 'Mobile home navigation' }).getByRole('button', { name: 'Tasks', exact: true }).click()
+  await page.getByRole('button', { name: 'Overdue', exact: true }).click()
+}
+test('stops an overdue weekly series from the repeating-task panel, keeps history and resumes only when requested', async ({ page, isMobile, isolatedData }) => {
+  const { api, task } = await overdueWeeklySeries(page, isolatedData.apiURL)
+  await login(page)
+  await overdueBoard(page, isMobile)
+  const options = page.getByRole('button', { name: `Options for ${task.title}`, exact: true })
+  const stop = page.getByRole('button', { name: 'Stop repeating', exact: true }).filter({ visible: true })
+  await expect(options).toHaveCount(0)
+  page.once('dialog', dialog => dialog.dismiss())
+  await stop.click()
+  const seriesPath = `${path}/recurring`
+  const paused = async () => (await (await api(seriesPath)).json()).series.find(series => series._id === task.recurringSeries).paused
+  expect(await paused()).toBe(false)
+  page.once('dialog', dialog => dialog.accept())
+  await stop.click()
+  await expect(options).toHaveCount(0)
+  expect(await paused()).toBe(true)
+  let saved = await sessions(api, task.recurringSeries)
+  expect(saved.find(entry => entry._id === task._id).status).toBe('open')
+  expect(saved.filter(entry => entry._id !== task._id).every(entry => entry.status === 'cancelled')).toBe(true)
+  const count = saved.length
+  await page.reload()
+  expect(await paused()).toBe(true)
+  expect((await sessions(api, task.recurringSeries)).length).toBe(count)
+  await page.getByRole('button', { name: 'Resume', exact: true }).filter({ visible: true }).click()
+  await expect.poll(paused).toBe(false)
+  saved = await sessions(api, task.recurringSeries)
+  expect(saved.filter(entry => entry._id !== task._id).some(entry => entry.status === 'open')).toBe(true)
+})
+test('recurring task options follow the family setting and a permitted member can stop the series', async ({ page, isMobile, isolatedData }) => {
+  const { api, task } = await overdueWeeklySeries(page, isolatedData.apiURL)
+  await login(page, 'may')
+  await overdueBoard(page, isMobile)
+  const options = page.getByRole('button', { name: `Options for ${task.title}`, exact: true })
+  await expect(options).toHaveCount(0)
+  expect((await api(`/families/${ids.family}/task-permissions`, { method: 'PATCH', data: { overdueTaskDeletion: 'member' } })).status()).toBe(200)
+  await page.reload()
+  await overdueBoard(page, isMobile)
+  await expect(options).toHaveCount(0)
+  page.once('dialog', dialog => dialog.accept())
+  await page.getByRole('button', { name: 'Stop repeating', exact: true }).filter({ visible: true }).click()
+  await expect(options).toHaveCount(0)
+  expect((await (await api(`${path}/recurring`)).json()).series.find(series => series._id === task.recurringSeries).paused).toBe(true)
+})
+
+test('future sessions stay grouped without a three-dot menu after deleting the missed date', async ({ page, isMobile, isolatedData }) => {
+  const { api, task } = await overdueWeeklySeries(page, isolatedData.apiURL)
+  expect((await api(`${path}/${task._id}`, { method: 'DELETE' })).status()).toBe(200)
+  await login(page)
+  if (isMobile) await page.getByRole('navigation', { name: 'Mobile home navigation' }).getByRole('button', { name: 'Tasks', exact: true }).click()
+  await page.getByRole('button', { name: 'Needs someone', exact: true }).click()
+  await expect(page.getByRole('button', { name: `Options for ${task.title}`, exact: true })).toHaveCount(0)
+  const rows = page.locator('article').filter({ hasText: task.title }).filter({ visible: true })
+  await expect(rows).toHaveCount(1)
+  await expect(rows).toContainText('Next session:')
 })

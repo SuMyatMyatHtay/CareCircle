@@ -54,6 +54,7 @@ const context = computed(() =>
       <div class="care-mobile-task-copy">
         <h3>{{ task.title }}</h3>
         <RecurringTaskBadge :task="task" />
+        <p v-if="task.upcomingSessionCount">Next session: {{ date }} · {{ task.upcomingSessionCount }} upcoming {{ task.upcomingSessionCount === 1 ? 'session' : 'sessions' }}</p>
         <p>
           <template v-if="showDate">{{ date }} ·</template>
           {{ time }}
@@ -83,3 +84,7 @@ const context = computed(() =>
     </button>
   </article>
 </template>
+
+<style scoped>
+.care-mobile-task { position: relative; }
+</style>

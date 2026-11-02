@@ -45,12 +45,13 @@ test('giving back a date and reclaiming it never steals the other sessions', asy
   assert.equal(String(saved[2].claimedBy), ids.jasmine); assert.equal(saved[2].recurrenceDetached, true)
   assert.ok(saved.filter(t => t.occurrenceIndex !== 2).every(t => String(t.claimedBy) === ids.may))
 })
-test('next-four claims leave the rest open and protect against cross-family claims', async () => {
+test('one-date claims leave the rest open and protect against cross-family claims', async () => {
   const first = await create()
-  assert.equal((await action(first, 'claim', 'may', { scope: 'next4' })).status, 200)
+  assert.equal((await action(first, 'claim', 'may', { scope: 'next4' })).status, 400)
+  assert.equal((await action(first, 'claim', 'may', { scope: 'one' })).status, 200)
   const saved = await occurrences(first.recurringSeries)
-  assert.equal(saved.filter(t => t.status === 'claimed' && t.recurrenceDetached).length, 4)
-  assert.equal(saved.filter(t => t.status === 'open').length, 4)
+  assert.equal(saved.filter(t => t.status === 'claimed' && t.recurrenceDetached).length, 1)
+  assert.equal(saved.filter(t => t.status === 'open').length, 7)
   assert.equal((await request(`/families/${ids.otherFamily}/tasks/${first._id}/claim`, { method: 'POST' })).status, 404)
 })
 test('scoped editing preserves completed/independent dates and rejects stale versions', async () => {
@@ -93,4 +94,42 @@ test('rolling generation retains ownership without duplicate occurrence indexes'
   const saved = await occurrences(first.recurringSeries)
   assert.equal(saved.filter(t => t.occurrenceIndex === last.occurrenceIndex).length, 1)
   assert.ok(saved.every(t => String(t.claimedBy) === ids.may))
+})
+
+test('admins can stop overdue series; unauthorized members cannot; history is kept and generation stops', async () => {
+  const first = await create({ never: true })
+  const before = await occurrences(first.recurringSeries)
+  await Task.updateOne({ _id: first._id }, { $set: { startAt: new Date(Date.now() - 86400000) } })
+  await Task.updateOne({ _id: before[1]._id }, { $set: { status: 'in_progress', claimedBy: ids.may } })
+  await Task.updateOne({ _id: before[2]._id }, { $set: { status: 'completed', claimedBy: ids.may } })
+  await Task.updateOne({ _id: before[3]._id }, { $set: { recurrenceDetached: true } })
+  const seriesPath = `${path}/recurring/${first.recurringSeries}`
+  assert.equal((await request(seriesPath, { method: 'PATCH', user: 'may', body: { paused: true } })).status, 403)
+  assert.equal((await request(seriesPath, { method: 'PATCH', user: 'outsider', body: { paused: true } })).status, 403)
+  assert.equal((await request(`/families/${ids.otherFamily}/tasks/recurring/${first.recurringSeries}`, { method: 'PATCH', body: { paused: true } })).status, 404)
+  // Jasmine is an admin but Alex created this series.
+  assert.equal((await request(seriesPath, { method: 'PATCH', user: 'jasmine', body: { paused: true } })).status, 200)
+  assert.equal((await Series.findById(first.recurringSeries)).paused, true)
+  const stopped = await occurrences(first.recurringSeries)
+  assert.equal(stopped[0].status, 'open')
+  assert.equal(stopped[1].status, 'in_progress')
+  assert.equal(stopped[2].status, 'completed')
+  assert.equal(stopped[3].status, 'open')
+  assert.ok(stopped.slice(4).every(task => task.status === 'cancelled' && task.recurrencePaused))
+  await Series.updateOne({ _id: first.recurringSeries }, { $set: { generatedThrough: null } })
+  await request(path)
+  assert.equal((await occurrences(first.recurringSeries)).length, before.length)
+  assert.equal((await Series.findById(first.recurringSeries)).generatedThrough, null)
+})
+
+test('stop and resume follow current task permissions, even for the creator', async () => {
+  const created = await request(path, { method: 'POST', user: 'may', body: recurringTaskPayload({ never: true }) })
+  assert.equal(created.status, 201)
+  const seriesPath = `${path}/recurring/${created.data.task.recurringSeries}`
+  assert.equal((await request(seriesPath, { method: 'PATCH', user: 'may', body: { paused: true } })).status, 403)
+  assert.equal((await request(`/families/${ids.family}/task-permissions`, { method: 'PATCH', body: { overdueTaskDeletion: 'member' } })).status, 200)
+  assert.equal((await request(seriesPath, { method: 'PATCH', user: 'may', body: { paused: true } })).status, 200)
+  assert.equal((await request(`/families/${ids.family}/task-permissions`, { method: 'PATCH', body: { overdueTaskDeletion: 'admin' } })).status, 200)
+  assert.equal((await request(seriesPath, { method: 'PATCH', user: 'may', body: { paused: false } })).status, 403)
+  assert.equal((await request(seriesPath, { method: 'PATCH', user: 'jasmine', body: { paused: false } })).status, 200)
 })

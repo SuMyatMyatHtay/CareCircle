@@ -41,6 +41,8 @@ async function request(path, { method = 'GET', user = 'alex', body, authenticate
 beforeEach(async () => {
   translationProvider.reset()
   await resetFixtures()
+  // These cases test ordinary task permissions and claims, not the overdue policy.
+  await Task.findByIdAndUpdate(ids.task, { startAt: new Date(Date.now() + 3600000) })
   tokens = {}
   for (const [name, email] of Object.entries(accounts)) {
     const login = await request('/auth/login', { method: 'POST', authenticated: false, body: { email, password } })

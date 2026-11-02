@@ -68,6 +68,7 @@ function initials(name = '') {
         <div class="task-text">
             <h3 class="task-title"><RouterLink v-if="!route.meta.preview && familyId" :to="{ name: 'task-detail', params: { familyId, taskId: task._id } }" class="text-reset text-decoration-none">{{ task.title }}</RouterLink><template v-else>{{ task.title }}</template></h3>
             <RecurringTaskBadge :task="task" />
+            <p v-if="task.upcomingSessionCount" class="task-meta">Next session: {{ startAt.toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric', timeZone: TIME_ZONE }) }} · {{ task.upcomingSessionCount }} upcoming {{ task.upcomingSessionCount === 1 ? 'session' : 'sessions' }}</p>
             <p class="task-meta">
                 {{ time }}<template v-if="place"> · {{ place }}</template>
                 <template v-if="recipientName"> · for {{ recipientName }}</template>
@@ -88,7 +89,9 @@ function initials(name = '') {
 </template>
 
 <style scoped>
+
 .task-item {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 16px;

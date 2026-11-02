@@ -10,8 +10,7 @@ const route = useRoute()
 watch(recurringClaim, () => { scope.value = 'series' })
 watch([selectedFamilyId, () => route.fullPath], () => closeRecurringClaim())
 const options = [
-  { key: 'one', title: 'Just this date', detail: 'Take only this session. The other dates stay available.' },
-  { key: 'next4', title: 'The next 4 sessions', detail: 'Take this session and the next three available dates. Later dates stay with the family.' },
+  { key: 'one', title: 'Just this date', detail: 'Take only this session. The remaining dates stay grouped and available from the next session.' },
   { key: 'series', title: 'Every upcoming session', detail: 'Become the usual helper, including future generated sessions. You can release an individual date anytime.' },
 ]
 </script>

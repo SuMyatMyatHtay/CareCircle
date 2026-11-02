@@ -34,5 +34,5 @@ export async function login(page, account = 'alex') {
   await page.getByLabel('Password', { exact: true }).fill(password)
   await page.getByRole('button', { name: /Log in/ }).click()
   await expect(page).toHaveURL(/\/home$/)
-  await expect(page.getByRole('heading', { level: 1 })).toContainText(account === 'alex' ? 'Alex' : 'May')
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(account === 'alex' ? 'Alex' : 'Aunt')
 }

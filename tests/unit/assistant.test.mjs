@@ -57,6 +57,7 @@ async function request(path, { user = admin, body = {}, authenticated = true, fa
 const chat = (options = {}) => request('chat', { body: { messages: [{ role: 'user', content: 'Add an eye check for Grandpa on Friday at 10:30 am at Eye Centre.' }] }, ...options })
 
 beforeEach(async t => {
+  t.mock.method(Task, 'updateOne', async () => ({ matchedCount: 1, modifiedCount: 1 }))
   requestUserCounter++
   admin = `00000000000000000000${String(1000 + requestUserCounter).padStart(4, '0')}`
   savedEnv = { GEMINI_API_KEY: process.env.GEMINI_API_KEY, GEMINI_MODEL: process.env.GEMINI_MODEL, JWT_SECRET: process.env.JWT_SECRET }
@@ -66,7 +67,10 @@ beforeEach(async t => {
     startAt: '2026-10-23T02:30:00.000Z', endAt: '2026-10-23T03:30:00.000Z', location: { name: 'Eye Centre' },
     category: 'appointment', status: 'open', createdBy: admin, updatedAt: new Date('2026-10-20T01:00:00Z') }]])
   people = [{ _id: recipientId, family: familyId, name: 'Grandpa Tan', nickname: 'Grandpa', isActive: true }]
-  t.mock.method(User, 'findById', async value => ({ _id: String(value), name: String(value) === member ? 'Jasmine' : 'Sera', tokenVersion: 0 }))
+  t.mock.method(User, 'findById', value => {
+    const user = { _id: String(value), name: String(value) === member ? 'Jasmine' : 'Sera', tokenVersion: 0 }
+    return { select() { return this }, lean: async () => user, then: (resolve, reject) => Promise.resolve(user).then(resolve, reject) }
+  })
   t.mock.method(User, 'find', () => query([{ _id: admin, name: 'Sera' }, { _id: member, name: 'Jasmine' }]))
   t.mock.method(Task, 'getTaskById', async value => clone(tasks.get(String(value))))
   t.mock.method(Task, 'findOneAndUpdate', async (filter, update) => {
@@ -351,6 +355,7 @@ test('creation schema requires task details while updates still allow partial fi
 })
 
 test('admins cannot propose or confirm deletion of another member’s task', async () => {
+  tasks.get(taskId).startAt = new Date(Date.now() + 86400000)
   tasks.get(taskId).createdBy = member
   reply = { intent: 'delete', taskId, message: 'Delete task', suggestions: [] }
   assert.equal((await chat()).status, 403)
@@ -523,6 +528,7 @@ test('incomplete creation asks for missing details, then complete creation confi
 })
 
 test('deletion refuses non-creators and locked tasks with explicit reasons', async () => {
+  tasks.get(taskId).startAt = new Date(Date.now() + 86400000)
   reply = { intent: 'delete', taskId, message: 'Delete', suggestions: [] }
   tasks.get(taskId).createdBy = member
   const notOwner = await chat()

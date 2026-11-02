@@ -6,7 +6,7 @@ import Task from '../../server/src/features/tasks/TaskModel.js'
 import Family from '../../server/src/features/families/Family.model.js'
 import { deleteOverdueTasks, deleteTask } from '../../server/src/features/tasks/controller.js'
 import { updateTaskPermissions } from '../../server/src/features/families/settings.controller.js'
-const req = (role = 'member', permission) => ({ memberRole: role, family: { _id: 'family', overdueTaskDeletion: permission }, user: { userId: 'creator' }, params: { taskId: '000000000000000000000001' } })
+const req = (role = 'member', permission) => ({ memberRole: role, family: { _id: 'family', overdueTaskDeletion: permission, members: [{ userId: 'creator', role }] }, user: { userId: 'creator' }, params: { taskId: '000000000000000000000001' } })
 const response = () => ({ code: 200, status(code) { this.code = code; return this }, json(body) { this.body = body; return this } })
 test('missing permission defaults to admin only for bulk deletion', async t => {
   t.mock.method(Task, 'find', () => { throw new Error('Must not query tasks') })
@@ -29,6 +29,7 @@ for (const [role, permission] of [['admin', undefined], ['member', 'member']]) {
 }
 test('creator cannot bypass overdue permission through individual deletion', async t => {
   t.mock.method(Task, 'getTaskInFamily', async () => ({ createdBy: 'creator', status: 'open', startAt: new Date(0) }))
+  t.mock.method(Family, 'findById', async () => ({ members: [{ userId: 'creator', role: 'member' }] }))
   const res = response()
   await deleteTask(req(), res, error => { throw error })
   assert.equal(res.code, 403)
@@ -79,7 +80,7 @@ test('bulk deletion records one summary naming the deleter and the actual delete
   t.mock.method(Family, 'findById', () => ({ select: () => ({ lean: async () => ({ telegram: {} }) }) }))
   t.mock.method(Notification, 'create', async record => { notifications.push(record); return record })
   const res = response()
-  await deleteOverdueTasks({ ...req('admin'), family: { _id: familyId } }, res, error => { throw error })
+  await deleteOverdueTasks({ ...req('admin'), family: { ...req('admin').family, _id: familyId } }, res, error => { throw error })
   assert.equal(res.code, 200)
   assert.equal(res.body.deletedCount, 2)
   assert.equal(notifications.length, 1)

@@ -58,6 +58,30 @@ beforeEach(async () => {
 afterEach(() => { wrapper?.unmount(); queryClient.clear() })
 
 describe('Family home task board and navigation', () => {
+  it('shows one future recurring row on desktop and mobile while preserving the missed occurrence', async () => {
+    const sessions = [-1, 7, 14, 21, 28].map((days, index) => ({
+      _id: `session-${index}`, family: 'one', recurringSeries: 'weekly',
+      title: 'Weekly care', status: 'open',
+      startAt: new Date(Date.now() + days * 86400000).toISOString(),
+    }))
+    queryClient.setQueryData(queryKeys.tasks('one'), sessions)
+    await flushPromises()
+    const board = wrapper.getComponent(TodayTasks)
+    await findButton(board, 'Needs someone').trigger('click')
+    expect(board.props('tasks').map(task => task._id)).toEqual(['session-1'])
+    expect(board.text()).toContain('4 upcoming sessions')
+    await findButton(board, 'Overdue').trigger('click')
+    expect(board.props('tasks').map(task => task._id)).toEqual(['session-0'])
+    wrapper.getComponent(MobileHomeNavigation).vm.$emit('select', 'tasks')
+    await flushPromises()
+    await findButton(board, 'Needs someone').trigger('click')
+    const mobile = wrapper.findAllComponents(MobileTodayTasks).find(list => list.props('title') === 'Family tasks')
+    expect(mobile.props('tasks').map(task => task._id)).toEqual(['session-1'])
+    expect(mobile.text()).toContain('4 upcoming sessions')
+    await findButton(board, 'Overdue').trigger('click')
+    expect(mobile.props('tasks').map(task => task._id)).toEqual(['session-0'])
+  })
+
   it('separates expired unclaimed tasks from tasks that still need someone', async () => {
     const past = new Date(Date.now() - 3600000).toISOString()
     queryClient.setQueryData(queryKeys.tasks('one'), [...tasks,
@@ -151,4 +175,15 @@ it('select all includes overdue tasks only and resets when changing filters', as
   expect(board.find('.overdue-select-all').exists()).toBe(false)
   await findButton(board, 'Overdue').trigger('click')
   expect(board.get('input[aria-label="Select Buy groceries for deletion"]').element.checked).toBe(false)
+})
+
+it('assistant deletion refreshes the recorded summary without adding a task-title activity', async () => {
+  const previousGet = http.get.getMockImplementation()
+  vi.spyOn(http, 'get').mockImplementation(async path => path.endsWith('/notifications')
+    ? { data: { notifications: [{ _id: 'summary', text: 'Alex deleted 1 overdue task.', createdAt: new Date().toISOString() }] } }
+    : previousGet(path))
+  window.dispatchEvent(new CustomEvent('carecircle:task-updated', { detail: { familyId: 'one', action: 'delete', deleted: true, title: 'Private task title' } }))
+  await flushPromises()
+  expect(wrapper.text()).toContain('Alex deleted 1 overdue task.')
+  expect(wrapper.text()).not.toContain('Private task title')
 })

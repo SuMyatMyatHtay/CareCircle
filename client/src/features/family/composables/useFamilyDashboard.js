@@ -236,6 +236,12 @@ export function useFamilyDashboard() {
   function onAssistantTaskUpdated(event) {
     const detail = event.detail
     if (workspace.isPreview || detail?.familyId !== workspace.selectedFamilyId.value) return
+    if (detail.action === 'delete' && detail.deleted) {
+      // The server records the actor/count summary. Do not invent a second task-title update.
+      window.dispatchEvent(new CustomEvent('carecircle:notifications-updated', { detail: { familyId: detail.familyId } }))
+      showToast('Task deleted.')
+      return
+    }
     const title = detail.task?.title || detail.title || 'Task'
     const action = { create: 'posted', update: 'updated', unclaim: 'unclaimed', delete: 'deleted' }[detail.action] || 'updated'
     addActivity(`${workspace.user.value.name} ${action} “${title}”`)
