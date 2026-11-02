@@ -112,7 +112,7 @@ const firstName = (name) => String(name || '').trim().split(/\s+/)[0] || ''
 
 // Tasks and "next appointment" notes -> one sorted list of calendar events.
 // Cancelled tasks are left out: they won't happen.
-export function buildEvents({ tasks = [], appointmentNotes = [], familyId, now = Date.now() }) {
+export function buildEvents({ tasks = [], appointmentNotes = [], familyId, familyName = '', now = Date.now() }) {
     const events = []
 
     for (const task of tasks) {
@@ -132,6 +132,8 @@ export function buildEvents({ tasks = [], appointmentNotes = [], familyId, now =
             place: task.location?.name || '',
             state,
             who: claimer && ['claimed', 'in_progress', 'completed'].includes(state) ? firstName(claimer) : '',
+            familyId,
+            familyName,
             to: { name: 'task-detail', params: { familyId, taskId: task._id } }
         })
     }
@@ -154,11 +156,22 @@ export function buildEvents({ tasks = [], appointmentNotes = [], familyId, now =
             place: '',
             state: 'appointment',
             who: '',
+            familyId,
+            familyName,
             to: recipientId ? { name: 'recipient-log', params: { recipientId } } : null
         })
     }
 
     return events.sort((a, b) => a.at - b.at)
+}
+
+// The people on the calendar, for the "Show" filter: [{ id, name }], sorted by name
+export function recipientOptions(events) {
+    const people = new Map()
+    for (const event of events) {
+        if (event.recipientId && !people.has(event.recipientId)) people.set(event.recipientId, event.recipientName)
+    }
+    return [...people].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name))
 }
 
 // Everyone, one recipient's events, or tasks for nobody in particular ("household")

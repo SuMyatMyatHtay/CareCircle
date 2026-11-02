@@ -193,6 +193,12 @@ describe('Family APIs with Express, authentication and a real isolated MongoDB',
     assert.equal(again.data.cached, true)
     assert.equal(translationProvider.calls.length, 1)
     assert.equal(translationProvider.calls[0].to, 'zh-Hans')
+    // No "from": Azure detects the note's language, since notes aren't always English
+    assert.equal(translationProvider.calls[0].from, null)
+    // English is offered too, e.g. for a note written in Chinese
+    const english = await request(path, { method: 'POST', body: { lang: 'en' } })
+    assert.equal(english.status, 200)
+    assert.equal(translationProvider.calls.at(-1).to, 'en')
     const saved = await Log.findById(ids.log)
     assert.equal(saved.translations.get('zh'), first.data.translation)
     assert.equal(saved.updatedAt.getTime(), before.updatedAt.getTime())
@@ -200,7 +206,7 @@ describe('Family APIs with Express, authentication and a real isolated MongoDB',
 
   it('rejects unsupported languages and foreign-family notes before contacting the provider', async () => {
     const path = `${family}/logs/${ids.log}/translate`
-    for (const lang of ['constructor', 'en', 123])
+    for (const lang of ['constructor', 'jp', 123])
       assert.equal((await request(path, { method: 'POST', body: { lang } })).status, 400)
     assert.equal((await request(path, { method: 'POST', user: 'outsider', body: { lang: 'zh' } })).status, 403)
     assert.equal((await request(`/families/${ids.otherFamily}/logs/${ids.log}/translate`, { method: 'POST', body: { lang: 'zh' } })).status, 404)

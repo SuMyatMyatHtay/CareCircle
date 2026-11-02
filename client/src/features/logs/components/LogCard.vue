@@ -67,9 +67,9 @@ onUnmounted(() => { translationVersion++ })
 
 const translations = computed(() => ({ ...(props.log.translations || {}), ...fetchedTranslations.value }))
 
+// Every language, English too: a note may be written (or spoken) in Chinese, Malay or Tamil
 const languageOptions = computed(() =>
     Object.keys(LANGUAGE_LABELS)
-        .filter((code) => code !== (props.log.originalLang || 'en'))
         .map((code) => ({ code, label: languageLabel(code), cached: Boolean(translations.value[code]) }))
 )
 

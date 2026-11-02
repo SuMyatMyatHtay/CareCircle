@@ -2,7 +2,7 @@
 // Owner: Jhen (C)
 // Hub "Profile" tab: every detail about the recipient in three columns of cards.
 // Each "Edit" opens the recipient form; admins can also archive the recipient here.
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useActiveFamily } from '../../../composables/useActiveFamily.js'
 import { useRecipients } from '../../../composables/useRecipients.js'
@@ -10,6 +10,8 @@ import SectionCard from '../../../components/common/SectionCard.vue'
 import RecipientFormModal from '../components/RecipientFormModal.vue'
 import { archiveRecipient, getRecipientErrorMessage } from '../services/recipientsApi.js'
 import { careTypeLabel, mobilityLabel, ageLabel, formatDate, initials } from '../recipientLabels.js'
+import OneMapTiles from '../../transit/components/OneMapTiles.vue'
+import { searchClinics } from '../../transit/services/transitApi.js'
 
 const props = defineProps({
     recipient: { type: Object, required: true }
@@ -54,6 +56,30 @@ const lastMedicationUpdate = computed(() => {
 })
 
 const clinic = computed(() => props.recipient.preferredClinic)
+
+// Where to put the clinic on the map. Clinics picked from OneMap already have lat/lng;
+// one typed by hand is looked up once with the same OneMap search (postal code first).
+const foundSpot = ref(null)
+const clinicSpot = computed(() => {
+    const c = clinic.value
+    if (Number.isFinite(c?.lat) && Number.isFinite(c?.lng)) return { lat: c.lat, lng: c.lng }
+    return foundSpot.value
+})
+watch(clinic, async (c) => {
+    foundSpot.value = null
+    if (!c || (Number.isFinite(c.lat) && Number.isFinite(c.lng))) return
+    const query = c.postal || c.name || c.address
+    if (!query) return
+    try {
+        const { clinics, otherPlaces } = await searchClinics(query)
+        const place = clinics[0] || otherPlaces[0]
+        if (place && Number.isFinite(place.lat) && Number.isFinite(place.lng) && clinic.value === c) {
+            foundSpot.value = { lat: place.lat, lng: place.lng }
+        }
+    } catch {
+        // No map then; the name and address still show
+    }
+}, { immediate: true })
 
 const editing = ref(false)
 
@@ -181,7 +207,17 @@ async function archive() {
                         <button type="button" class="edit-link" @click="editing = true">Change</button>
                     </template>
                     <template v-if="clinic?.name || clinic?.address">
-                        <div class="map-placeholder" aria-hidden="true">
+                        <div v-if="clinicSpot" class="clinic-map">
+                            <OneMapTiles
+                                :lat="clinicSpot.lat"
+                                :lng="clinicSpot.lng"
+                                :label="clinic.name || 'Usual clinic'"
+                                :height="210"
+                                :fit-width="320"
+                                :zoom="16"
+                            />
+                        </div>
+                        <div v-else class="map-placeholder" aria-hidden="true">
                             <i class="bi bi-geo-alt"></i>
                             <span>OneMap</span>
                         </div>
@@ -365,6 +401,10 @@ async function archive() {
 .medication-list span {
     font-size: 12px;
     color: var(--theme-muted, #7B8391);
+}
+
+.clinic-map {
+    margin-bottom: 12px;
 }
 
 .map-placeholder {
