@@ -198,12 +198,13 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
 
                     <div class="month-grid" :class="{ 'is-loading': isLoadingEvents }">
                         <button
-                            v-for="day in days"
+                            v-for="(day, index) in days"
                             :key="day.key"
                             type="button"
                             class="day-cell"
                             :class="{
                                 'is-outside': !day.inMonth,
+                                'is-weekend': index % 7 >= 5,
                                 'is-today': day.key === today,
                                 'is-selected': day.key === selectedDay
                             }"
@@ -471,7 +472,12 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
     min-width: 0;
 }
 
-/* ---- Month grid ---- */
+/* ---- Month grid: square cells divided by thin lines, like Apple Calendar ---- */
+.month-card {
+    padding: 0;
+    overflow: hidden;
+}
+
 .weekday-row,
 .month-grid {
     display: grid;
@@ -479,16 +485,19 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
 }
 
 .weekday-row {
-    margin-bottom: 6px;
+    border-bottom: 1px solid var(--theme-border, #dfe3e8);
     color: var(--theme-muted, #717b8e);
     font-size: 12px;
     font-weight: 700;
-    text-align: center;
     text-transform: uppercase;
 }
 
+.weekday-row span {
+    padding: 10px 10px 8px;
+    text-align: right;
+}
+
 .month-grid {
-    gap: 4px;
     transition: opacity 0.2s;
 }
 
@@ -501,42 +510,65 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
     flex-direction: column;
     gap: 3px;
     min-width: 0;
-    min-height: 104px;
-    padding: 6px;
-    border: 1px solid transparent;
-    border-radius: 10px;
-    background: var(--theme-soft, #f6f8f6);
+    min-height: 112px;
+    padding: 6px 6px 8px;
+    border: none;
+    border-right: 1px solid var(--theme-border, #e6e9ed);
+    border-bottom: 1px solid var(--theme-border, #e6e9ed);
+    border-radius: 0;
+    background: var(--theme-panel, #fff);
     color: inherit;
     text-align: left;
 }
 
+.day-cell:nth-child(7n) {
+    border-right: none;
+}
+
+.day-cell:nth-last-child(-n + 7) {
+    border-bottom: none;
+}
+
+.day-cell.is-weekend {
+    /* A neutral tint of the panel, so it stays subtle in light and dark mode */
+    background: color-mix(in srgb, var(--theme-text, #30332f) 3%, var(--theme-panel, #fff));
+}
+
 .day-cell:hover {
-    border-color: var(--theme-border, #dfe3e8);
+    background: color-mix(in srgb, var(--theme-text, #30332f) 6%, var(--theme-panel, #fff));
 }
 
 .day-cell.is-outside {
-    background: transparent;
     color: var(--theme-muted, #9aa1ad);
 }
 
-.day-cell.is-selected {
-    border-color: var(--theme-green, #2d7d43);
-    box-shadow: 0 0 0 1px var(--theme-green, #2d7d43);
+.day-cell.is-outside .day-chips {
+    opacity: 0.6;
 }
 
+/* The date sits top right; today is a filled circle, the selected day an outlined one */
 .day-number {
+    display: inline-grid;
+    place-items: center;
+    align-self: flex-end;
+    min-width: 26px;
+    height: 26px;
+    padding: 0 4px;
+    border-radius: 999px;
     font-size: 13px;
     font-weight: 700;
 }
 
+.day-cell.is-selected .day-number {
+    box-shadow: inset 0 0 0 1.5px var(--theme-green, #2d7d43);
+    color: var(--theme-green, #2d7d43);
+}
+
 .day-cell.is-today .day-number {
-    display: inline-grid;
-    place-items: center;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
     background: var(--theme-green, #2d7d43);
-    color: #fff;
+    box-shadow: none;
+    /* The panel colour reads on the green in both modes (white in light, dark in dark) */
+    color: var(--theme-panel, #fff);
 }
 
 .day-chips {
@@ -552,7 +584,7 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
     min-width: 0;
     padding: 2px 5px;
     border-left: 3px solid currentColor;
-    border-radius: 5px;
+    border-radius: 3px;
     font-size: 11px;
     line-height: 1.35;
 }
@@ -584,8 +616,8 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
 /* ---- Colours, one per state ---- */
 .state-open { --state: var(--theme-warning, #93650a); --state-soft: var(--theme-warning-soft, #fff3d6); }
 .state-missed { --state: var(--theme-danger, #c0564b); --state-soft: var(--theme-danger-soft, #fde8e4); }
-.state-claimed { --state: var(--theme-green, #2d7d43); --state-soft: var(--theme-accent-soft, #e3f2e6); }
-.state-in_progress { --state: #2f6fb3; --state-soft: #e5effa; }
+.state-claimed { --state: var(--theme-green, #2d7d43); --state-soft: var(--theme-soft, #e3f2e6); }
+.state-in_progress { --state: var(--theme-blue, #2f6fb3); --state-soft: var(--theme-blue-soft, #e5effa); }
 .state-completed { --state: var(--theme-muted, #7b8391); --state-soft: var(--theme-neutral, #eef0f2); }
 .state-appointment { --state: var(--theme-purple, #6a4fa3); --state-soft: var(--theme-purple-soft, #eee8fa); }
 
@@ -612,7 +644,8 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
     display: flex;
     flex-wrap: wrap;
     gap: 6px 16px;
-    margin: 14px 0 0;
+    margin: 0;
+    padding: 8px 16px 14px;
     padding: 0;
     list-style: none;
     color: var(--theme-muted, #717b8e);
@@ -659,7 +692,9 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
 }
 
 .calendar-hint {
-    margin: 10px 0 0;
+    margin: 0;
+    padding: 10px 16px 0;
+    border-top: 1px solid var(--theme-border, #dfe3e8);
     color: var(--theme-muted, #717b8e);
     font-size: 12px;
 }
@@ -788,10 +823,23 @@ a.agenda-item:hover {
         padding: 12px;
     }
 
+    .month-card {
+        padding: 0;
+    }
+
+    .weekday-row span {
+        padding: 8px 0 6px;
+        text-align: center;
+    }
+
     .day-cell {
         align-items: center;
-        min-height: 48px;
+        min-height: 52px;
         padding: 4px 2px;
+    }
+
+    .day-number {
+        align-self: center;
     }
 
     .day-chips {
@@ -805,6 +853,11 @@ a.agenda-item:hover {
     /* No double-click on phones: "+ Add task" in the day's list does it */
     .calendar-hint {
         display: none;
+    }
+
+    .legend {
+        padding-top: 12px;
+        border-top: 1px solid var(--theme-border, #dfe3e8);
     }
 
     .dot {
