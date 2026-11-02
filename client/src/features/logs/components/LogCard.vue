@@ -2,6 +2,7 @@
 // Owner: SeungHak (F)
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { logTypeLabel, MEDICATION_CHANGE_LABELS, LANGUAGE_LABELS, languageLabel } from '../logTypes.js'
+import { preferredLanguage } from '../preferredLanguage.js'
 
 const props = defineProps({
     log: { type: Object, required: true },
@@ -65,16 +66,6 @@ watch([() => props.log._id, () => props.log.content], () => {
     showPreferredLanguage()
 })
 onUnmounted(() => { translationVersion++ })
-
-// The reader's language from their profile ("Preferred language"), e.g. 'zh' for Aunt May
-function preferredLanguage() {
-    try {
-        const lang = JSON.parse(sessionStorage.getItem('user') || '{}').preferredLang
-        return Object.hasOwn(LANGUAGE_LABELS, lang) ? lang : ''
-    } catch {
-        return ''
-    }
-}
 
 // Every note opens already translated into the reader's language (cached on the server, so each
 // note is translated once per language). A note already in that language is shown as it is.

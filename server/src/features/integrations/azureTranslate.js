@@ -70,3 +70,14 @@ export async function translateText(text, targetLang, sourceLang = null) {
     }
     return { text: translatedText, detectedLang: appLanguage(data[0].detectedLanguage?.language) }
 }
+
+// A care note in targetLang. Azure detects the note's language, but its guess on a short
+// note can be wrong (e.g. "Grandpa ate lunch." as Punjabi, "translated" to "Grandpa and Lunch").
+// Notes are written in the app's languages, so a guess outside them is treated as English.
+export async function translateNote(text, targetLang) {
+    const detected = await translateText(text, targetLang)
+    if (isSupportedLanguage(detected.detectedLang)) return detected
+    if (targetLang === 'en') return { text, detectedLang: 'en' }
+    const fromEnglish = await translateText(text, targetLang, 'en')
+    return { text: fromEnglish.text, detectedLang: 'en' }
+}

@@ -259,4 +259,10 @@ test('notes open already translated into the reader\'s preferred language', asyn
   // The reader can hide it
   await note.getByTestId('log-translate').click()
   await expect(note.locator('.translation')).toHaveCount(0)
+
+  // "Latest notes" on the recipient Overview is in Chinese too, with the original a click away
+  await page.goto(`/recipients/${ids.grandpa}`)
+  await expect(page.getByText('这是已翻译的护理记录。', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: /Show original/ }).click()
+  await expect(page.getByText('Sample note in the isolated test database.', { exact: true })).toBeVisible()
 })
