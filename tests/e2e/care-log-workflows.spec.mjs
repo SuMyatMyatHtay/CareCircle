@@ -125,6 +125,10 @@ test('a member can change only their own notes, but can translate everyone\'s', 
   const alexNote = page.getByTestId(`log-card-${ids.log}`)
   await expect(alexNote).toBeVisible()
   await expect(alexNote.getByTestId('log-translate')).toBeVisible()
+  // All four languages, English included (a note may be in Chinese)
+  await alexNote.getByTestId('log-translate').click()
+  for (const code of ['en', 'zh', 'ms', 'ta']) await expect(alexNote.getByTestId(`log-translate-${code}`)).toBeVisible()
+  await alexNote.getByTestId('log-translate').click()
   await expect(alexNote.getByRole('button', { name: 'Edit note', exact: true })).toHaveCount(0)
   await expect(alexNote.getByRole('button', { name: 'Delete note', exact: true })).toHaveCount(0)
 
