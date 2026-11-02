@@ -7,7 +7,7 @@ import { authConfig, apiError } from '../../family/services/dashboardApi.js'
 const props = defineProps({ selectedIds: { type: Array, default: () => [] }, taskIds: { type: Array, default: () => [] }, disabled: Boolean })
 const emit = defineEmits(['deleted', 'select-all', 'busy'])
 const allSelected = computed(() => props.taskIds.length > 0 && props.taskIds.every(id => props.selectedIds.includes(id)))
-const { selectedFamily, selectedFamilyId, isAdmin, isPreview } = useFamilyWorkspace()
+const { selectedFamily, selectedFamilyId, isAdmin, isPreview, user } = useFamilyWorkspace()
 const allowed = computed(() => isAdmin.value || selectedFamily.value?.overdueTaskDeletion === 'member')
 const busy = ref(false), message = ref(''), error = ref('')
 watch(selectedFamilyId, () => { message.value = ''; error.value = '' })
@@ -25,12 +25,19 @@ async function remove() {
       const before = previewState.tasks.length
       previewState.tasks = previewState.tasks.filter(task => !(ids.includes(task._id) && task.status === 'open' && +new Date(task.startAt) <= Date.now()))
       deletedCount = before - previewState.tasks.length
+      if (deletedCount) previewState.updates.unshift({
+        _id: crypto.randomUUID(), actor: user.value.name, actorId: user.value.id,
+        profilePicture: user.value.profilePicture, avatar: user.value.avatar,
+        text: `${user.value.name} deleted ${deletedCount} overdue task${deletedCount === 1 ? '' : 's'}.`,
+        time: new Intl.DateTimeFormat('en-SG', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Singapore' }).format(new Date()),
+      })
     } else {
       const { data } = await http.delete(`/families/${familyId}/tasks/overdue`, { ...authConfig(), data: { taskIds: ids } })
       deletedCount = data.deletedCount
     }
     if (familyId !== selectedFamilyId.value) return
     message.value = `${deletedCount} overdue task${deletedCount === 1 ? '' : 's'} deleted.`
+    window.dispatchEvent(new CustomEvent('carecircle:overdue-deleted', { detail: { familyId } }))
     emit('deleted')
   } catch (err) {
     if (familyId === selectedFamilyId.value) { error.value = apiError(err, 'Delete overdue tasks'); emit('deleted') }

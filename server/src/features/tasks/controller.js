@@ -7,6 +7,7 @@
 //   req.user.userId, req.family, req.memberRole
 
 import mongoose from 'mongoose'
+import User from '../auth/User.model.js'
 import Task, { LOCKED_STATUSES, UNDELETABLE_STATUSES } from './TaskModel.js'
 import { TASK_CATEGORIES, TASK_STATUS, TASK_STATUSES, EVENTS } from '../../constants.js'
 import { notify } from '../../utils/notify.js'
@@ -478,7 +479,12 @@ export async function deleteTask(req, res, next) {
             throw httpError(409, 'Task was changed by someone else. Refresh and try again.')
         }
 
-        await announce(EVENTS.TASK_DELETED, populated)
+        if (overdue) {
+            const actor = await User.findById(req.user.userId).select('name').lean()
+            await notify(req.family._id, EVENTS.TASK_DELETED, { deletedCount: 1, changedBy: actor })
+        } else {
+            await announce(EVENTS.TASK_DELETED, populated)
+        }
         return res.json({ message: 'Task deleted', taskId: task._id.toString() })
     } catch (error) {
         return handleError(error, res, next)
@@ -519,24 +525,28 @@ export async function deleteOverdueTasks(req, res, next) {
         const filter = { family: req.family._id, status: 'open', startAt: { $lte: cutoff } }
         if (taskIds !== undefined) filter._id = { $in: [...new Set(taskIds)] }
         const tasks = await Task.find(filter)
+        const actor = tasks.length ? await User.findById(req.user.userId).select('name').lean() : null
         let deletedCount = 0
-        for (const task of tasks) {
-            try {
-                const populated = await Task.getPopulatedTaskById(task._id)
-                let result
-                if (task.recurringSeries) {
-                    await deleteRecurringOccurrence(task, task.updatedAt)
-                    result = { deletedCount: 1 }
-                } else {
-                    result = await Task.deleteOne({ _id: task._id, family: req.family._id, status: 'open', startAt: { $lte: cutoff }, updatedAt: task.updatedAt })
+        try {
+            for (const task of tasks) {
+                try {
+                    let result
+                    if (task.recurringSeries) {
+                        await deleteRecurringOccurrence(task, task.updatedAt)
+                        result = { deletedCount: 1 }
+                    } else {
+                        result = await Task.deleteOne({ _id: task._id, family: req.family._id, status: 'open', startAt: { $lte: cutoff }, updatedAt: task.updatedAt })
+                    }
+                    if (result.deletedCount) {
+                        deletedCount++
+                    }
+                } catch (error) {
+                    if (error.status !== 409) throw error
                 }
-                if (result.deletedCount) {
-                    deletedCount++
-                    await announce(EVENTS.TASK_DELETED, populated)
-                }
-            } catch (error) {
-                if (error.status !== 409) throw error
             }
+        } finally {
+            // Record one summary, including successful deletions before a partial failure.
+            if (deletedCount) await notify(req.family._id, EVENTS.TASK_DELETED, { deletedCount, changedBy: actor })
         }
         return res.json({ deletedCount })
     } catch (error) { return handleError(error, res, next) }

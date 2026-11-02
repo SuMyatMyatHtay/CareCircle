@@ -1,5 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import User from '../../server/src/features/auth/User.model.js'
+import Notification from '../../server/src/features/notifications/Notifications.model.js'
 import Task from '../../server/src/features/tasks/TaskModel.js'
 import Family from '../../server/src/features/families/Family.model.js'
 import { deleteOverdueTasks, deleteTask } from '../../server/src/features/tasks/controller.js'
@@ -65,3 +67,22 @@ for (const taskIds of [[], ['invalid'], 'all', [null]]) {
     assert.equal(res.code, 400)
   })
 }
+
+test('bulk deletion records one summary naming the deleter and the actual deleted count', async t => {
+  const familyId = '000000000000000000000010'
+  const tasks = [1, 2, 3].map(id => ({ _id: String(id), updatedAt: new Date() }))
+  const notifications = []
+  t.mock.method(Task, 'find', async () => tasks)
+  t.mock.method(Task, 'deleteOne', async filter => ({ deletedCount: filter._id === '3' ? 0 : 1 }))
+  t.mock.method(Task, 'getPopulatedTaskById', () => { throw new Error('Must not create individual task updates') })
+  t.mock.method(User, 'findById', () => ({ select: () => ({ lean: async () => ({ name: 'Jasmine Tan' }) }) }))
+  t.mock.method(Family, 'findById', () => ({ select: () => ({ lean: async () => ({ telegram: {} }) }) }))
+  t.mock.method(Notification, 'create', async record => { notifications.push(record); return record })
+  const res = response()
+  await deleteOverdueTasks({ ...req('admin'), family: { _id: familyId } }, res, error => { throw error })
+  assert.equal(res.code, 200)
+  assert.equal(res.body.deletedCount, 2)
+  assert.equal(notifications.length, 1)
+  assert.equal(notifications[0].text, 'Jasmine deleted 2 overdue tasks.')
+  assert.equal(notifications[0].refId, undefined)
+})

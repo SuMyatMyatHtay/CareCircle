@@ -31,3 +31,8 @@ test('the new task events are on by default', () => {
   for (const eventType of [EVENTS.TASK_UPDATED, EVENTS.TASK_DELETED, EVENTS.TASK_STARTED])
     assert.ok(effectiveEvents([]).includes(eventType))
 })
+
+test('overdue deletion summary contains only the actual actor and count', () => {
+  assert.deepEqual(buildMessage(EVENTS.TASK_DELETED, { ...task, changedBy: { name: 'Jasmine Tan' }, deletedCount: 5 }), { text: 'Jasmine deleted 5 overdue tasks.' })
+  assert.deepEqual(buildMessage(EVENTS.TASK_DELETED, { changedBy: { name: 'Aunt May' }, deletedCount: 1 }), { text: 'Aunt May deleted 1 overdue task.' })
+})
