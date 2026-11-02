@@ -4,7 +4,7 @@
 // appointment written in a consultation note, on one month grid.
 // Click a day to see its list; each item opens the task, or the note's care log.
 // Double-click a day, or "+ Add task" in its list, to post a task on that day (like Apple Calendar).
-// Google Calendar sync (E, Chaithra) sits beside it for people who want it on their phone.
+// Google Calendar sync (E, Chaithra) sits by the title for people who want it on their phone.
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { useFamilyWorkspace } from '../../family/composables/useFamilyWorkspace.js'
@@ -122,6 +122,8 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
                 <h1>Calendar</h1>
                 <p>Every family task and follow-up appointment, in one place.</p>
             </div>
+            <!-- Up here, not below the day's list, so it's never scrolled out of sight on a phone -->
+            <GoogleCalendarSync v-if="selectedFamily" class="calendar-google" compact />
         </header>
 
         <FamilyEmptyState
@@ -272,7 +274,6 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
                         </p>
                     </section>
 
-                    <GoogleCalendarSync compact />
                 </aside>
             </div>
 
@@ -302,6 +303,10 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
     align-items: center;
     flex-wrap: wrap;
     gap: 16px;
+}
+
+.calendar-google {
+    flex: 0 0 auto;
 }
 
 .calendar-header h1 {
