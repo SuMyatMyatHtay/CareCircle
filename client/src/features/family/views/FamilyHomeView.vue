@@ -6,6 +6,7 @@ import NewTaskButton from '../../tasks/components/NewTaskButton.vue'
 import FamilyEmptyState from '../components/FamilyEmptyState.vue'
 import TransitBanner from '../components/TransitBanner.vue'
 import RecipientOverview from '../components/RecipientOverview.vue'
+import DeleteOverdueTasks from '../../tasks/components/DeleteOverdueTasks.vue'
 import TodayTasks from '../components/TodayTasks.vue'
 import RecurringSeriesPanel from '../../tasks/components/RecurringSeriesPanel.vue'
 import RecentUpdates from '../components/RecentUpdates.vue'
@@ -197,6 +198,7 @@ watch(selectedFamilyId, () => {
 
 <template>
   <div class="care-page care-home-page">
+    <DeleteOverdueTasks @deleted="loadTasks()" />
     <div class="care-home-desktop">
       <HomeHeader :title="`${greeting}, ${firstName}`" :subtitle="subtitle">
         <template #actions>

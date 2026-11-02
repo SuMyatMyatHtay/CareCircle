@@ -462,8 +462,9 @@ export async function deleteTask(req, res, next) {
     try {
         const task = await findTaskInFamily(req.family._id, req.params.taskId)
 
-        if (task.createdBy.toString() !== req.user.userId) {
-            throw httpError(403, 'Only the task creator can delete this task')
+        const overdue = task.status === 'open' && +new Date(task.startAt) <= Date.now()
+        if (overdue ? !canDeleteOverdue(req) : task.createdBy.toString() !== req.user.userId) {
+            throw httpError(403, overdue ? 'Only family admins can delete overdue tasks' : 'Only the task creator can delete this task')
         }
         if (UNDELETABLE_STATUSES.includes(task.status)) {
             throw httpError(409, `Task is ${task.status} and cannot be deleted. Cancel it instead.`)
@@ -500,5 +501,37 @@ export async function pauseRecurringSeries(req, res, next) {
         if (!mongoose.isValidObjectId(req.params.seriesId)) throw httpError(404, 'Repeating task not found')
         await setSeriesPaused(req.params.seriesId, req.family._id, req.user.userId, req.body?.paused)
         return res.json({ ok: true })
+    } catch (error) { return handleError(error, res, next) }
+}
+
+function canDeleteOverdue(req) {
+    return req.memberRole === 'admin' || req.family.overdueTaskDeletion === 'member'
+}
+
+export async function deleteOverdueTasks(req, res, next) {
+    try {
+        if (!canDeleteOverdue(req)) throw httpError(403, 'Only family admins can delete overdue tasks')
+        const cutoff = new Date()
+        const tasks = await Task.find({ family: req.family._id, status: 'open', startAt: { $lte: cutoff } })
+        let deletedCount = 0
+        for (const task of tasks) {
+            try {
+                const populated = await Task.getPopulatedTaskById(task._id)
+                let result
+                if (task.recurringSeries) {
+                    await deleteRecurringOccurrence(task, task.updatedAt)
+                    result = { deletedCount: 1 }
+                } else {
+                    result = await Task.deleteOne({ _id: task._id, family: req.family._id, status: 'open', startAt: { $lte: cutoff }, updatedAt: task.updatedAt })
+                }
+                if (result.deletedCount) {
+                    deletedCount++
+                    await announce(EVENTS.TASK_DELETED, populated)
+                }
+            } catch (error) {
+                if (error.status !== 409) throw error
+            }
+        }
+        return res.json({ deletedCount })
     } catch (error) { return handleError(error, res, next) }
 }

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import TaskPermissionsCard from '../components/TaskPermissionsCard.vue'
 import SettingsHeader from '../components/SettingsHeader.vue'
 import FamilyMembersCard from '../components/FamilyMembersCard.vue'
 import InviteCodeCard from '../components/InviteCodeCard.vue'
@@ -195,6 +196,7 @@ function requestMobileLogout() {
 
 <template>
   <div class="care-page care-settings-page">
+    <TaskPermissionsCard :key="selectedFamilyId" />
     <div class="care-settings-desktop">
       <SettingsHeader />
       <FamilyEmptyState

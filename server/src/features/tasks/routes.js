@@ -9,6 +9,7 @@ import {
   createTask,
   updateTask,
   deleteTask,
+  deleteOverdueTasks,
   claimTask,
   unclaimTask,
   startTask,
@@ -24,6 +25,7 @@ router.get('/', listTasks)                          // ?status=&recipient=&claim
 router.post('/', createTask)                        // member
 router.get('/recurring', getRecurringSeries)
 router.patch('/recurring/:seriesId', pauseRecurringSeries)
+router.delete('/overdue', deleteOverdueTasks)
 router.get('/:taskId', getTask)                     // member
 router.patch('/:taskId', updateTask)                // creator only
 router.delete('/:taskId', deleteTask)               // creator only
