@@ -280,7 +280,6 @@ The updated `server/.env.example` groups settings for Groq, Google Calendar, Gem
 | Voice notes | `GROQ_API_KEY` | Microphone permission; HTTPS or localhost for browser recording |
 | Google Calendar sync | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | Enable Calendar API and configure OAuth consent/test users and the exact callback URI |
 | Telegram | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, optional `TELEGRAM_BOT_USERNAME` | Register a public webhook at `/api/integrations/telegram/webhook` with the matching secret token |
-| Telegram task links | `APP_URL` | Frontend origin, e.g. `http://localhost:5173` locally |
 | Telegram reminders | `CRON_SECRET` | A cron service (e.g. cron-job.org) calls `POST /api/cron/reminders` every 5 minutes with `Authorization: Bearer <CRON_SECRET>` |
 | OneMap search and maps | No credentials in the current implementation | Network access; location permission for live sharing |
 

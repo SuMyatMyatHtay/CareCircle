@@ -8,6 +8,7 @@ import { startTestDatabase } from '../../server/test/support/database.js'
 import { resetFixtures, ids, accounts, password } from '../../server/test/support/fixtures.js'
 import Family from '../../server/src/features/families/Family.model.js'
 import Notification from '../../server/src/features/notifications/Notifications.model.js'
+import Task from '../../server/src/features/tasks/TaskModel.js'
 
 const OLD_GROUP = '-1001'
 const NEW_GROUP = '-1009999' // what Telegram gives the group once it is a supergroup
@@ -134,5 +135,36 @@ describe('Telegram group, webhook and reminders', () => {
     assert.deepEqual(ok.data, { ok: true })
     // The old duplicate route is gone
     assert.equal((await request('/integrations/reminders', { method: 'POST', authenticated: false })).status, 404)
+  })
+
+  it('sends just the message, with no link back to the app', async () => {
+    process.env.APP_URL = 'https://app.example.test'
+    try {
+      await Family.updateOne({ _id: ids.family }, { $set: { telegram: { chatId: NEW_GROUP } } })
+      const startAt = new Date(Date.now() + 3600e3).toISOString()
+      await request(`/families/${ids.family}/tasks`, { method: 'POST', body: { title: 'Buy medicine', category: 'errand', startAt } })
+      assert.equal(telegramCalls.length, 1)
+      assert.doesNotMatch(telegramCalls[0].text, /https?:\/\//)
+      assert.match(telegramCalls[0].text, /^New task: Buy medicine/)
+    } finally {
+      delete process.env.APP_URL
+    }
+  })
+
+  it('sends the 24-hour "still unclaimed" reminder only where it is switched on, and once', async () => {
+    // Two linked families, each with an unclaimed task starting in 3 hours (inside the 24-hour window)
+    await Family.updateOne({ _id: ids.family }, { $set: { telegram: { chatId: NEW_GROUP }, reminders: { unclaimedTask: true } } })
+    await Family.updateOne({ _id: ids.otherFamily }, { $set: { telegram: { chatId: '-1002' }, reminders: { unclaimedTask: false } } })
+    const startAt = new Date(Date.now() + 3 * 3600e3)
+    const tan = await Task.create({ family: ids.family, title: 'Pharmacy run', category: 'errand', startAt, createdBy: ids.alex })
+    await Task.create({ family: ids.otherFamily, title: 'Lee errand', category: 'errand', startAt, createdBy: ids.outsider })
+
+    const run = await request('/cron/reminders', { method: 'POST', authenticated: false, headers: { Authorization: 'Bearer cron-test-secret' } })
+    assert.equal(run.status, 200)
+    // Only the family that switched it on hears about it
+    assert.deepEqual(telegramCalls.map(call => call.chatId), [NEW_GROUP])
+    assert.match(telegramCalls[0].text, /Pharmacy run/)
+    // The task is marked, so later sweeps don't repeat it
+    assert.ok((await Task.findById(tan._id).lean()).unclaimedReminderAt)
   })
 })

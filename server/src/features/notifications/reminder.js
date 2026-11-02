@@ -107,7 +107,6 @@ export async function runDueReminders(familyId) {
     const family = await Family.findById(familyId).select('telegram reminders').lean()
     if (!family?.telegram?.chatId) return // no group linked, nothing to send to
 
-    await unclaimedAlerts(family._id, now)
     if (family.reminders?.beforeTask === true) await beforeTaskReminders(family._id, now)
     if (family.reminders?.unclaimedTask === true) await unclaimedAlerts(family._id, now)
     if (family.reminders?.dailySummary === true) await dailySummary(family, now)

@@ -236,7 +236,7 @@ Base: `/api/families/:familyId/tasks/:taskId/transit` (mounted before D's tasks 
 
 - **What syncs:** the user's tasks that are `claimed`, `in_progress` or `completed` (from the last 30 days on) appear in their Google Calendar; given back, cancelled, deleted or left-family tasks are removed. Completed tasks get a ✓.
 - **When:** after any successful change to a task (`calendarAutoSync` middleware in front of D's tasks router, so D's code doesn't change), after "Safely back home", when the user opens My Tasks, and on "Sync now".
-- **Server settings** (`server/.env`, never committed): `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI=http://localhost:5173/api/google/callback`; deployed, also `APP_URL=<website address>` if the website and API are on different addresses. While the Google app is in testing, only Gmails added as test users can connect.
+- **Server settings** (`server/.env`, never committed): `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI=http://localhost:5173/api/google/callback` (deployed: the website's address + `/api/google/callback`; Google sends people back to that website). While the Google app is in testing, only Gmails added as test users can connect.
 - **Model:** `server/src/features/calendar-sync/GoogleCalendarLink.model.js` (collection `googlecalendarlinks`): refresh token (never sent to the browser), Google email, and taskId → event id.
 - **Code:** `server/src/features/calendar-sync/`, `client/src/features/my-tasks/components/GoogleCalendarSync.vue`.
 
@@ -299,7 +299,7 @@ Optional: `GET /api/families/:familyId/calendar.ics` exports the tasks for Googl
 - **Calling `notify()`:** `notify(familyId, eventType, payload)` in `server/src/utils/notify.js` is a stub that only logs. Keep its signature when replacing it. Every package calls it.
 - **Outbox:** `notify()` should save an entry in `notifications` and then send it. Its status is `skipped` when no chat is linked or the event is muted.
 - **Message text:**
-  - Every message ends with a deep link to the related page.
+  - Messages are plain text, with no link back to the app.
   - Keep health details out of the text, because group chats get forwarded. Write "Grandpa's medication was updated", not the drug and dose.
 - **Reminders:** a scheduled job sends reminders for tasks starting soon.
 
