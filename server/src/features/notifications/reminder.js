@@ -1,11 +1,12 @@
-// Telegram reminders WITHOUT a cron job.
-// runDueReminders(familyId) is called from requests the app already makes (see listNotifications
-// and listTasks). Each call checks what is due for ONE family and sends it through notify().
+// Telegram reminders: 1 hour before a claimed task, unclaimed tasks coming up, and the 8am summary.
+// A cron service (cron-job.org) calls POST /api/cron/reminders every 5 minutes with
+// "Authorization: Bearer <CRON_SECRET>" (notifications/routes.js); that runs runAllDueReminders(),
+// which checks every family. runDueReminders(familyId) does the same for one family.
 //
 // Every reminder is "claimed" with an atomic update first (flag on the task, or the day on the
 // family), so two requests at the same moment can never send the same message twice.
 //
-// Limit: it only runs while someone has CareCircle open. If nobody opens the app, nothing is sent.
+// Limit: without the cron service calling that route, no reminders are sent.
 import Family from '../families/Family.model.js'
 import Task from '../tasks/TaskModel.js'
 import { notify } from '../../utils/notify.js'

@@ -22,7 +22,12 @@ export async function callTelegram(method, body = {}) {
     signal: AbortSignal.timeout(5000), // serverless: don't let a slow Telegram hold the request open
   })
   const data = await response.json().catch(() => ({}))
-  if (!response.ok || !data.ok) throw new Error(data.description || `Telegram HTTP ${response.status}`)
+  if (!response.ok || !data.ok) {
+    const error = new Error(data.description || `Telegram HTTP ${response.status}`)
+    // "group chat was upgraded to a supergroup chat": Telegram also says the group's new id
+    if (data.parameters?.migrate_to_chat_id) error.migrateTo = String(data.parameters.migrate_to_chat_id)
+    throw error
+  }
   return data.result
 }
  
@@ -31,6 +36,24 @@ export function sendTelegramMessage(chatId, text) {
   return callTelegram('sendMessage', { chat_id: chatId, text, link_preview_options: { is_disabled: true } })
 }
  
+// A group that becomes a supergroup (e.g. after its settings change) gets a new id.
+// Point every family linked to the old id at the new one.
+export async function moveGroup(oldChatId, newChatId) {
+  await Family.updateMany({ 'telegram.chatId': String(oldChatId) }, { $set: { 'telegram.chatId': String(newChatId) } })
+}
+
+// Send to a family's linked group. If the group moved to a new id, remember it and send
+// again, so nobody has to /link the group again. Use this for every message to a family.
+export async function sendToGroup(chatId, text) {
+  try {
+    return await sendTelegramMessage(chatId, text)
+  } catch (error) {
+    if (!error.migrateTo) throw error
+    await moveGroup(chatId, error.migrateTo)
+    return sendTelegramMessage(error.migrateTo, text)
+  }
+}
+
 // Telegram sends the secret we gave setWebhook in this header on every update
 function isValidWebhookSecret(req) {
   const expected = process.env.TELEGRAM_WEBHOOK_SECRET
@@ -99,7 +122,11 @@ async function unlinkGroup(chat) {
  
 async function handleUpdate(update) {
   const message = update?.message
-  if (!message?.text || !message.chat) return
+  if (!message?.chat) return
+  // The group became a supergroup: Telegram posts this in the old group and the new one
+  if (message.migrate_to_chat_id) return moveGroup(message.chat.id, message.migrate_to_chat_id)
+  if (message.migrate_from_chat_id) return moveGroup(message.migrate_from_chat_id, message.chat.id)
+  if (!message.text) return
   const [first, ...rest] = message.text.trim().split(/\s+/)
   const command = first.toLowerCase().replace(/@.*$/, '') // "/link@CareCircleBot" -> "/link"
   if (command === '/link') return linkGroup(message.chat, message.from, rest[0])

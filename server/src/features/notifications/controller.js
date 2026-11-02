@@ -8,7 +8,7 @@ import Family from '../families/Family.model.js'
 import User from '../auth/User.model.js'
 import Notification from './Notifications.model.js'
 import { effectiveEvents, parseNotifyOn } from '../../utils/notify.js'
-import { sendTelegramMessage } from '../integrations/telegram.js'
+import { sendToGroup } from '../integrations/telegram.js'
 import { NOTIFICATION_STATUSES } from '../../constants.js'
 
 // GET /api/families/:familyId/notifications?limit=20&status=sent
@@ -87,7 +87,7 @@ export async function sendTestMessage(req, res, next) {
     const chatId = req.family.telegram?.chatId
     if (!chatId) return res.status(409).json({ error: 'No Telegram group is linked yet' })
     try {
-      await sendTelegramMessage(chatId, `CareCircle test: updates for ${req.family.name} will appear in this group.`)
+      await sendToGroup(chatId, `CareCircle test: updates for ${req.family.name} will appear in this group.`)
     } catch (error) {
       console.error('Telegram test message failed:', error.message)
       return res.status(502).json({ error: 'Telegram did not accept the message. Is the bot still in the group?' })
