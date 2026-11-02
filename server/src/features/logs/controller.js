@@ -308,17 +308,14 @@ export async function translateLog(req, res, next) {
                 `lang must be one of: ${SUPPORTED_LANGUAGES.join(', ')}`
             ])
         }
-        if (lang === log.originalLang) {
-            throw httpError(400, 'Validation failed', ['This note is already in that language'])
-        }
-
         // Cache hit: each text is only translated once per language
         const cached = log.translations?.get(lang)
         if (cached) return res.json({ lang, translation: cached, cached: true })
 
         let translation
         try {
-            translation = await translateText(log.content, lang, log.originalLang)
+            // No source language: notes aren't always English (a doctor may speak Chinese), so Azure detects it
+            translation = await translateText(log.content, lang)
         } catch (error) {
             console.error('Translation failed:', error.message)
             throw httpError(502, 'Translation service is unavailable. Please try again later.')

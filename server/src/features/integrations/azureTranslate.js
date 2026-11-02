@@ -16,7 +16,8 @@ export function isSupportedLanguage(lang) {
     return Object.hasOwn(LANGUAGE_CODES, lang)
 }
 
-export async function translateText(text, targetLang, sourceLang = 'en') {
+// sourceLang is optional: without it Azure detects the language of the text itself
+export async function translateText(text, targetLang, sourceLang = null) {
     const apiKey = process.env.AZURE_TRANSLATOR_KEY
     const region = process.env.AZURE_TRANSLATOR_REGION
 
@@ -51,7 +52,8 @@ export async function translateText(text, targetLang, sourceLang = 'en') {
 
     if (!response.ok) {
         const body = await response.json().catch(() => ({}))
-        throw new Error(body.error || `Azure responded with ${response.status}`)
+        // Azure sends { error: { code, message } }; the message is what's useful in the server log
+        throw new Error(body.error?.message || (typeof body.error === 'string' ? body.error : '') || `Azure responded with ${response.status}`)
     }
 
     const data = await response.json()
