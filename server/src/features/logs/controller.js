@@ -4,7 +4,7 @@ import mongoose from 'mongoose'
 import LogEntry from './CareLog.model.js'
 import User from '../auth/User.model.js'
 import { EVENTS, LOG_TYPES } from '../../constants.js'
-import { translateText, isSupportedLanguage, SUPPORTED_LANGUAGES } from '../integrations/azureTranslate.js'
+import { translateNote, isSupportedLanguage, SUPPORTED_LANGUAGES } from '../integrations/azureTranslate.js'
 import { notify } from '../../utils/notify.js'
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 50
@@ -316,7 +316,7 @@ export async function translateLog(req, res, next) {
         try {
             // No source language: notes aren't always English (a doctor may speak Chinese), so Azure detects it.
             // Already in that language: keep the note's own words, so readers see no "translation" of it.
-            const result = await translateText(log.content, lang)
+            const result = await translateNote(log.content, lang)
             translation = result.detectedLang === lang ? log.content : result.text
         } catch (error) {
             console.error('Translation failed:', error.message)

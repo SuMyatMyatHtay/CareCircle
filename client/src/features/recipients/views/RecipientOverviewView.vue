@@ -12,6 +12,7 @@ import { queryKeys } from '../../../services/queryClient.js'
 import SectionCard from '../../../components/common/SectionCard.vue'
 import TaskList from '../../tasks/components/TaskList.vue'
 import { getLogs, getLogErrorMessage } from '../../logs/services/logsApi.js'
+import NoteText from '../../logs/components/NoteText.vue'
 import { logTypeLabel } from '../../logs/logTypes.js'
 import { displayName, initials, mobilityLabel, formatDate } from '../recipientLabels.js'
 
@@ -121,7 +122,8 @@ const hasEssentials = computed(() =>
                                 <span class="type-chip" :class="`type-${log.type}`">{{ logTypeLabel(log.type) }}</span>
                                 <span class="note-date">{{ formatDate(log.createdAt, { day: 'numeric', month: 'short' }) }}</span>
                             </div>
-                            <p class="note-content">{{ log.content }}</p>
+                            <!-- F: shown in the reader's preferred language -->
+                            <NoteText class="note-content" :family-id="selectedFamilyId" :log="log" />
                         </div>
                     </li>
                 </ul>
@@ -267,13 +269,16 @@ const hasEssentials = computed(() =>
 }
 
 .note-content {
+    font-size: 14px;
+    color: var(--theme-text, #2F2F2F);
+}
+
+/* Three lines of the note; the translation toggle stays visible below */
+.note-content :deep(.note-text-body) {
     display: -webkit-box;
-    margin: 0;
     overflow: hidden;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
-    font-size: 14px;
-    color: var(--theme-text, #2F2F2F);
 }
 
 .essentials {

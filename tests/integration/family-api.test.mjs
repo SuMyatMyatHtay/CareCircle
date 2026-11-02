@@ -206,6 +206,18 @@ describe('Family APIs with Express, authentication and a real isolated MongoDB',
     assert.equal(saved.updatedAt.getTime(), before.updatedAt.getTime())
   })
 
+  it('treats a short note Azure misjudges as English instead of showing a garbled translation', async () => {
+    translationProvider.mode = 'misdetect'
+    const path = `${family}/logs/${ids.log}/translate`
+    const chinese = await request(path, { method: 'POST', body: { lang: 'zh' } })
+    assert.equal(chinese.status, 200)
+    assert.equal(chinese.data.translation, '这是已翻译的护理记录。')
+    // First a guess, then again from English
+    assert.deepEqual(translationProvider.calls.map(call => call.from), [null, 'en'])
+    const english = await request(path, { method: 'POST', body: { lang: 'en' } })
+    assert.equal(english.data.translation, (await Log.findById(ids.log)).content)
+  })
+
   it('rejects unsupported languages and foreign-family notes before contacting the provider', async () => {
     const path = `${family}/logs/${ids.log}/translate`
     for (const lang of ['constructor', 'jp', 123])
