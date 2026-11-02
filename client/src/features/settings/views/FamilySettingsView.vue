@@ -196,7 +196,6 @@ function requestMobileLogout() {
 
 <template>
   <div class="care-page care-settings-page">
-    <TaskPermissionsCard :key="selectedFamilyId" />
     <div class="care-settings-desktop">
       <SettingsHeader />
       <FamilyEmptyState
@@ -233,6 +232,7 @@ function requestMobileLogout() {
               "
               @remove="askToRemove"
             />
+            <TaskPermissionsCard :key="selectedFamilyId" />
             <LanguagePreferencesCard
               :language="language"
               :busy="busy"
@@ -330,6 +330,7 @@ function requestMobileLogout() {
           @manage="manageMobileMember"
         />
       </section>
+      <TaskPermissionsCard v-if="selectedFamily" :key="selectedFamilyId" />
       <p v-if="logoutError" class="care-error care-small" role="alert">
         {{ logoutError }}
       </p>

@@ -44,3 +44,24 @@ test('permission write requires current admin membership', async t => {
   assert.equal(filter.members.$elemMatch.role, 'admin')
   assert.equal(res.code, 403)
 })
+
+test('selected deletion scopes IDs while preserving family, status and deadline filters', async t => {
+  const id = '000000000000000000000001'
+  let filter
+  t.mock.method(Task, 'find', async value => { filter = value; return [] })
+  const res = response()
+  await deleteOverdueTasks({ ...req('admin'), body: { taskIds: [id, id] } }, res, error => { throw error })
+  assert.equal(res.code, 200)
+  assert.deepEqual(filter._id, { $in: [id] })
+  assert.equal(filter.family, 'family')
+  assert.equal(filter.status, 'open')
+  assert.ok(filter.startAt.$lte instanceof Date)
+})
+for (const taskIds of [[], ['invalid'], 'all', [null]]) {
+  test(`rejects invalid selection ${JSON.stringify(taskIds)} without deleting everything`, async t => {
+    t.mock.method(Task, 'find', () => { throw new Error('Must not query tasks') })
+    const res = response()
+    await deleteOverdueTasks({ ...req('admin'), body: { taskIds } }, res, error => { throw error })
+    assert.equal(res.code, 400)
+  })
+}

@@ -5,6 +5,9 @@ import { useTaskClock, isTaskOverdue } from '../../tasks/composables/useTaskOver
 const now = useTaskClock()
 defineProps({
   tasks: { type: Array, default: () => [] },
+  selectable: Boolean,
+  selectedIds: { type: Array, default: () => [] },
+  selectionBusy: Boolean,
   loading: Boolean,
   error: { type: String, default: '' },
   busyId: { type: String, default: '' },
@@ -16,7 +19,7 @@ defineProps({
   filter: { type: String, default: 'today' },
   filters: { type: Array, default: () => [] },
 })
-defineEmits(['retry', 'claim', 'clear-filter', 'filter'])
+defineEmits(['retry', 'claim', 'clear-filter', 'filter', 'select-task'])
 </script>
 <template>
   <SectionCard
@@ -26,6 +29,7 @@ defineEmits(['retry', 'claim', 'clear-filter', 'filter'])
     <div v-if="filters.length" class="care-home-task-filters" role="group" aria-label="Filter family tasks">
       <button v-for="option in filters" :key="option.key" type="button" :aria-pressed="filter === option.key" :class="{ selected: filter === option.key }" @click="$emit('filter', option.key)">{{ option.label }}</button>
     </div>
+    <slot name="bulk-actions" />
     <div v-if="filterLabel" class="care-task-filter">
       Unclaimed · {{ filterLabel }}
       <button class="care-text-button" @click="$emit('clear-filter')">
@@ -35,6 +39,7 @@ defineEmits(['retry', 'claim', 'clear-filter', 'filter'])
     <div class="care-home-panel-scroll" role="region" aria-label="Family task list" tabindex="0">
     <TaskList
       :tasks="tasks"
+      :show-selection="selectable"
       :is-loading="loading"
       :error-message="error"
       :empty-message="
@@ -45,6 +50,12 @@ defineEmits(['retry', 'claim', 'clear-filter', 'filter'])
       :flash-ids="flashIds"
       @retry="$emit('retry')"
     >
+      <template #selection="{ task }">
+        <label v-if="selectable && task.status === 'open' && isTaskOverdue(task, now)" class="overdue-task-select">
+          <span class="visually-hidden">Select {{ task.title }} for deletion</span>
+          <input type="checkbox" :checked="selectedIds.includes(task._id)" :disabled="selectionBusy" :aria-label="`Select ${task.title} for deletion`" @change="$emit('select-task', task._id, $event.target.checked)" />
+        </label>
+      </template>
       <template #actions="{ task }">
         <span v-if="task.status === 'open' && isTaskOverdue(task, now)" class="care-muted care-small">Overdue · Claiming closed</span>
         <button
@@ -76,3 +87,8 @@ defineEmits(['retry', 'claim', 'clear-filter', 'filter'])
     </div>
   </SectionCard>
 </template>
+
+<style scoped>
+.overdue-task-select { display: inline-flex; align-items: center; justify-content: center; width: 20px; min-height: 44px; cursor: pointer; }
+.overdue-task-select input { width: 20px; height: 20px; accent-color: var(--care-green, #2e7d43); cursor: pointer; }
+</style>

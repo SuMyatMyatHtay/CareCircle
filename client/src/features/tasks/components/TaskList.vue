@@ -10,6 +10,7 @@ import TaskClaimActions from './TaskClaimActions.vue'
 
 const props = defineProps({
     tasks: { type: Array, default: () => [] },
+    showSelection: Boolean,
     isLoading: { type: Boolean, default: false },
     errorMessage: { type: String, default: '' },
     emptyMessage: { type: String, default: 'No tasks yet. Add one with "New task".' },
@@ -51,17 +52,25 @@ function endFlash(event, taskId) {
         <!-- Stays mounted when empty, so the last row can still animate out -->
         <TransitionGroup name="care-list" tag="div" class="task-list overflow-y-auto pe-1"
             :style="{ maxHeight: maxHeight || null }">
-            <TaskListItem v-for="task in tasks" :key="task._id" :task="task"
-                :class="{ 'care-flash': flashing.has(task._id) }" @animationend="endFlash($event, task._id)">
-                <template #actions="{ task: rowTask }">
-                    <slot name="actions" :task="rowTask"><TaskClaimActions :task="rowTask" /></slot>
-                </template>
-            </TaskListItem>
+            <div v-for="task in tasks" :key="task._id" class="task-list-row" :class="{ 'has-selection': showSelection }">
+                <div v-if="showSelection" class="task-list-selection">
+                    <slot name="selection" :task="task" />
+                </div>
+                <TaskListItem :task="task" :class="{ 'care-flash': flashing.has(task._id) }" @animationend="endFlash($event, task._id)">
+                    <template #actions="{ task: rowTask }">
+                        <slot name="actions" :task="rowTask"><TaskClaimActions :task="rowTask" /></slot>
+                    </template>
+                </TaskListItem>
+            </div>
         </TransitionGroup>
     </template>
 </template>
 
 <style scoped>
+.task-list-row { min-width: 0; }
+.task-list-row.has-selection { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 14px; align-items: center; }
+.task-list-selection { display: flex; align-items: center; justify-content: center; }
+
 .task-list {
     position: relative;
     display: flex;

@@ -1,7 +1,12 @@
 <script setup>
+import { isTaskOverdue, useTaskClock } from '../../tasks/composables/useTaskOverdue.js'
 import MobileTaskCard from './MobileTaskCard.vue'
+const now = useTaskClock()
 defineProps({
   tasks: { type: Array, default: () => [] },
+  selectable: Boolean,
+  selectedIds: { type: Array, default: () => [] },
+  selectionBusy: Boolean,
   loading: Boolean,
   error: { type: String, default: '' },
   busyId: { type: String, default: '' },
@@ -11,7 +16,7 @@ defineProps({
   allowCreate: Boolean,
   allowClaim: { type: Boolean, default: true },
 })
-defineEmits(['see-all', 'retry', 'claim', 'create'])
+defineEmits(['see-all', 'retry', 'claim', 'create', 'select-task'])
 </script>
 
 <template>
@@ -47,15 +52,25 @@ defineEmits(['see-all', 'retry', 'claim', 'create'])
       A little breathing room. No tasks scheduled.
     </p>
     <div v-else class="care-mobile-task-list">
-      <MobileTaskCard
-        v-for="task in tasks"
-        :key="task._id"
-        :task="task"
-        :busy-id="busyId"
-        :show-date="showDate"
-        :allow-claim="allowClaim"
-        @claim="$emit('claim', $event)"
-      />
+      <div v-for="task in tasks" :key="task._id" class="mobile-task-selection-row" :class="{ 'has-selection': selectable }">
+        <label v-if="selectable" class="overdue-mobile-select">
+          <input v-if="task.status === 'open' && isTaskOverdue(task, now)" type="checkbox" :checked="selectedIds.includes(task._id)" :disabled="selectionBusy" :aria-label="`Select ${task.title} for deletion`" @change="$emit('select-task', task._id, $event.target.checked)" />
+        </label>
+        <MobileTaskCard
+          :task="task"
+          :busy-id="busyId"
+          :show-date="showDate"
+          :allow-claim="allowClaim"
+          @claim="$emit('claim', $event)"
+        />
+      </div>
     </div>
   </section>
 </template>
+
+<style scoped>
+.mobile-task-selection-row { min-width: 0; }
+.mobile-task-selection-row.has-selection { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 12px; align-items: center; }
+.overdue-mobile-select { display: flex; align-items: center; justify-content: center; min-height: 44px; cursor: pointer; }
+.overdue-mobile-select input { width: 20px; height: 20px; accent-color: var(--care-green, #2e7d43); }
+</style>
