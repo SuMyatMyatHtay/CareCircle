@@ -7,6 +7,7 @@ import PersonAvatar from '../../my-tasks/components/PersonAvatar.vue'
 import { getTransitSession } from '../services/transitApi.js'
 import { formatTime, recipientName, TIME_ZONE } from '../../my-tasks/utils/formatters.js'
 import AddToCalendar from './AddToCalendar.vue'
+import TaskLocationCard from './TaskLocationCard.vue'
 import { WORDS } from '../utils/wording.js'
 import { useTaskOverdue } from '../../tasks/composables/useTaskOverdue.js'
 
@@ -83,8 +84,10 @@ const progress = computed(() => {
 // Main green button
 const mainButton = computed(() => {
     if (status.value === 'open') return overdue.value ? null : { label: "I'll take it", event: 'claim', icon: 'bi-hand-thumbs-up' }
-    if (props.task.needsTransit && props.isClaimer && status.value === 'claimed') {
-        return { label: WORDS.startTrip, event: 'start', icon: 'bi-arrow-right' }
+    if (props.isClaimer && status.value === 'claimed') {
+        return props.task.needsTransit
+            ? { label: WORDS.startTrip, event: 'start', icon: 'bi-arrow-right' }
+            : { label: WORDS.startTask, event: 'start', icon: 'bi-play-fill' }
     }
     if (props.task.needsTransit && session.value) {
         return { label: isLive.value ? WORDS.openTrip : WORDS.viewTrip, event: 'open-trip', icon: 'bi-geo-alt' }
@@ -177,6 +180,9 @@ watch(() => [props.task._id, props.task.status], loadSession, { immediate: true 
                 </div>
             </div>
         </section>
+
+        <!-- Same OneMap map as the laptop Task detail -->
+        <TaskLocationCard v-if="task.location" :location="task.location" />
 
         <section v-if="task.description" class="notes">
             <strong>Notes</strong>

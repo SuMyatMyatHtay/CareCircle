@@ -39,8 +39,11 @@ const latest = computed(() => {
 const isLive = computed(() => session.value?.status === 'active')
 
 // Which transit button to show
+// Same rule as the My Tasks cards and the phone layout:
+//   claimed (by me): trip -> Start the trip, no trip -> Start task
+//   in progress: trip -> Open the trip · finished trip -> View trip
 const transitButton = computed(() => {
-    if (!props.task.needsTransit) return null
+    if (!props.task.needsTransit) return props.task.status === 'claimed' && isClaimer.value ? 'startTask' : null
     if (session.value) return isLive.value ? 'open' : 'view'
     if (props.task.status === 'claimed' && isClaimer.value) return 'start'
     return null
@@ -75,6 +78,19 @@ async function startTransit() {
     }
 }
 
+// A task with no trip just starts (no Transit page)
+async function startPlainTask() {
+    isBusy.value = true
+    try {
+        await startTask(props.familyId, props.task._id)
+        emit('changed')
+    } catch (error) {
+        emit('error', getErrorMessage(error))
+    } finally {
+        isBusy.value = false
+    }
+}
+
 watch(() => [props.task?._id, props.task?.status], loadSession, { immediate: true })
 </script>
 
@@ -99,6 +115,15 @@ watch(() => [props.task?._id, props.task?.status], loadSession, { immediate: tru
                 @click="startTransit"
             >
                 {{ WORDS.startTrip }}
+            </button>
+            <button
+                v-else-if="transitButton === 'startTask'"
+                type="button"
+                class="btn-primary-lg"
+                :disabled="isBusy"
+                @click="startPlainTask"
+            >
+                {{ WORDS.startTask }}
             </button>
             <button v-else-if="transitButton === 'open'" type="button" class="btn-primary-lg" @click="openTransit">
                 {{ WORDS.openTrip }}

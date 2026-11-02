@@ -4,10 +4,14 @@
 //   <TaskLocationCard :location="task.location" />
 import { computed } from 'vue'
 import OneMapTiles from './OneMapTiles.vue'
+import { usePlaceSpot } from '../utils/usePlaceSpot.js'
 
 const props = defineProps({
     location: { type: Object, default: null }
 })
+
+// Typed-in places without coordinates are looked up by postal code
+const spot = usePlaceSpot(() => props.location)
 
 const name = computed(() => props.location?.name || props.location?.address || '')
 const addressLine = computed(() => {
@@ -21,8 +25,8 @@ const addressLine = computed(() => {
 <template>
     <section class="location" aria-label="Location">
         <OneMapTiles
-            :lat="location?.lat ?? null"
-            :lng="location?.lng ?? null"
+            :lat="spot?.lat ?? null"
+            :lng="spot?.lng ?? null"
             :label="name ? `OneMap · ${name}` : ''"
             :height="220"
         />

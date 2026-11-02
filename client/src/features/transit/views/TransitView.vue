@@ -16,6 +16,7 @@ import PersonAvatar from '../../my-tasks/components/PersonAvatar.vue'
 import { getTask, getTransitSession, postMilestone, removeMilestone, endTransit, resumeTransit, updateLocation } from '../services/transitApi.js'
 import { useLiveLocation } from '../utils/useLiveLocation.js'
 import { useActiveTransit } from '../utils/useActiveTransit.js'
+import { usePlaceSpot } from '../utils/usePlaceSpot.js'
 import { WORDS, TRIP_STEPS, extraUpdates } from '../utils/wording.js'
 import { startTask, getErrorMessage } from '../../my-tasks/services/myTasksApi.js'
 import { formatTime, recipientName } from '../../my-tasks/utils/formatters.js'
@@ -64,7 +65,15 @@ const who = computed(() => recipientName(task.value))
 const companionName = computed(() => session.value?.companion?.name || task.value?.claimedBy?.name || '')
 const companionFirst = computed(() => companionName.value.split(' ')[0])
 const familyName = computed(() => families.value.find((f) => f.id === props.familyId)?.name || 'family')
-const destination = computed(() => task.value?.location || null)
+// A place typed in without map coordinates is looked up by postal code, so the pin still shows
+const destSpot = usePlaceSpot(() => task.value?.location)
+const destination = computed(() => {
+    const loc = task.value?.location
+    if (!loc) return null
+    return destSpot.value ? { ...loc, ...destSpot.value } : loc
+})
+// The phone layout reads the place from the task, so give it the looked-up spot too
+const taskForView = computed(() => (task.value && destination.value ? { ...task.value, location: destination.value } : task.value))
 const placeName = computed(() => destination.value?.name || destination.value?.address || '')
 
 // Live location: the companion's own browser shares it; everyone else gets it from the server
@@ -289,7 +298,7 @@ onUnmounted(stopPolling)
         <p v-else-if="loadError" class="status is-error" role="alert">{{ loadError }}</p>
         <TransitMobile
             v-else-if="task"
-            :task="task"
+            :task="taskForView"
             :session="session"
             :who="who"
             :companion-first="companionFirst"

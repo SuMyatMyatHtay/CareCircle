@@ -184,7 +184,9 @@ function openTrip() {
 function startTrip() {
     run(async () => {
         await startTask(props.familyId, props.taskId)
-        openTrip()
+        // Only trips have a Transit page; other tasks just show "In progress" here
+        if (task.value?.needsTransit) openTrip()
+        else await load()
     })
 }
 
@@ -333,7 +335,7 @@ watch(() => [props.familyId, props.taskId], () => { editingRecurring.value = fal
                     </template>
                     <template #end>
                         <button v-if="canUnclaim" type="button" class="btn-secondary" :disabled="isBusy" @click="giveBack">
-                            Give back task
+                            Give back
                         </button>
                     </template>
                 </TaskTransitActions>
