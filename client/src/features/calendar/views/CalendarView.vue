@@ -795,7 +795,7 @@ a.agenda-item:hover {
 }
 
 /* Phones: small cells with dots, the day's list below */
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
     .calendar-header h1 {
         font-size: 26px;
     }
@@ -806,7 +806,39 @@ a.agenda-item:hover {
 
     .month-nav h2 {
         min-width: 0;
-        font-size: 17px;
+        margin: 0;
+        font-size: 16px;
+        white-space: nowrap;
+    }
+
+    .month-nav {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr) 44px auto;
+        gap: 4px;
+        width: 100%;
+    }
+
+    .icon-button {
+        width: 44px;
+        height: 44px;
+    }
+
+    .today-button {
+        min-height: 44px;
+        margin-left: 0;
+        padding: 7px 10px;
+    }
+
+    .calendar-side {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .agenda-head {
+        flex-wrap: wrap;
+    }
+
+    .add-task-button {
+        min-height: 44px;
     }
 
     .calendar-filters {
@@ -818,6 +850,11 @@ a.agenda-item:hover {
     .recipient-filter select {
         width: 100%;
         max-width: none;
+    }
+
+    .recipient-filter {
+        display: grid;
+        grid-template-columns: 48px minmax(0, 1fr);
     }
 
     .calendar-card {

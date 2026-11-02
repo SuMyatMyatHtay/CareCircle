@@ -1114,6 +1114,9 @@
   }
   .app-layout .app-main {
     padding: 22px 18px 28px;
+    padding-left: max(18px, env(safe-area-inset-left, 0px));
+    padding-right: max(18px, env(safe-area-inset-right, 0px));
+    padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px));
   }
   .app-layout .family-sidebar {
     width: 240px;

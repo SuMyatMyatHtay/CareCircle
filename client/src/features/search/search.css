@@ -525,9 +525,9 @@ label.search-filter-group .search-filter-label {
 }
 
 /* ---------- Phone screen (Figma 21) ---------- */
-/* Full-bleed: cancels .app-main's phone padding (22px top, 18px sides) */
+/* Match the app's phone gutters, including landscape safe areas. */
 .search-mobile {
-  margin: -22px -18px 0;
+  margin: -22px calc(-1 * max(18px, env(safe-area-inset-right, 0px))) 0 calc(-1 * max(18px, env(safe-area-inset-left, 0px)));
   font-family: 'Nunito', system-ui, sans-serif;
 }
 .search-mobile-header {

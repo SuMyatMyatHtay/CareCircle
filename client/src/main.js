@@ -8,4 +8,5 @@ import 'bootstrap-icons/font/bootstrap-icons.css'
 import './styles/theme.css'
 import './styles/motion.css'
 import './styles/global.css'
+import './styles/mobile.css'
 createApp(App).use(router).use(VueQueryPlugin, { queryClient }).mount('#app')

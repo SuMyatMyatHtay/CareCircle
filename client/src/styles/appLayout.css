@@ -98,6 +98,52 @@
   .app-main {
     padding: 0 18px 25px;
   }
+
+  .app-layout {
+    --assistant-mobile-bottom: 16px;
+  }
+
+  .app-layout.family-home-surface,
+  .app-layout.family-settings-surface {
+    --assistant-mobile-bottom: 88px;
+  }
+
+  .app-layout.task-form-surface {
+    --assistant-mobile-bottom: 164px;
+  }
+
+  .app-layout .app-main {
+    padding-left: max(18px, env(safe-area-inset-left, 0px));
+    padding-right: max(18px, env(safe-area-inset-right, 0px));
+    padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+    scrollbar-gutter: auto;
+    overscroll-behavior-y: contain;
+    scroll-padding-block: 20px 104px;
+  }
+
+  .app-layout.task-form-surface .app-main {
+    padding-bottom: 24px;
+  }
+
+  .app-topbar {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-left: max(16px, env(safe-area-inset-left, 0px)) !important;
+    padding-right: max(16px, env(safe-area-inset-right, 0px)) !important;
+  }
+
+  .app-menu-button,
+  .app-profile-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .app-layout .family-sidebar {
+    padding-top: max(24px, env(safe-area-inset-top, 0px));
+    padding-bottom: max(18px, env(safe-area-inset-bottom, 0px));
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -61,21 +61,21 @@ defineEmits(['switch-family'])
 .care-mobile-calendar {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border: 1px solid var(--care-border, #dfe3e8);
   border-radius: 50%;
   background: var(--theme-panel, #fff);
   color: var(--care-green, #2d7d43);
   font-size: 16px;
 }
-/* 44px touch target around the 36px circle */
-.care-mobile-search {
-  position: relative;
+.care-mobile-account {
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
 }
-.care-mobile-search::after {
-  position: absolute;
-  inset: -4px;
-  content: '';
+@media (max-width: 359px) {
+  .care-mobile-header-actions { gap: 4px; }
 }
 </style>

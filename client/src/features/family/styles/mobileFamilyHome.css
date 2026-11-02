@@ -217,6 +217,8 @@
   background: var(--care-panel);
   border-top: 1px solid var(--care-border);
   padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(12px, env(safe-area-inset-left, 0px));
+  padding-right: max(12px, env(safe-area-inset-right, 0px));
 }
 .care-mobile-home-navigation a,
 .care-mobile-home-navigation button {
@@ -225,7 +227,7 @@
   justify-content: center;
   flex-direction: column;
   gap: 3px;
-  min-height: 40px;
+  min-height: 44px;
   padding: 3px 0;
   border: 0;
   border-radius: 6px;
@@ -280,7 +282,7 @@
     display: none !important;
   }
   .family-home-surface .app-main {
-    padding: 26px 20px calc(90px + env(safe-area-inset-bottom, 0px));
+    padding: calc(26px + env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) calc(164px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px));
     scrollbar-gutter: auto;
   }
   .family-home-surface .care-home-page {
@@ -294,7 +296,7 @@
 
 @media (max-width: 359px) {
   .family-home-surface .app-main {
-    padding: 22px 12px calc(84px + env(safe-area-inset-bottom, 0px));
+    padding: calc(22px + env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) calc(164px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
   }
   .care-mobile-home-header h1 {
     font-size: 19px;

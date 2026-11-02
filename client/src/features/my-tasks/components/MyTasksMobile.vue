@@ -81,7 +81,8 @@ const EMPTY = {
                 :aria-selected="activeTab === tab.key"
                 @click="emit('select-tab', tab.key)"
             >
-                {{ tab.label }} · {{ counts[tab.key] || 0 }}
+                <span>{{ tab.label }}</span>
+                <span class="tab-count">{{ counts[tab.key] || 0 }}</span>
             </button>
         </div>
 
@@ -143,6 +144,7 @@ const EMPTY = {
     align-items: center;
     justify-content: space-between;
     gap: 10px;
+    flex-wrap: wrap;
 }
 
 /* "All families ▾" (same as the laptop) */
@@ -157,9 +159,14 @@ const EMPTY = {
     font-size: 13px;
     font-weight: 700;
     color: var(--theme-text, #2e2e2e);
+    min-width: 0;
+    max-width: 100%;
+    min-height: 44px;
 }
 
 .families-pill select {
+    min-width: 0;
+    max-width: 100%;
     border: none;
     background: transparent;
     font: inherit;
@@ -180,6 +187,7 @@ const EMPTY = {
     font-size: 14px;
     font-weight: 700;
     color: var(--theme-green, #2f7a3f);
+    min-height: 44px;
 }
 
 h1 {
@@ -199,23 +207,45 @@ h1 {
 
 .tabs {
     display: flex;
-    gap: 20px;
+    gap: 6px;
     margin-top: 8px;
     border-bottom: 1px solid var(--theme-border, #e5e7eb);
-    overflow-x: auto;
 }
 
 .tab {
-    padding: 0 0 12px;
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 0;
+    min-height: 44px;
+    padding: 8px 0 12px;
     margin-bottom: -1px;
     border: none;
     border-bottom: 3px solid transparent;
     background: none;
     font-family: inherit;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
     color: var(--theme-muted, #5b6470);
     white-space: nowrap;
+}
+
+.tab-count {
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--theme-neutral, #f3f4f6);
+    font-size: 11px;
+}
+
+@media (max-width: 359px) {
+    .tab { font-size: 13px; }
 }
 
 .tab.active {

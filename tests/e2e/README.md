@@ -9,6 +9,11 @@ Run `npm run test:e2e` from the repository root. Playwright starts the real Vue
 app and Express API, with a fresh local MongoDB process and test-only accounts.
 It never runs `server/seed.js`, loads the server's `.env`, or uses a shared DB.
 
+`mobile-layout.spec.mjs` checks 320px and 390px layouts: task tabs, complete invite
+codes, member profile links, calendar filters, task-modal actions and form fields.
+It also checks drawer state across viewport resizes and the assistant's clearance
+from the task footer, including its composer in a short landscape viewport.
+
 The same workflows run in desktop Chromium and a 390px mobile Chromium context:
 signup validation/duplicate emails, family creation and joining, login/logout,
 language saving, global dark mode, recipient create/edit/archive,

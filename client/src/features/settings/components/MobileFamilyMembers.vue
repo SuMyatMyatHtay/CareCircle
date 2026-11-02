@@ -1,5 +1,5 @@
 <script setup>
-import CareAvatar from '../../../components/common/CareAvatar.vue'
+import ProfileAvatar from '../../../components/common/ProfileAvatar.vue'
 defineProps({
   members: { type: Array, default: () => [] },
   userId: { type: String, default: '' },
@@ -30,14 +30,13 @@ defineEmits(['manage', 'retry'])
     </p>
     <ul v-else>
       <li v-for="member in members" :key="member.user._id">
-        <RouterLink :to="{ name: 'public-profile', params: { userId: member.user._id } }" class="care-text-button">View {{ member.user.name }}'s profile</RouterLink>
+        <ProfileAvatar :person="member.user" size="small" />
         <button
           class="care-mobile-member-row"
           :disabled="busy || (!isAdmin && member.user._id !== userId)"
           :aria-label="`Manage ${member.user.name}${member.user._id === userId ? ' (you)' : ''}`"
           @click="$emit('manage', member)"
         >
-          <CareAvatar :person="member.user" size="small" />
           <span class="care-mobile-member-name">
             <strong>
               {{ member.user.name }}
