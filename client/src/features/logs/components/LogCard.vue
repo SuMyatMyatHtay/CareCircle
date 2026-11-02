@@ -1,6 +1,6 @@
 <script setup>
 // Owner: SeungHak (F)
-import { computed, ref, watch, onUnmounted } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { logTypeLabel, MEDICATION_CHANGE_LABELS, LANGUAGE_LABELS, languageLabel } from '../logTypes.js'
 
 const props = defineProps({
@@ -62,8 +62,27 @@ watch([() => props.log._id, () => props.log.content], () => {
     translatingTo.value = ''
     translateError.value = ''
     menuOpen.value = false
+    showPreferredLanguage()
 })
 onUnmounted(() => { translationVersion++ })
+
+// The reader's language from their profile ("Preferred language"), e.g. 'zh' for Aunt May
+function preferredLanguage() {
+    try {
+        const lang = JSON.parse(sessionStorage.getItem('user') || '{}').preferredLang
+        return Object.hasOwn(LANGUAGE_LABELS, lang) ? lang : ''
+    } catch {
+        return ''
+    }
+}
+
+// Every note opens already translated into the reader's language (cached on the server, so each
+// note is translated once per language). A note already in that language is shown as it is.
+function showPreferredLanguage() {
+    const lang = preferredLanguage()
+    if (lang && props.translate) chooseLanguage(lang, { auto: true })
+}
+onMounted(showPreferredLanguage)
 
 const translations = computed(() => ({ ...(props.log.translations || {}), ...fetchedTranslations.value }))
 
@@ -82,13 +101,22 @@ function onTranslateButton() {
     menuOpen.value = !menuOpen.value
 }
 
-async function chooseLanguage(code) {
+// The server stores the note's own words when it is already in that language
+const isOriginal = (code) => (translations.value[code] || '').trim() === props.log.content.trim()
+
+// auto: opened in the reader's language, so stay quiet if it can't be done
+async function chooseLanguage(code, { auto = false } = {}) {
     const current = ++translationVersion
-    menuOpen.value = false
+    if (!auto) menuOpen.value = false
     translateError.value = ''
 
+    const show = () => {
+        if (!isOriginal(code)) shownLanguage.value = code
+        else if (!auto) translateError.value = `This note is already in ${languageLabel(code)}.`
+    }
+
     if (translations.value[code]) {
-        shownLanguage.value = code
+        show()
         return
     }
 
@@ -99,9 +127,9 @@ async function chooseLanguage(code) {
         const text = await props.translate(props.log, code)
         if (current !== translationVersion) return
         fetchedTranslations.value = { ...fetchedTranslations.value, [code]: text }
-        shownLanguage.value = code
+        show()
     } catch (error) {
-        if (current === translationVersion)
+        if (current === translationVersion && !auto)
             translateError.value = error.message || 'Could not translate this note. Please try again.'
     } finally {
         if (current === translationVersion) translatingTo.value = ''

@@ -38,8 +38,7 @@ const shown = computed(() => (feed.items.value.length ? feed.items.value : props
     </p>
     </div>
     <p v-if="!preview" class="care-activity-note">
-      Task board checks for updates every 20 seconds. Care log updates will
-      appear when the activity feed is connected.
+      Task and care note updates from the whole family. Checks for new ones every 20 seconds.
     </p>
   </SectionCard>
 </template>

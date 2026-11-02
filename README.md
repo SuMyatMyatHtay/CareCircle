@@ -28,13 +28,13 @@ This README describes the implementation in this repository. External integratio
 - Edit your name, phone, Telegram username, language preference and profile picture. Email is read-only in the profile form.
 - View another member's profile and recent tasks from shared families. Profiles are accessible to the account owner and people who share a family with them.
 - Choose light, dark or device appearance, saved in the browser and applied across pages and dialogs.
-- Save an English, Chinese, Malay or Tamil preference. Care-log translation is requested separately; this does not automatically translate the entire interface.
+- Save an English, Chinese, Malay or Tamil preference. Care notes open already translated into it; the rest of the interface stays in English.
 
 ### Family home
 
 - See the greeting, care recipients, today's tasks, active transit banners and recent updates in one dashboard.
 - Browse recipients using numbered pages, three cards per page. Cards show upcoming care and tasks needing someone, and open the recipient hub.
-- Browse tasks inside Home using **Today**, **Needs someone**, **Overdue**, **Claimed**, **In progress**, **Completed** and **All tasks**. There is no separate Family tasks page.
+- Browse tasks inside Home using **Upcoming** (the default: tasks still to come, including tomorrow and later), **Today**, **Needs someone**, **Overdue**, **Claimed**, **In progress**, **Completed** and **All tasks**. There is no separate Family tasks page.
 - Claim available tasks from Home. Expired unclaimed tasks move out of Needs someone and into Overdue automatically.
 - Scroll the task panel and Recent updates independently while their headings remain visible.
 - Follow multiple active trips, with additional trips behind an expandable control.
@@ -63,7 +63,7 @@ This README describes the implementation in this repository. External integratio
 - Close claiming at the scheduled start time. Both the UI and database write condition enforce the deadline. An overdue task can be unclaimed, but cannot be reclaimed unless its schedule changes.
 - Start and complete claimed tasks. Starting a transport task creates a real transit session.
 - View task details, status, location, assignment and timestamp-based activity. Creator-only edit/delete APIs and creator/admin cancellation APIs enforce lifecycle restrictions.
-- Make confirmed task edits through the assistant. Repeating tasks also have an Edit dialog with occurrence/series scope; the conventional Edit button for ordinary tasks remains a placeholder.
+- Edit a task you created from Task detail (desktop, or the phone's More menu); the task form opens filled in. Repeating tasks use an Edit dialog with occurrence/series scope, and confirmed edits can also come from the assistant.
 
 ### Repeating tasks
 
@@ -89,6 +89,7 @@ This README describes the implementation in this repository. External integratio
 
 ### Calendars
 
+- Open **Calendar** from the sidebar (or the calendar button on the phone's Home) for a month view of every task across all your families, or one family, plus follow-up appointments from consultation notes. Colours show each task's state; click a day for its list, filter by person, and double-click a day (or use **Add task**) to post a task on it.
 - Add individual tasks to Google Calendar or Outlook, or download an `.ics` event for Apple Calendar and compatible apps, without connecting an account.
 - Optionally connect Google Calendar through OAuth from My tasks. Sync claimed, in-progress and completed tasks, update events, and remove events when tasks are given back or otherwise no longer belong in that calendar.
 - Sync manually or through task-change/My tasks triggers. Disconnect with the option to remove generated events.
@@ -99,9 +100,10 @@ This README describes the implementation in this repository. External integratio
 - Write consultation, medication-change, diet, symptom and general notes in a recipient's Log tab.
 - Record consultation details, next appointments and medication additions, adjustments or removals. Logs can reference related tasks.
 - Filter and browse history. The author or family admin can edit/delete a note.
-- Translate notes on demand into English, Chinese, Malay or Tamil using Azure Translator. Cache translations per language and invalidate them when the source content changes.
+- Notes open already translated into the reader's preferred language, or can be translated on demand into English, Chinese, Malay or Tamil, using Azure Translator. Azure detects the note's own language, so notes dictated in Chinese or another language translate correctly; a note already in the reader's language is shown as written. Translations are cached per language and cleared when the note changes.
 - Dictate notes using browser recording and Groq Whisper transcription. Review the transcription before saving; typed input remains available if recording/provider access fails.
-- Choose whether to notify the family when creating a note.
+- Add a consultation note straight from a task or a live trip in a pop-up; it is linked to that visit and listed under **Notes from this visit**, where it can also be translated, edited or deleted.
+- Choose whether to send a Telegram message when creating a note; the update still appears in Recent updates.
 
 ### Telegram and updates
 
@@ -355,14 +357,13 @@ The table records the team's contributions beyond the initial work allocation. A
 | C | Jhen | Care recipient management, profiles and recipient hub; language translation; Telegram chatbot implementation |
 | D | Marcus | Task creation and management, task lifecycle foundations and shared backend foundations |
 | E | Chaithra | My tasks, transit, maps and calendar workflows |
-| F | SeungHak | Care logs and Groq speech-to-text implementation |
+| F | SeungHak | Care logs, consultation notes from tasks, the family Calendar, Groq speech-to-text, automatic note translation and care-note/task update notifications |
 
 The Contributions leaderboard and other cross-feature improvements are documented in the feature sections without additional individual attribution.
 
 ## Current limitations
 
-- The sidebar **Calendar** entry remains Coming soon. Calendar export, Google Calendar sync and the mobile settings agenda are separate implemented features.
-- The conventional task-detail **Edit** button for ordinary tasks is a placeholder; recurring tasks have a scoped editing dialog. Creator-authorised task updates are also available through the API and assistant proposals. Cancellation has an API route, without a complete task-detail cancellation UI.
+- Cancellation has an API route, without a complete task-detail cancellation UI.
 - Family names are set at creation and cannot be changed. Member roles support admin/member; custom relationship labels are not supported.
 - Dashboard, notifications and transit use polling rather than Socket.IO. Live location requires the companion's active page and browser permission.
 - There is no scheduled reminder worker. Open-ended recurrence extends on task reads, so a family that never loads tasks does not generate more sessions automatically. Due-soon indicators, event-triggered Telegram notifications and calendar reminders are distinct from scheduled CareCircle reminders; recurring tasks do not add evening-before Telegram reminders.
