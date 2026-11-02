@@ -4,7 +4,7 @@
 `2081b4d`임을 확인하고 테스트를 점검했다. 아래 내용은 그 main 위에 추가한
 테스트까지 포함한다. 테스트 개수는 코드 커버리지 백분율을 뜻하지 않는다.
 
-검증 결과: Node 회귀 148개, 테스트 도구 2개, Vitest 180개,
+합산 runner 도입 전 검증 기록: Node 회귀 148개, 테스트 도구 2개, Vitest 180개,
 API suite 50개, desktop/mobile E2E 62개, **합계 442개 통과**.
 각 레이어와 production build를 실행해 확인했다.
 
@@ -212,6 +212,16 @@ npm run test:e2e
 npm run test:all
 npm run build
 ```
+
+`npm run test:all`은 이제 모든 suite 실행 뒤 **CareCircle Test Summary** 표와
+현재 실행의 `N checks passed.` 합계를 터미널에 출력한다. 위의 442는 이전
+검증 기록이며 고정 출력값이 아니다. 새 테스트와 합산 도구 자체의 검증도
+현재 개수에 반영된다.
+
+각 suite의 실패·skip을 구분하고, 실패해도 나머지 suite를 실행한다.
+실패하거나 결과 파일이 없으면 종료 코드는 0이 아니며, 누락된 결과를
+성공으로 계산하지 않는다. Ctrl+C로 중단하면 나머지 suite는 시작하지 않는다.
+원본 결과와 합산 JSON은 출력된 `.test-runtime/test-all-*` 폴더에 저장된다.
 
 DB는 테스트가 새로 생성한 `127.0.0.1`의 `carecircle_test_*`만 사용한다.
 팀의 Atlas DB나 `server/seed.js`는 사용하지 않는다. 실행 상세와 기존

@@ -65,7 +65,7 @@ npm run test:all
 | `npm run test:api` | Real Express routes, JWT authentication, Mongoose and isolated MongoDB |
 | `npm run test:e2e` | Playwright on desktop and mobile Chromium, using the real app/API/DB |
 | `npm run test:e2e:headed` | The same browser tests with visible browser windows |
-| `npm run test:all` | All layers, in sequence |
+| `npm run test:all` | All layers in sequence, then a combined terminal summary |
 | `pnpm exec playwright show-report` | The most recent local HTML browser report |
 
 The first DB test downloads a MongoDB binary to its normal machine cache. The
@@ -116,6 +116,28 @@ Browser contexts are fresh for every test. API, Vite and MongoDB stop after the 
 Runtime connection details, reports, traces and screenshots are Git-ignored.
 Exported cloud credentials are disabled for isolated API/E2E processes; the
 translation provider double installs explicit test-only values instead.
+
+## Combined terminal summary
+
+Run `npm run test:all` to execute Node regressions, infrastructure tests, Vitest,
+API integration and Playwright, then display one **CareCircle Test Summary** table.
+It lists passed, failed, skipped and total tests for each suite, with extra
+todo/cancelled/flaky columns when needed. The final `N checks passed.` line is
+computed from this run's reports. Counts above document an earlier verification;
+new tests, including the summary runner's own tests, change the current total.
+
+The orchestrator is `scripts/test-all.mjs`. Node emits a machine-readable global
+summary through `scripts/node-summary-reporter.mjs`; Vitest and Playwright use
+their JSON reporters alongside their normal terminal output. File/suite counts
+and retried attempts are not added as extra tests. Each run uses a fresh
+`.test-runtime/test-all-*` directory, so stale successful reports cannot hide a
+failed start. The directory also contains the aggregated `summary.json`.
+
+Ordinary suite failures do not stop later suites. The command exits nonzero when
+any suite fails, a runner fails outside a test, or a report is missing/invalid.
+Missing reports show `-`, an error and a partial known total. Ctrl+C/SIGTERM stops
+starting new suites and preserves interruption status. A partial run never claims
+that all checks passed. Individual test commands retain their existing behaviour.
 
 ## Scope and limits
 

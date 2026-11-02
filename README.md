@@ -335,10 +335,17 @@ npm run build
 | `npm run test:integration` | Alias for API/database integration tests |
 | `npm run test:e2e` | Desktop/mobile Chromium workflows |
 | `npm run test:e2e:headed` | Browser workflows in visible windows |
-| `npm run test:all` | Node, frontend, API and browser suites in sequence |
+| `npm run test:all` | All suites in sequence, followed by a combined terminal summary |
 | `npm run test:watch --prefix client` | Frontend watch mode |
 
 Before browser tests, install Chromium using `npx playwright install chromium`. API/E2E tests may download a MongoDB binary on their first run. E2E reserves frontend port **5180**; its API and database use available local ports.
+
+`npm run test:all` keeps each runner's normal output and ends with a **CareCircle
+Test Summary** table and the computed number of checks passed. Counts come from
+fresh Node/Vitest/Playwright reports; they are not hard-coded. Failed suites do
+not prevent the remaining suites from running. Any failed runner, missing report
+or interruption keeps a nonzero exit code. Raw reports and `summary.json` are
+saved in the printed, Git-ignored `.test-runtime/test-all-*` directory.
 
 Recurring-task API/E2E tests use a local replica set for transaction support. See [the current testing commands and setup](docs/TESTING-RECURRING.md) for focused commands, support helpers, prerequisites and verified/unverified results.
 
