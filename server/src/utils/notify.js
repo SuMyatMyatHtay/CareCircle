@@ -145,9 +145,12 @@ const BUILDERS = {
     const when = whenLabel(task.startAt)
     return { text: `${shortName(task.createdBy?.name) || 'Someone'} updated: ${taskSubject(task)}${when ? `, ${when}` : ''}.`, ...taskRef(task) }
   },
-  [EVENTS.TASK_DELETED]: (task) => ({
-    text: `${shortName(task.createdBy?.name) || 'Someone'} removed: ${taskSubject(task)}.`, ...taskRef(task),
-  }),
+  [EVENTS.TASK_DELETED]: (task) => {
+    if (Number.isInteger(task.deletedCount) && task.deletedCount > 0) {
+      return { text: `${shortName(task.changedBy?.name) || 'Someone'} deleted ${task.deletedCount} overdue task${task.deletedCount === 1 ? '' : 's'}.` }
+    }
+    return { text: `${shortName(task.changedBy?.name || task.createdBy?.name) || 'Someone'} removed: ${taskSubject(task)}.`, ...taskRef(task) }
+  },
   [EVENTS.TASK_STARTED]: (task) => ({
     text: `${shortName(task.claimedBy?.name) || 'Someone'} started: ${taskSubject(task)}.`, ...taskRef(task),
   }),

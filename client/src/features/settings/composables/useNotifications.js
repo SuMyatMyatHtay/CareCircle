@@ -187,9 +187,11 @@ export function useRecentNotifications(source, { intervalMs = 20000, limit = 8 }
   }
 
   watch(() => resolve(source), () => { items.value = []; load() }, { immediate: true })
+  const onOverdueDeleted = event => { if (event.detail?.familyId === resolve(source)) load() }
   onMounted(() => {
+    window.addEventListener('carecircle:overdue-deleted', onOverdueDeleted)
     timer = setInterval(() => { if (document.visibilityState === 'visible') load() }, intervalMs)
   })
-  onUnmounted(() => clearInterval(timer))
+  onUnmounted(() => { clearInterval(timer); window.removeEventListener('carecircle:overdue-deleted', onOverdueDeleted) })
   return { items }
 }

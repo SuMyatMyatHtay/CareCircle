@@ -109,7 +109,7 @@ export function useFamilyDashboard() {
       )
       const currentIds = new Set(tasks.value.map((task) => task._id))
       const removed = previousTasks.filter(
-        (task) => !currentIds.has(task._id),
+        (task) => !currentIds.has(task._id) && !(task.status === 'open' && isTaskOverdue(task)),
       )
       const changes = [...changed, ...removed]
       // Never flash a row for something the user did themselves (e.g. on another page)

@@ -8,6 +8,7 @@
 // and this file + its route can be deleted.
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useActiveFamily } from '../../../composables/useActiveFamily.js'
 import TaskLocationCard from '../components/TaskLocationCard.vue'
 import TaskTransitActions from '../components/TaskTransitActions.vue'
 import PersonAvatar from '../../my-tasks/components/PersonAvatar.vue'
@@ -53,7 +54,15 @@ const isClaimer = computed(() => Boolean(me.id) && idOf(task.value?.claimedBy) =
 const isCreator = computed(() => Boolean(me.id) && idOf(task.value?.createdBy) === me.id)
 const canEdit = computed(() => isCreator.value && !['completed', 'cancelled'].includes(task.value?.status) && !(task.value?.recurringSeries && task.value.status === 'in_progress'))
 const canUnclaim = computed(() => (isCreator.value || isClaimer.value) && task.value?.status === 'claimed')
-const canDelete = computed(() => Boolean(me.id) && idOf(task.value?.createdBy) === me.id && !['in_progress', 'completed'].includes(task.value?.status))
+const { families: taskFamilies } = useActiveFamily()
+const canDelete = computed(() => {
+    if (!me.id || !task.value || ['in_progress', 'completed'].includes(task.value.status)) return false
+    if (task.value.status === 'open' && overdue.value) {
+        const family = taskFamilies.value.find(entry => entry.id === props.familyId)
+        return family?.overdueTaskDeletion === 'member' || family?.members?.some(member => member.userId === me.id && member.role === 'admin')
+    }
+    return isCreator.value
+})
 const status = computed(() => task.value?.status)
 const who = computed(() => recipientName(task.value))
 const claimerName = computed(() => task.value?.claimedBy?.name || '')

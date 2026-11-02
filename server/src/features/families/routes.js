@@ -5,7 +5,7 @@ import { Router } from 'express'
 import { requireAuth } from '../../middleware/requireAuth.js'
 import { requireFamilyMember, requireFamilyAdmin } from '../../middleware/requireFamilyMember.js'
 import { createFamily, getMyFamilies, joinFamily } from './controller.js'
-import { listMembers, updateMember, deleteMember, regenerateInviteCode } from './settings.controller.js'
+import { listMembers, updateMember, deleteMember, regenerateInviteCode, updateTaskPermissions } from './settings.controller.js'
 
 const router = Router()
 
@@ -23,6 +23,7 @@ router.post('/join', joinFamily)
 
 
 // ---- B (SangYoon): settings and members ----
+router.patch('/:familyId/task-permissions', admin, updateTaskPermissions)
 router.post('/:familyId/invite-code', admin, regenerateInviteCode)
 router.get('/:familyId/members', member, listMembers)
 router.patch('/:familyId/members/:userId', admin, updateMember) // { role }; existing schema has no relationship field

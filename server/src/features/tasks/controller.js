@@ -7,6 +7,7 @@
 //   req.user.userId, req.family, req.memberRole
 
 import mongoose from 'mongoose'
+import User from '../auth/User.model.js'
 import Task, { LOCKED_STATUSES, UNDELETABLE_STATUSES } from './TaskModel.js'
 import { TASK_CATEGORIES, TASK_STATUS, TASK_STATUSES, EVENTS } from '../../constants.js'
 import { notify } from '../../utils/notify.js'
@@ -462,8 +463,9 @@ export async function deleteTask(req, res, next) {
     try {
         const task = await findTaskInFamily(req.family._id, req.params.taskId)
 
-        if (task.createdBy.toString() !== req.user.userId) {
-            throw httpError(403, 'Only the task creator can delete this task')
+        const overdue = task.status === 'open' && +new Date(task.startAt) <= Date.now()
+        if (overdue ? !canDeleteOverdue(req) : task.createdBy.toString() !== req.user.userId) {
+            throw httpError(403, overdue ? 'Only family admins can delete overdue tasks' : 'Only the task creator can delete this task')
         }
         if (UNDELETABLE_STATUSES.includes(task.status)) {
             throw httpError(409, `Task is ${task.status} and cannot be deleted. Cancel it instead.`)
@@ -477,7 +479,12 @@ export async function deleteTask(req, res, next) {
             throw httpError(409, 'Task was changed by someone else. Refresh and try again.')
         }
 
-        await announce(EVENTS.TASK_DELETED, populated)
+        if (overdue) {
+            const actor = await User.findById(req.user.userId).select('name').lean()
+            await notify(req.family._id, EVENTS.TASK_DELETED, { deletedCount: 1, changedBy: actor })
+        } else {
+            await announce(EVENTS.TASK_DELETED, populated)
+        }
         return res.json({ message: 'Task deleted', taskId: task._id.toString() })
     } catch (error) {
         return handleError(error, res, next)
@@ -500,5 +507,47 @@ export async function pauseRecurringSeries(req, res, next) {
         if (!mongoose.isValidObjectId(req.params.seriesId)) throw httpError(404, 'Repeating task not found')
         await setSeriesPaused(req.params.seriesId, req.family._id, req.user.userId, req.body?.paused)
         return res.json({ ok: true })
+    } catch (error) { return handleError(error, res, next) }
+}
+
+function canDeleteOverdue(req) {
+    return req.memberRole === 'admin' || req.family.overdueTaskDeletion === 'member'
+}
+
+export async function deleteOverdueTasks(req, res, next) {
+    try {
+        if (!canDeleteOverdue(req)) throw httpError(403, 'Only family admins can delete overdue tasks')
+        const taskIds = req.body?.taskIds
+        if (taskIds !== undefined && (!Array.isArray(taskIds) || !taskIds.length || taskIds.length > 1000 || taskIds.some(id => typeof id !== 'string' || !mongoose.isValidObjectId(id)))) {
+            throw httpError(400, 'Select between 1 and 1000 valid task IDs')
+        }
+        const cutoff = new Date()
+        const filter = { family: req.family._id, status: 'open', startAt: { $lte: cutoff } }
+        if (taskIds !== undefined) filter._id = { $in: [...new Set(taskIds)] }
+        const tasks = await Task.find(filter)
+        const actor = tasks.length ? await User.findById(req.user.userId).select('name').lean() : null
+        let deletedCount = 0
+        try {
+            for (const task of tasks) {
+                try {
+                    let result
+                    if (task.recurringSeries) {
+                        await deleteRecurringOccurrence(task, task.updatedAt)
+                        result = { deletedCount: 1 }
+                    } else {
+                        result = await Task.deleteOne({ _id: task._id, family: req.family._id, status: 'open', startAt: { $lte: cutoff }, updatedAt: task.updatedAt })
+                    }
+                    if (result.deletedCount) {
+                        deletedCount++
+                    }
+                } catch (error) {
+                    if (error.status !== 409) throw error
+                }
+            }
+        } finally {
+            // Record one summary, including successful deletions before a partial failure.
+            if (deletedCount) await notify(req.family._id, EVENTS.TASK_DELETED, { deletedCount, changedBy: actor })
+        }
+        return res.json({ deletedCount })
     } catch (error) { return handleError(error, res, next) }
 }
