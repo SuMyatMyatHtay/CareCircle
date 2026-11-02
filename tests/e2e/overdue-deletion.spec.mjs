@@ -2,7 +2,7 @@ import { test, expect, ids, login, authenticatedApi } from './fixtures.mjs'
 
 async function openOverdue(page, isMobile) {
   await page.goto('/home')
-  if (isMobile) await page.getByRole('button', { name: 'Tasks', exact: true }).click()
+  if (isMobile) await page.getByRole('button', { name: 'See all', exact: true }).filter({ visible: true }).click()
   await page.getByRole('button', { name: 'Overdue', exact: true }).filter({ visible: true }).click()
 }
 

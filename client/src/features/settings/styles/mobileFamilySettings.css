@@ -391,17 +391,7 @@
   .care-settings-mobile {
     display: block;
   }
-  .family-settings-surface .sidebar-wrapper,
-  .family-settings-surface .sidebar-overlay,
-  .family-settings-surface .app-topbar,
-  .family-settings-surface .care-hidden-topbar,
-  .family-settings-surface .care-preview-bar {
-    display: none !important;
-  }
-  .family-settings-surface .app-main {
-    padding: calc(24px + env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) calc(164px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px));
-    scrollbar-gutter: auto;
-  }
+  /* Phones keep the top bar with the left menu (☰); there is no bottom bar any more */
   .family-settings-surface .care-settings-page {
     max-width: none;
     min-height: 100%;
@@ -411,9 +401,6 @@
   }
 }
 @media (max-width: 359px) {
-  .family-settings-surface .app-main {
-    padding: calc(20px + env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) calc(164px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
-  }
   .care-mobile-settings-profile {
     gap: 10px;
   }

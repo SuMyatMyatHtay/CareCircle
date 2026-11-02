@@ -33,8 +33,8 @@ test('creates a daily series from the form and persists every session', async ({
   }).toBe(6)
   await page.reload()
   if (isMobile) {
-    // Mobile Home shows today's tasks. Future occurrences live in its Tasks panel.
-    await page.getByRole('button', { name: 'Tasks', exact: true }).click()
+    // Mobile Home shows today's tasks. "See all" opens the full task list.
+    await page.getByRole('button', { name: 'See all', exact: true }).filter({ visible: true }).click()
     await expect(page.getByRole('heading', { name: 'E2E repeating therapy', exact: true })).toHaveCount(6)
   } else await expect(page.getByRole('heading', { name: 'Repeating tasks', exact: true })).toBeVisible()
 })

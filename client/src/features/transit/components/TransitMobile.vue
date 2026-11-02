@@ -139,7 +139,7 @@ function safelyHome() {
                     :live-time="liveTime"
                     :live-note="liveNote"
                     :label="liveSpot ? (liveCaption || `Live · updated ${time(liveSpot.at)}`) : trail.length > 1 ? 'Route travelled' : (task.location?.name || 'Destination')"
-                    :height="260"
+                    :height="440"
                     :fit-width="320"
                 />
             </section>

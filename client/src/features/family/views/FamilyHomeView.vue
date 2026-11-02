@@ -20,7 +20,6 @@ import { previewState } from '../data/previewFamily.js'
 import MobileHomeHeader from '../components/MobileHomeHeader.vue'
 import MobileTransitCard from '../components/MobileTransitCard.vue'
 import MobileTodayTasks from '../components/MobileTodayTasks.vue'
-import MobileHomeNavigation from '../components/MobileHomeNavigation.vue'
 import ProfileAvatar from '../../../components/common/ProfileAvatar.vue'
 import '../styles/mobileFamilyHome.css'
 import { useActiveTransit } from '../../transit/utils/useActiveTransit.js' // E: live trip banner
@@ -156,10 +155,6 @@ async function openMobileTaskForm() {
   await nextTick()
   if (isPreview) openNewTask()
   else router.push({ name: 'task-new' })
-}
-function navigateMobileHome(tab) {
-  if (tab === 'tasks') taskFilter.value = 'all'
-  mobilePanel.value = tab === 'home' ? '' : tab
 }
 function showAllMobileTasks() {
   taskFilter.value = 'all'
@@ -345,15 +340,10 @@ watch(selectedFamilyId, () => {
           @retry="loadTasks()"
           @claim="claimTask"
         />
+        <!-- Phones use the left menu (☰) only, so Recent updates sits on the page
+             instead of behind a bottom-bar "Activity" tab -->
+        <RecentUpdates class="care-mobile-recent" :updates="activity" :preview="isPreview" />
       </template>
-      <MobileHomeNavigation
-        :contributions-enabled="Boolean(selectedFamily)"
-        :preview="isPreview"
-        :home-path="homePath"
-        :settings-path="settingsPath"
-        :active="mobilePanel || 'home'"
-        @select="navigateMobileHome"
-      />
     </div>
     <CareModal
       v-if="mobilePanel"

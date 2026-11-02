@@ -92,14 +92,16 @@ test('creates and claims a family task, then isolates the selected family', asyn
   await page.getByLabel('Starts', { exact: true }).fill('23:30')
   await page.getByRole('button', { name: 'Post task', exact: true }).click()
   await expect(page).toHaveURL(/\/home$/)
-  if (isMobile) await page.getByRole('button', { name: 'Tasks', exact: true }).click()
+  // Phones: no bottom bar; "See all" on Home opens the family's task list
+  if (isMobile) await page.getByRole('button', { name: 'See all', exact: true }).filter({ visible: true }).click()
   await page.getByRole('button', { name: 'Needs someone', exact: true }).filter({ visible: true }).click()
   const task = page.getByRole('article').filter({ has: page.getByRole('heading', { name: 'E2E grocery pickup', exact: true }) })
   await task.getByRole('button', { name: 'I’ll take it', exact: true }).click()
   await page.getByRole('button', { name: 'Claimed', exact: true }).filter({ visible: true }).click()
   await expect(task).toContainText('Claimed')
   await page.reload()
-  if (isMobile) await page.getByRole('button', { name: 'Tasks', exact: true }).click()
+  // Phones: no bottom bar; "See all" on Home opens the family's task list
+  if (isMobile) await page.getByRole('button', { name: 'See all', exact: true }).filter({ visible: true }).click()
   await page.getByRole('button', { name: 'Claimed', exact: true }).filter({ visible: true }).click()
   await expect(task).toContainText('Claimed')
   await expect(task).toContainText('Alex Tan')
@@ -110,9 +112,10 @@ test('creates and claims a family task, then isolates the selected family', asyn
   await page.goto('/home')
   await expect(page.getByRole('heading', { name: 'E2E grocery pickup', exact: true })).toHaveCount(0)
   if (isMobile) {
-    await page.getByRole('button', { name: 'People', exact: true }).click()
-    await expect(page.getByRole('button', { name: /Lee recipient/ })).toBeVisible()
-    await expect(page.getByRole('button', { name: /^Grandpa/ })).toHaveCount(0)
+    // Phones: the care recipients are in the left menu (☰)
+    await page.getByRole('button', { name: 'Open navigation menu' }).click()
+    await expect(page.getByRole('link', { name: /^Lee recipient/ }).filter({ visible: true })).toBeVisible()
+    await expect(page.getByRole('link', { name: /^Grandpa/ }).filter({ visible: true })).toHaveCount(0)
   } else {
     await expect(page.getByRole('heading', { name: 'Lee recipient', exact: true })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Grandpa', exact: true })).toHaveCount(0)

@@ -80,12 +80,15 @@
     width: 264px;
     flex-basis: 264px;
     overflow: visible;
-    transition: transform 0.25s ease;
+    transition: transform 0.25s ease, visibility 0s linear 0s;
   }
 
+  /* Closed menu: slide out, then hide it so screen readers and tests don't see it */
   .sidebar-wrapper.sidebar-hidden {
     transform: translateX(-100%);
     pointer-events: none;
+    visibility: hidden;
+    transition: transform 0.25s ease, visibility 0s linear 0.25s;
   }
 
   .sidebar-overlay {
@@ -103,10 +106,8 @@
     --assistant-mobile-bottom: 16px;
   }
 
-  .app-layout.family-home-surface,
-  .app-layout.family-settings-surface {
-    --assistant-mobile-bottom: 88px;
-  }
+  /* Home and Settings no longer have a bottom bar on phones (left menu only),
+     so the assistant button sits at the normal 16px like every other page */
 
   .app-layout.task-form-surface {
     --assistant-mobile-bottom: 164px;

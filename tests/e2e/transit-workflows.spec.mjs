@@ -91,7 +91,7 @@ test('"Safely back home" ends the trip and the task shows as done in My Tasks', 
   await expect(page.getByLabel('Your own update', { exact: true })).toHaveCount(0)
 
   await page.goto('/my-tasks')
-  await page.getByRole('tab', { name: /^Done · 1/ }).filter({ visible: true }).click()
+  await page.getByRole('tab', { name: /^Done\s*(·\s*)?1$/ }).filter({ visible: true }).click()
   await expect(page.getByText('Physio at TTSH', { exact: true }).filter({ visible: true })).toBeVisible()
 })
 

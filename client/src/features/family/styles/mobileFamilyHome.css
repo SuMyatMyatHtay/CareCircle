@@ -274,30 +274,14 @@
   .care-home-mobile {
     display: block;
   }
-  .family-home-surface .sidebar-wrapper,
-  .family-home-surface .sidebar-overlay,
-  .family-home-surface .app-topbar,
-  .family-home-surface .care-hidden-topbar,
-  .family-home-surface .care-preview-bar {
-    display: none !important;
-  }
-  .family-home-surface .app-main {
-    padding: calc(26px + env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) calc(164px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px));
-    scrollbar-gutter: auto;
-  }
+  /* Phones keep the top bar with the left menu (☰); there is no bottom bar any more */
   .family-home-surface .care-home-page {
     max-width: none;
     min-height: 100%;
   }
-  .family-home-surface .care-live-toast {
-    bottom: calc(78px + env(safe-area-inset-bottom, 0px));
-  }
 }
 
 @media (max-width: 359px) {
-  .family-home-surface .app-main {
-    padding: calc(22px + env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) calc(164px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
-  }
   .care-mobile-home-header h1 {
     font-size: 19px;
   }

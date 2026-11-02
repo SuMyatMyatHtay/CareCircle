@@ -223,7 +223,9 @@ test('"Add consultation note" on a task opens a pop-up and saves the note to tha
   await expect(editDialog).toHaveCount(0)
   await expect(newNote).toContainText('Review in 2 weeks.')
 
-  await page.goto(logPage)
+  // "See all of Grandpa's notes" opens his whole care log, where the note is saved
+  await page.getByTestId('task-see-all-notes').click()
+  await expect(page).toHaveURL(new RegExp(`${logPage}$`))
   await expect(cards(page).first()).toContainText('Review in 2 weeks.')
 
   await page.goto(taskPage)
@@ -265,4 +267,29 @@ test('notes open already translated into the reader\'s preferred language', asyn
   await expect(page.getByText('这是已翻译的护理记录。', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: /Show original/ }).click()
   await expect(page.getByText('Sample note in the isolated test database.', { exact: true })).toBeVisible()
+})
+
+// Chaithra (E): household tasks (e.g. groceries) have no recipient, so the pop-up asks who the note is about
+test('a household task can add a care note after picking who it is about', async ({ page }) => {
+  const { default: Task } = await import('../../server/src/features/tasks/TaskModel.js')
+  const householdTask = '000000000000000000000399'
+  await Task.create({ _id: householdTask, family: ids.family, title: 'Weekly grocery run',
+    startAt: new Date(Date.now() + 2 * 60 * 60 * 1000), createdBy: ids.jasmine })
+
+  await login(page)
+  await page.goto(`/families/${ids.family}/tasks/${householdTask}`)
+  await page.getByTestId('task-add-note').filter({ visible: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Add care note' })
+  await expect(dialog).toBeVisible()
+  // Grandpa is the family's only care recipient, so he is already picked
+  await expect(dialog.getByTestId(`note-for-${ids.grandpa}`)).toHaveAttribute('aria-checked', 'true')
+  await dialog.getByTestId('log-type-diet').click()
+  await dialog.getByTestId('log-content').fill('Bought low-sugar biscuits for Grandpa.')
+  const { request } = await postNote(page)
+  expect(request).toMatchObject({ type: 'diet', recipient: ids.grandpa, task: householdTask })
+
+  await expect(page.getByTestId('saved-toast')).toHaveText("Note saved to Grandpa's log")
+  await expect(page.getByTestId('visit-notes').filter({ visible: true })).toContainText('Bought low-sugar biscuits')
+  await page.goto(logPage)
+  await expect(cards(page).first()).toContainText('Bought low-sugar biscuits')
 })

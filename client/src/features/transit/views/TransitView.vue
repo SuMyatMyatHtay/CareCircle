@@ -394,7 +394,7 @@ onUnmounted(stopPolling)
                             :live-note="liveBubbleNote"
                             :trail="session?.path || []"
                             :label="mapCaption"
-                            :height="520"
+                            :height="680"
                             :fit-width="560"
                             :bottom-space="liveSpot ? 100 : 0"
                         >
@@ -1150,7 +1150,7 @@ h3 {
     }
 
     .map :deep(.onemap) {
-        height: 260px !important;
+        height: 440px !important;
     }
 
     /* On phones the timeline comes first, map below */
