@@ -314,8 +314,10 @@ export async function translateLog(req, res, next) {
 
         let translation
         try {
-            // No source language: notes aren't always English (a doctor may speak Chinese), so Azure detects it
-            translation = await translateText(log.content, lang)
+            // No source language: notes aren't always English (a doctor may speak Chinese), so Azure detects it.
+            // Already in that language: keep the note's own words, so readers see no "translation" of it.
+            const result = await translateText(log.content, lang)
+            translation = result.detectedLang === lang ? log.content : result.text
         } catch (error) {
             console.error('Translation failed:', error.message)
             throw httpError(502, 'Translation service is unavailable. Please try again later.')

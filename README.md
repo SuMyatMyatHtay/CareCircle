@@ -34,7 +34,7 @@ CareCircle is a family-care coordination web application for sharing caregiving 
 | Backend              | Node.js, Express.js                                       |
 | Database             | MongoDB, Mongoose                                         |
 | Authentication       | bcrypt password hashing, JWT                              |
-| Planned integrations | Telegram Bot API, OneMap, Google Calendar, LibreTranslate |
+| Integrations         | Telegram Bot API, OneMap, Google Calendar, Azure Translator, Groq Whisper (speech to text) |
 
 ## 🚀 Local setup
 

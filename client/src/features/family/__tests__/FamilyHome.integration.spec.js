@@ -81,6 +81,10 @@ describe('Family home task board and navigation', () => {
 
   it('keeps all task filters and claiming inside the existing home dashboard', async () => {
     const board = wrapper.getComponent(TodayTasks)
+    // Opens on what's coming up, so a task for a later day can be claimed straight away
+    expect(board.text()).toContain('Future appointment')
+    expect(board.text()).not.toContain('Completed walk')
+    await findButton(board, 'Today').trigger('click')
     expect(board.text()).toContain('Today across the family')
     expect(board.text()).toContain('Buy groceries')
     expect(board.text()).not.toContain('Future appointment')
@@ -116,7 +120,7 @@ describe('Family home task board and navigation', () => {
     expect(wrapper.text()).toBe('My tasks')
     await router.push('/home')
     await flushPromises()
-    expect(wrapper.text()).toContain('Today across the family')
+    expect(wrapper.text()).toContain('Across the family')
     expect(wrapper.text()).toContain('Recent updates')
   })
 })

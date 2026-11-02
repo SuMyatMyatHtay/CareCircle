@@ -12,7 +12,7 @@ import LiveUpdateToast from '../components/LiveUpdateToast.vue'
 import NewTaskModal from '../../tasks/components/NewTaskModal.vue'
 import CareModal from '../../../components/common/CareModal.vue'
 import { useFamilyWorkspace } from '../composables/useFamilyWorkspace.js'
-import { useFamilyDashboard } from '../composables/useFamilyDashboard.js'
+import { useFamilyDashboard, singaporeDay } from '../composables/useFamilyDashboard.js'
 import { isTaskOverdue, useTaskClock } from '../../tasks/composables/useTaskOverdue.js'
 import { previewState } from '../data/previewFamily.js'
 import MobileHomeHeader from '../components/MobileHomeHeader.vue'
@@ -102,9 +102,12 @@ const mobileDate = new Intl.DateTimeFormat('en-SG', {
   timeZone: 'Asia/Singapore',
 }).format(new Date())
 const mobilePanel = ref('')
-const taskFilter = ref('today')
+// Start on what's coming up (not just today), so a task posted for tomorrow is right there to
+// claim, and stays in view as "Claimed" after you take it
+const taskFilter = ref('upcoming')
 const taskNow = useTaskClock()
 const taskFilters = [
+  { key: 'upcoming', label: 'Upcoming' },
   { key: 'today', label: 'Today' },
   { key: 'open', label: 'Needs someone' },
   { key: 'overdue', label: 'Overdue' },
@@ -115,6 +118,10 @@ const taskFilters = [
 ]
 const taskBoardTasks = computed(() => taskFilter.value === 'today' ? todayTasks.value
   : allTasks.value.filter(task => {
+      // In progress whatever the date; claimed from today on; open while it can still be claimed
+      if (taskFilter.value === 'upcoming') return task.status === 'in_progress' ||
+        (task.status === 'claimed' && +new Date(task.startAt) >= +new Date(`${singaporeDay(taskNow.value)}T00:00:00+08:00`)) ||
+        (task.status === 'open' && !isTaskOverdue(task, taskNow.value))
       if (taskFilter.value === 'open') return task.status === 'open' && !isTaskOverdue(task, taskNow.value)
       if (taskFilter.value === 'overdue') return task.status === 'open' && isTaskOverdue(task, taskNow.value)
       return taskFilter.value === 'all' || task.status === taskFilter.value

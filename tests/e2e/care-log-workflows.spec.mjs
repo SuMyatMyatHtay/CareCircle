@@ -233,3 +233,30 @@ test('"Add consultation note" on a task opens a pop-up and saves the note to tha
   await expect(page.getByTestId('saved-toast')).toHaveText("Note deleted from Grandpa's log")
   await expect(page.getByText('No notes yet.', { exact: false })).toBeVisible()
 })
+
+test('notes open already translated into the reader\'s preferred language', async ({ page, isMobile }) => {
+  await login(page)
+  const note = page.getByTestId(`log-card-${ids.log}`)
+
+  // English reader, English note: shown as written, no translation
+  await page.goto(logPage)
+  await expect(note).toContainText('Sample note in the isolated test database.')
+  await expect(note.getByTestId('log-translate')).toBeEnabled()
+  await expect(note.locator('.translation')).toHaveCount(0)
+
+  // Switch the preferred language to Chinese in Settings
+  await page.goto('/settings')
+  if (isMobile) await page.getByLabel('Notes language', { exact: true }).selectOption('zh')
+  else await page.getByRole('button', { name: '中文', exact: true }).click()
+  await expect(page.getByText('Your language preference has been saved.', { exact: true }).filter({ visible: true })).toBeVisible()
+
+  // Every note now opens in Chinese, with the original still above it
+  await page.goto(logPage)
+  await expect(note.locator('.translation')).toContainText('这是已翻译的护理记录。')
+  await expect(note).toContainText('Sample note in the isolated test database.')
+  await expect(note.getByTestId('log-translate')).toContainText('中文')
+
+  // The reader can hide it
+  await note.getByTestId('log-translate').click()
+  await expect(note.locator('.translation')).toHaveCount(0)
+})

@@ -194,6 +194,8 @@ describe('Family APIs with Express, authentication and a real isolated MongoDB',
     const english = await request(path, { method: 'POST', body: { lang: 'en' } })
     assert.equal(english.status, 200)
     assert.equal(translationProvider.calls.at(-1).to, 'en')
+    // Azure detected English: the note keeps its own words, so readers see no "translation"
+    assert.equal(english.data.translation, before.content)
     const saved = await Log.findById(ids.log)
     assert.equal(saved.translations.get('zh'), first.data.translation)
     assert.equal(saved.updatedAt.getTime(), before.updatedAt.getTime())

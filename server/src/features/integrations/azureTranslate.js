@@ -1,7 +1,7 @@
 // Runs on the server only, so the API key never reaches the browser.
-// App language code -> LibreTranslate language code.
+// App language code -> Azure Translator language code.
 // The keys must match LANGUAGE_LABELS in client/src/features/logs/logTypes.js.
-// If a language fails, check https://libretranslate.com/languages
+// If a language fails, check https://learn.microsoft.com/azure/ai-services/translator/language-support
 const LANGUAGE_CODES = {
     en: 'en',
     zh: 'zh-Hans',
@@ -16,7 +16,14 @@ export function isSupportedLanguage(lang) {
     return Object.hasOwn(LANGUAGE_CODES, lang)
 }
 
-// sourceLang is optional: without it Azure detects the language of the text itself
+// Azure language code -> app language code, for the language Azure detected ("zh-Hans" -> "zh")
+function appLanguage(azureCode = '') {
+    if (azureCode.startsWith('zh')) return 'zh'
+    return SUPPORTED_LANGUAGES.find((code) => LANGUAGE_CODES[code] === azureCode) || azureCode
+}
+
+// sourceLang is optional: without it Azure detects the language of the text itself.
+// Returns { text, detectedLang } (detectedLang is '' when a sourceLang was given).
 export async function translateText(text, targetLang, sourceLang = null) {
     const apiKey = process.env.AZURE_TRANSLATOR_KEY
     const region = process.env.AZURE_TRANSLATOR_REGION
@@ -61,5 +68,5 @@ export async function translateText(text, targetLang, sourceLang = null) {
     if (!translatedText) {
         throw new Error('Azure Translator returned an empty or unexpected payload structure')
     }
-    return translatedText
+    return { text: translatedText, detectedLang: appLanguage(data[0].detectedLanguage?.language) }
 }

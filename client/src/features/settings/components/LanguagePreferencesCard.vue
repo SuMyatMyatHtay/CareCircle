@@ -12,8 +12,8 @@ const languages = [
 <template>
   <SectionCard title="Your language" class="care-language-card">
     <p class="care-muted care-small">
-      Choose the language you’re most comfortable reading. Care note translation
-      will use this preference when LibreTranslate is connected.
+      Choose the language you’re most comfortable reading. Care notes open
+      already translated into it, using Microsoft Azure Translator.
     </p>
     <div
       class="care-language-options"
