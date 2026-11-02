@@ -476,6 +476,7 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
 .month-card {
     padding: 0;
     overflow: hidden;
+    border-radius: 0;
 }
 
 .weekday-row,
