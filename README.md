@@ -312,6 +312,10 @@ Contributions is calculated from existing membership-protected task/member endpo
 
 ## Testing
 
+For a Korean explanation with actual unit/component, integration and E2E examples,
+Vitest props/emits, and the main coverage audit, see
+[Testing walkthrough](docs/TESTING-EXPLAINED.ko.md).
+
 From the repository root:
 
 ```sh

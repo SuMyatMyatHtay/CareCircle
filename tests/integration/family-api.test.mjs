@@ -41,6 +41,9 @@ async function request(path, { method = 'GET', user = 'alex', body, authenticate
 beforeEach(async () => {
   translationProvider.reset()
   await resetFixtures()
+  // The shared browser fixture is at 14:00 Singapore time. These API cases
+  // exercise future-task ownership/claiming, so keep it ahead at any run time.
+  await Task.updateOne({ _id: ids.task }, { $set: { startAt: new Date(Date.now() + 3600000) } })
   tokens = {}
   for (const [name, email] of Object.entries(accounts)) {
     const login = await request('/auth/login', { method: 'POST', authenticated: false, body: { email, password } })
@@ -132,7 +135,7 @@ describe('Family APIs with Express, authentication and a real isolated MongoDB',
     assert.equal((await request(`${family}/members`)).status, 401)
   })
 
-  it('keeps manual task edits and deletions restricted to the creator, including admins', async () => {
+  it('keeps future task edits and deletions restricted to the creator, including admins', async () => {
     for (const user of ['alex', 'may']) {
       assert.equal((await request(`${family}/tasks/${ids.task}`, { method: 'PATCH', user, body: { title: 'Unauthorized edit' } })).status, 403)
       assert.equal((await request(`${family}/tasks/${ids.task}`, { method: 'DELETE', user })).status, 403)

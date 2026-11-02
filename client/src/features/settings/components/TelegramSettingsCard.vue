@@ -96,7 +96,7 @@ function onReminderChange(key, value) {
       v-for="option in events"
       :key="option.key"
       :label="option.label"
-      :checked="preferences[option.key]"
+      :checked="isOn(option.key)"
       :disabled="!canEdit"
       @change="onChange(option.key, $event)"
     />

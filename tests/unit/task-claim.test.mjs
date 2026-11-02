@@ -14,6 +14,14 @@ beforeEach(t => {
   t.mock.method(Task, 'getTaskInFamily', async (family, id) => family === stored.family && id === stored._id ? { ...stored } : null)
   t.mock.method(Task, 'getTaskById', async () => ({ ...stored }))
   t.mock.method(Task, 'getPopulatedTaskById', async () => ({ ...stored, claimedBy: stored.claimedBy ? { _id: stored.claimedBy, name: 'Helper' } : null }))
+  // Current main marks a near-term unclaim as already alerted. Keep this
+  // metadata write in the isolated model double, rather than querying MongoDB.
+  t.mock.method(Task, 'updateOne', async (filter, update) => {
+    assert.deepEqual(Object.keys(update.$set), ['unclaimedReminderAt'])
+    if (filter._id !== stored._id) return { matchedCount: 0, modifiedCount: 0 }
+    Object.assign(stored, update.$set)
+    return { matchedCount: 1, modifiedCount: 1 }
+  })
   // Exercise the actual updateTaskStatus static, including its compare-and-set filter.
   t.mock.method(Task, 'findOneAndUpdate', async (filter, update) => {
     if (!Object.entries(filter).every(([key, value]) => value?.$gt ? new Date(stored[key]) > value.$gt : stored[key] === value)) return null
@@ -84,6 +92,7 @@ test('claimer can unclaim and another member can then claim, but strangers canno
   assert.equal((await invoke(unclaimTask)).status, 200)
   assert.equal(stored.claimedBy, null)
   assert.equal(stored.claimedAt, null)
+  assert.ok(stored.unclaimedReminderAt instanceof Date)
   assert.equal((await invoke(claimTask, creator)).status, 200)
   assert.equal(stored.claimedBy, creator)
   assert.equal((await invoke(claimTask, member)).status, 409)
