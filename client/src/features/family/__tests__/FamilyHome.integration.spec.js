@@ -5,6 +5,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { VueQueryPlugin } from '@tanstack/vue-query'
 import FamilyHomeView from '../views/FamilyHomeView.vue'
 import TodayTasks from '../components/TodayTasks.vue'
+import UrgentUpcomingTasks from '../components/UrgentUpcomingTasks.vue'
 import MobileTodayTasks from '../components/MobileTodayTasks.vue'
 import { useActiveFamily } from '../../../composables/useActiveFamily.js'
 import { http } from '../../../services/http.js'
@@ -57,6 +58,24 @@ beforeEach(async () => {
 afterEach(() => { wrapper?.unmount(); queryClient.clear() })
 
 describe('Family home task board and navigation', () => {
+  it('shows at most three soonest unclaimed tasks and combines recurring dates in the urgency section', async () => {
+    const next = (id, days, extra = {}) => ({ _id: id, family: 'one', title: id, status: 'open', startAt: new Date(Date.now() + days * 86400000).toISOString(), ...extra })
+    queryClient.setQueryData(queryKeys.tasks('one'), [
+      next('later', 8), next('claimed', 1, { status: 'claimed', claimedBy: 'alex' }),
+      next('missed', -1), next('soonest', 1), next('weekly-next', 2, { recurringSeries: 'series' }),
+      next('weekly-later', 9, { recurringSeries: 'series' }), next('third', 3), next('completed', 1, { status: 'completed' }),
+    ])
+    await flushPromises()
+    const expected = ['soonest', 'weekly-next', 'third']
+    expect(wrapper.getComponent(UrgentUpcomingTasks).props('tasks').map(task => task._id)).toEqual(expected)
+    const mobile = wrapper.findAllComponents(MobileTodayTasks).find(list => list.props('title') === 'Upcoming tasks needing someone')
+    expect(mobile.props('tasks').map(task => task._id)).toEqual(expected)
+    queryClient.setQueryData(queryKeys.tasks('one'), [])
+    await flushPromises()
+    expect(wrapper.getComponent(UrgentUpcomingTasks).props('tasks')).toEqual([])
+    expect(wrapper.getComponent(UrgentUpcomingTasks).text()).toContain('No upcoming tasks need someone')
+  })
+
   it('shows one future recurring row on desktop and mobile while preserving the missed occurrence', async () => {
     const sessions = [-1, 7, 14, 21, 28].map((days, index) => ({
       _id: `session-${index}`, family: 'one', recurringSeries: 'weekly',
