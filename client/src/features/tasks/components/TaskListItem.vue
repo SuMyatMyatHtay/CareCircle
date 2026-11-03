@@ -1,4 +1,5 @@
 <script setup>
+import TaskDeleteMenu from './TaskDeleteMenu.vue'
 import ProfileAvatar from '../../../components/common/ProfileAvatar.vue'
 // One row in a task list: date, recipient, title, time/place, who claimed it, status.
 // Buttons (e.g. "I'll take it") can be passed in through the "actions" slot.
@@ -55,6 +56,7 @@ function initials(name = '') {
 
 <template>
     <article class="task-item" :class="{ 'is-open': isOpen, 'is-closed': isClosed }">
+        <TaskDeleteMenu :task="task" />
         <div class="date-badge" :aria-label="`${weekday} ${dayOfMonth}`">
             <span class="date-weekday">{{ weekday }}</span>
             <span class="date-day">{{ dayOfMonth }}</span>
@@ -89,6 +91,8 @@ function initials(name = '') {
 </template>
 
 <style scoped>
+.task-item { position: relative; }
+.task-item:has(.task-delete-menu) { padding-right: 50px; }
 
 .task-item {
     position: relative;

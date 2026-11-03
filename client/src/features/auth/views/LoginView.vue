@@ -93,7 +93,7 @@ async function handleLogin() {
       </div>
       <div class="form-group">
         <div class="label-row">
-          <label for="password">Password</label><span class="coming-soon">Forgot password? · Later</span>
+          <label for="password">Password</label><RouterLink to="/forgot-password">Forgot password?</RouterLink>
         </div>
         <div class="input-wrap">
           <i class="bi bi-lock" aria-hidden="true"></i><input id="password" v-model="password"

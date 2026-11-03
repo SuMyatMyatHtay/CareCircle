@@ -3,7 +3,7 @@
 // requireAuth + requireFamilyMember. Recipients are archived, never deleted,
 // so there is no DELETE route.
 import { Router } from 'express'
-import { requireFamilyAdmin } from '../../middleware/requireFamilyMember.js'
+import { canRemoveRecipient } from '../tasks/permissions.js'
 import {
     listRecipients,
     getRecipient,
@@ -19,6 +19,9 @@ router.post('/', createRecipient)                   // member
 router.get('/:recipientId', getRecipient)           // member
 router.patch('/:recipientId', updateRecipient)      // member
 
-router.post('/:recipientId/archive', requireFamilyAdmin, archiveRecipient) // admin
+router.post('/:recipientId/archive', (req, res, next) => {
+    if (!canRemoveRecipient(req.family, req.user.userId)) return res.status(403).json({ error: 'Only family admins can remove recipients with the current family setting.' })
+    next()
+}, archiveRecipient)
 
 export default router

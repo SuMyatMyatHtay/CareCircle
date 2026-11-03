@@ -72,7 +72,7 @@ test('pause/resume preserves one-date openings and deleted dates do not regenera
   let saved = await occurrences(first.recurringSeries)
   await action(saved[1], 'unclaim')
   const seriesPath = `${path}/recurring/${first.recurringSeries}`
-  assert.equal((await request(seriesPath, { method: 'PATCH', user: 'may', body: { paused: true } })).status, 403)
+  assert.equal((await request(seriesPath, { method: 'PATCH', user: 'may', body: { paused: true } })).status, 200)
   assert.equal((await request(seriesPath, { method: 'PATCH', body: { paused: true } })).status, 200)
   saved = await occurrences(first.recurringSeries)
   assert.equal(saved[1].status, 'open'); assert.equal(saved[2].recurrencePaused, true)
@@ -104,7 +104,7 @@ test('admins can stop overdue series; unauthorized members cannot; history is ke
   await Task.updateOne({ _id: before[2]._id }, { $set: { status: 'completed', claimedBy: ids.may } })
   await Task.updateOne({ _id: before[3]._id }, { $set: { recurrenceDetached: true } })
   const seriesPath = `${path}/recurring/${first.recurringSeries}`
-  assert.equal((await request(seriesPath, { method: 'PATCH', user: 'may', body: { paused: true } })).status, 403)
+  assert.equal((await request(seriesPath, { method: 'PATCH', user: 'may', body: { paused: true } })).status, 200)
   assert.equal((await request(seriesPath, { method: 'PATCH', user: 'outsider', body: { paused: true } })).status, 403)
   assert.equal((await request(`/families/${ids.otherFamily}/tasks/recurring/${first.recurringSeries}`, { method: 'PATCH', body: { paused: true } })).status, 404)
   // Jasmine is an admin but Alex created this series.
@@ -122,14 +122,14 @@ test('admins can stop overdue series; unauthorized members cannot; history is ke
   assert.equal((await Series.findById(first.recurringSeries)).generatedThrough, null)
 })
 
-test('stop and resume follow current task permissions, even for the creator', async () => {
+test('stop and resume allow creators and admins independently of recipient settings', async () => {
   const created = await request(path, { method: 'POST', user: 'may', body: recurringTaskPayload({ never: true }) })
   assert.equal(created.status, 201)
   const seriesPath = `${path}/recurring/${created.data.task.recurringSeries}`
-  assert.equal((await request(seriesPath, { method: 'PATCH', user: 'may', body: { paused: true } })).status, 403)
-  assert.equal((await request(`/families/${ids.family}/task-permissions`, { method: 'PATCH', body: { overdueTaskDeletion: 'member' } })).status, 200)
   assert.equal((await request(seriesPath, { method: 'PATCH', user: 'may', body: { paused: true } })).status, 200)
-  assert.equal((await request(`/families/${ids.family}/task-permissions`, { method: 'PATCH', body: { overdueTaskDeletion: 'admin' } })).status, 200)
-  assert.equal((await request(seriesPath, { method: 'PATCH', user: 'may', body: { paused: false } })).status, 403)
+  assert.equal((await request(`/families/${ids.family}/recipient-permissions`, { method: 'PATCH', body: { recipientDeletion: 'member' } })).status, 200)
+  assert.equal((await request(seriesPath, { method: 'PATCH', user: 'may', body: { paused: true } })).status, 200)
+  assert.equal((await request(`/families/${ids.family}/recipient-permissions`, { method: 'PATCH', body: { recipientDeletion: 'admin' } })).status, 200)
+  assert.equal((await request(seriesPath, { method: 'PATCH', user: 'may', body: { paused: false } })).status, 200)
   assert.equal((await request(seriesPath, { method: 'PATCH', user: 'jasmine', body: { paused: false } })).status, 200)
 })

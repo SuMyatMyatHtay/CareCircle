@@ -5,7 +5,7 @@ import { useFamilyWorkspace } from '../../family/composables/useFamilyWorkspace.
 import { getRecurringSeries, pauseRecurringSeries, getTaskErrorMessage } from '../services/tasksApi.js'
 import { queryKeys } from '../../../services/queryClient.js'
 const props = defineProps({ task: { type: Object, required: true }, disabled: Boolean })
-const { selectedFamilyId, selectedFamily, isAdmin, isPreview } = useFamilyWorkspace()
+const { selectedFamilyId, selectedFamily, isAdmin, isPreview, user } = useFamilyWorkspace()
 const familyId = computed(() => String(props.task.family?._id || props.task.family || selectedFamilyId.value || ''))
 const seriesId = computed(() => String(props.task.recurringSeries?._id || props.task.recurringSeries || ''))
 const client = useQueryClient(), busy = ref(false), error = ref(''), open = ref(false)
@@ -16,7 +16,7 @@ const query = useQuery({
   enabled: computed(() => !isPreview && !!familyId.value && !!seriesId.value),
 })
 const series = computed(() => query.data.value?.find(entry => String(entry._id) === seriesId.value))
-const allowed = computed(() => !isPreview && (isAdmin.value || selectedFamily.value?.overdueTaskDeletion === 'member'))
+const allowed = computed(() => !isPreview && (isAdmin.value || String(props.task.createdBy?._id || props.task.createdBy) === user.value.id))
 const visible = computed(() => allowed.value && props.task.status === 'open' && series.value && !series.value.paused)
 function closeMenu(restoreFocus = false) {
   open.value = false

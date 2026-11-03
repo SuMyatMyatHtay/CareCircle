@@ -492,13 +492,15 @@ function canDeleteOverdue(req) {
 
 export async function deleteOverdueTasks(req, res, next) {
     try {
-        if (!canDeleteOverdue(req)) throw httpError(403, 'Only family admins can delete overdue tasks')
+        // Members can remove their own overdue tasks; admins can remove any.
         const taskIds = req.body?.taskIds
         if (taskIds !== undefined && (!Array.isArray(taskIds) || !taskIds.length || taskIds.length > 1000 || taskIds.some(id => typeof id !== 'string' || !mongoose.isValidObjectId(id)))) {
             throw httpError(400, 'Select between 1 and 1000 valid task IDs')
         }
         const cutoff = new Date()
         const filter = { family: req.family._id, status: 'open', startAt: { $lte: cutoff } }
+        if (!canDeleteOverdue(req)) filter.createdBy = req.user.userId
+        if (!canDeleteOverdue(req)) filter.createdBy = req.user.userId
         if (taskIds !== undefined) filter._id = { $in: [...new Set(taskIds)] }
         const tasks = await Task.find(filter)
         const actor = tasks.length ? await User.findById(req.user.userId).select('name').lean() : null

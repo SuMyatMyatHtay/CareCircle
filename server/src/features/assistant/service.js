@@ -7,7 +7,7 @@ import Family from '../families/Family.model.js'
 import User from '../auth/User.model.js'
 import { syncInBackground } from '../calendar-sync/sync.js'
 import { assertTaskDeletionAllowed, deleteFamilyTask } from '../tasks/deletionService.js'
-import { familyMember, canDeleteFamilyTask, canManageFamilyTasks } from '../tasks/permissions.js'
+import { familyMember, canDeleteFamilyTask, canRemoveRecipient } from '../tasks/permissions.js'
 import { assistantError, generateReply, validateConversation } from './gemini.js'
 import { TASK_STATUSES, TASK_CATEGORIES } from '../../constants.js'
 
@@ -199,7 +199,8 @@ export async function chat({ body, familyId, familyName, userId, memberRole, gen
   const memberIds = family?.members.map(member => member.userId) || []
   const members = await User.find({ _id: { $in: memberIds } }).select('name').lean()
   const context = { family: family.name || familyName, userId, role: currentMember.role,
-    permissions: { overdueTaskDeletion: family.overdueTaskDeletion || 'admin', canDeleteOverdueTasks: canManageFamilyTasks(family, userId) },
+    permissions: { taskDeletion: 'admin_or_creator', recipientDeletion: family.recipientDeletion || 'admin',
+      canRemoveRecipients: canRemoveRecipient(family, userId) },
     selectedTask: selectedTask ? { ...taskSummary(selectedTask, recipients), canDelete: canDeleteFamilyTask(selectedTask, family, userId) } : null,
     members: members.map(member => ({ id: id(member), name: member.name })),
     recipients: recipients.map(person => ({ id: id(person), name: person.name, nickname: person.nickname })),

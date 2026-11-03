@@ -16,7 +16,7 @@ function formatFamily(family) {
         id: family._id.toString(),
         name: family.name,
         inviteCode: family.inviteCode,
-        overdueTaskDeletion: family.overdueTaskDeletion || 'admin',
+        recipientDeletion: family.recipientDeletion || 'admin',
         createdBy: family.createdBy.toString(),
         // userId is populated with the member's name in getFamiliesForUser only
         members: family.members.map(member => ({

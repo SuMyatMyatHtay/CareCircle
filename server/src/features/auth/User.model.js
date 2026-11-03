@@ -9,6 +9,9 @@ const userSchema = new mongoose.Schema({
   telegramUsername: { type: String, trim: true, default: '' },
   isCaretaker: { type: Boolean, default: false },
   tokenVersion: { type: Number, default: 0 },
+  passwordReset: { type: new mongoose.Schema({
+    hash: String, expiresAt: Date, sentAt: Date, attempts: Number, tokenHash: String, tokenExpiresAt: Date,
+  }, { _id: false }), select: false },
   // Retained for compatibility with the old, separate pet feature.
   petAppearance: {
     species: { type: String, enum: ['bunny', 'bear', 'fox', 'cat', 'red-panda', null], default: null },

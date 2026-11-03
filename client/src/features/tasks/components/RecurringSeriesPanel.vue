@@ -17,9 +17,9 @@ const entries = computed(() => (query.data.value || []).filter(series => !props.
 const seriesTasks = series => props.tasks.filter(task => String(task.recurringSeries?._id || task.recurringSeries) === String(series._id))
 const next = series => seriesTasks(series).filter(task => !task.recurrenceDetached && ['open', 'claimed'].includes(task.status) && +new Date(task.startAt) > Date.now()).sort((a, b) => new Date(a.startAt) - new Date(b.startAt))[0]
 const canEdit = series => String(series.createdBy?._id || series.createdBy) === user.value.id
-const canManage = () => isAdmin.value || selectedFamily.value?.overdueTaskDeletion === 'member'
+const canManage = series => isAdmin.value || canEdit(series)
 async function toggle(series) {
-  if (busy.value || !canManage()) return
+  if (busy.value || !canManage(series)) return
   if (!series.paused && !window.confirm('Stop this repeating schedule? Upcoming repeating sessions will be cancelled. Overdue tasks, one-off exceptions and work already started will be kept. You can resume it later.')) return
   const familyId = selectedFamilyId.value
   busy.value = series._id; actionError.value = ''
@@ -39,7 +39,7 @@ async function toggle(series) {
     <p v-else-if="!entries.length" class="care-muted">No repeating tasks yet.</p>
     <div v-for="series in entries" :key="series._id" class="recurring-series-row">
       <i class="bi bi-repeat" aria-hidden="true"></i><div class="recurring-series-text"><strong>{{ next(series)?.title || series.template.title }}</strong><small>{{ recurrenceLabel(series.rule) }}<template v-if="series.rule.end.mode === 'on'"> · until {{ series.rule.end.until }}</template><template v-if="series.rule.end.mode === 'after'"> · {{ series.rule.end.count }} sessions</template><template v-if="series.paused"> · Paused</template></small><span v-if="series.usualHelper" class="recurring-helper"><ProfileAvatar :person="series.usualHelper" size="tiny" />{{ series.usualHelper.name }} is the usual helper</span><small v-else>Taken session by session</small></div>
-      <div v-if="canEdit(series) || canManage()" class="recurring-series-buttons"><button v-if="canEdit(series)" class="care-button" :disabled="!next(series) || !!busy" @click="editing = next(series)">Edit</button><button v-if="canManage()" class="care-button" :disabled="!!busy" @click="toggle(series)">{{ series.paused ? 'Resume' : 'Stop repeating' }}</button></div>
+      <div v-if="canEdit(series) || canManage(series)" class="recurring-series-buttons"><button v-if="canEdit(series)" class="care-button" :disabled="!next(series) || !!busy" @click="editing = next(series)">Edit</button><button v-if="canManage(series)" class="care-button" :disabled="!!busy" @click="toggle(series)">{{ series.paused ? 'Resume' : 'Stop repeating' }}</button></div>
     </div>
     <p v-if="actionError" role="alert" class="text-danger">{{ actionError }}</p>
     <RecurringTaskEditModal v-if="editing" :key="editing._id" :task="editing" :family-id="selectedFamilyId" @close="editing = null" @saved="editing = null" />

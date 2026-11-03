@@ -6,12 +6,12 @@ import { previewState } from '../../family/data/previewFamily.js'
 import { http } from '../../../services/http.js'
 import { authConfig, apiError } from '../../family/services/dashboardApi.js'
 const { selectedFamily, selectedFamilyId, isAdmin, isPreview } = useFamilyWorkspace()
-const permission = computed(() => selectedFamily.value?.overdueTaskDeletion || 'admin')
+const permission = computed(() => selectedFamily.value?.recipientDeletion || 'admin')
 const busy = ref(false), error = ref(''), saved = ref(false), pending = ref('')
 const groupId = useId()
 const options = [
-  { value: 'admin', title: 'Admins only', description: 'Keep these task actions with family admins.', icon: 'bi-shield-check' },
-  { value: 'member', title: 'All family members', description: 'Let anyone in the family clear overdue tasks and stop or resume repeating schedules.', icon: 'bi-people' },
+  { value: 'admin', title: 'Admins only', description: 'Only family admins can remove care recipients.', icon: 'bi-shield-check' },
+  { value: 'member', title: 'All family members', description: 'Let anyone in the family remove care recipients.', icon: 'bi-people' },
 ]
 async function change(value) {
   const familyId = selectedFamilyId.value
@@ -19,28 +19,28 @@ async function change(value) {
   if (!isAdmin.value || busy.value) return
   busy.value = true; pending.value = value; error.value = ''; saved.value = false
   try {
-    if (isPreview) previewState.family.overdueTaskDeletion = value
+    if (isPreview) previewState.family.recipientDeletion = value
     else {
-      const { data } = await http.patch(`/families/${familyId}/task-permissions`, { overdueTaskDeletion: value }, authConfig())
+      const { data } = await http.patch(`/families/${familyId}/recipient-permissions`, { recipientDeletion: value }, authConfig())
       if (familyId !== selectedFamilyId.value) return
-      selectedFamily.value.overdueTaskDeletion = data.overdueTaskDeletion
+      selectedFamily.value.recipientDeletion = data.recipientDeletion
     }
     saved.value = true
-  } catch (err) { if (familyId === selectedFamilyId.value) error.value = apiError(err, 'Task permissions') }
+  } catch (err) { if (familyId === selectedFamilyId.value) error.value = apiError(err, 'Recipient permissions') }
   finally { busy.value = false; pending.value = '' }
 }
 </script>
 <template>
-  <SectionCard v-if="selectedFamily" title="Task permissions" class="care-task-permissions">
+  <SectionCard v-if="selectedFamily" title="Recipient permissions" class="care-task-permissions">
     <template #actions>
       <span class="permission-badge"><i class="bi bi-shield-lock" aria-hidden="true"></i> Admin managed</span>
     </template>
     <fieldset :disabled="!isAdmin || busy" :aria-busy="busy">
-      <legend>Who can delete overdue tasks or stop repeating tasks?</legend>
-      <p class="permission-description">Choose who can delete overdue tasks and stop or resume repeating schedules.</p>
+      <legend>Who can remove care recipients?</legend>
+      <p class="permission-description">Choose who can remove care recipients from this family. Their existing tasks and care logs are preserved.</p>
       <div class="permission-options">
         <label v-for="option in options" :key="option.value" class="permission-option" :class="{ selected: (pending || permission) === option.value }">
-          <input type="radio" :name="`overdue-deletion-${groupId}`" :value="option.value" :checked="(pending || permission) === option.value" @change="change(option.value)" />
+          <input type="radio" :name="`recipient-deletion-${groupId}`" :value="option.value" :checked="(pending || permission) === option.value" @change="change(option.value)" />
           <span class="permission-icon"><i class="bi" :class="option.icon" aria-hidden="true"></i></span>
           <span class="permission-copy">
             <span class="permission-title">{{ option.title }} <span v-if="option.value === 'admin'" class="permission-default">Default</span></span>
@@ -54,7 +54,7 @@ async function change(value) {
     <div class="permission-footer" aria-live="polite">
       <p v-if="busy"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> Saving permission...</p>
       <p v-else-if="error" role="alert" class="care-error">{{ error }}</p>
-      <p v-else-if="saved" class="care-feedback"><i class="bi bi-check-circle" aria-hidden="true"></i> Task permissions saved.</p>
+      <p v-else-if="saved" class="care-feedback"><i class="bi bi-check-circle" aria-hidden="true"></i> Recipient permissions saved.</p>
       <p v-else><i class="bi bi-lock" aria-hidden="true"></i> {{ isAdmin ? 'Only family admins can change this setting. Changes save automatically.' : 'Ask a family admin to change this setting.' }}</p>
     </div>
   </SectionCard>

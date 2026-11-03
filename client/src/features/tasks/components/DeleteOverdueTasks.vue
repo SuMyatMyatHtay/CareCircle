@@ -8,7 +8,7 @@ const props = defineProps({ selectedIds: { type: Array, default: () => [] }, tas
 const emit = defineEmits(['deleted', 'select-all', 'busy'])
 const allSelected = computed(() => props.taskIds.length > 0 && props.taskIds.every(id => props.selectedIds.includes(id)))
 const { selectedFamily, selectedFamilyId, isAdmin, isPreview, user } = useFamilyWorkspace()
-const allowed = computed(() => isAdmin.value || selectedFamily.value?.overdueTaskDeletion === 'member')
+const allowed = computed(() => Boolean(selectedFamily.value))
 const busy = ref(false), message = ref(''), error = ref('')
 watch(selectedFamilyId, () => { message.value = ''; error.value = '' })
 async function remove() {
@@ -23,7 +23,7 @@ async function remove() {
     let deletedCount
     if (isPreview) {
       const before = previewState.tasks.length
-      previewState.tasks = previewState.tasks.filter(task => !(ids.includes(task._id) && task.status === 'open' && +new Date(task.startAt) <= Date.now()))
+      previewState.tasks = previewState.tasks.filter(task => !(ids.includes(task._id) && (isAdmin.value || String(task.createdBy?._id || task.createdBy) === user.value.id) && task.status === 'open' && +new Date(task.startAt) <= Date.now()))
       deletedCount = before - previewState.tasks.length
       if (deletedCount) previewState.updates.unshift({
         _id: crypto.randomUUID(), actor: user.value.name, actorId: user.value.id,

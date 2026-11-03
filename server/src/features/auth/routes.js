@@ -5,7 +5,13 @@ import { updatePet } from './pet.controller.js'
 import { updateAvatar } from './avatar.controller.js'
 import { requireAuth } from '../../middleware/requireAuth.js'
 import { getPublicProfile } from './public-profile.controller.js'
+import { passwordResetHandlers, resetRateLimit } from './password-reset.js'
 const router = Router()
+const reset = passwordResetHandlers()
+const limitReset = resetRateLimit()
+router.post('/forgot-password', limitReset, reset.requestCode)
+router.post('/verify-reset-code', limitReset, reset.verifyCode)
+router.post('/reset-password', limitReset, reset.resetPassword)
 router.post('/register', register)
 router.post('/login', login)
 router.get('/me', requireAuth, getCurrentUser)

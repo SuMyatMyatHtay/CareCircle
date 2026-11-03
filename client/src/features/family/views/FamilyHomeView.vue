@@ -112,10 +112,10 @@ const taskFilter = ref('today')
 const taskNow = useTaskClock()
 const selectedOverdueIds = ref([])
 const deletingOverdue = ref(false)
-const canSelectOverdue = computed(() => taskFilter.value === 'overdue' && (isAdmin.value || selectedFamily.value?.overdueTaskDeletion === 'member'))
-const overdueTaskIds = computed(() => displayTasks.value.filter(task => task.status === 'open' && isTaskOverdue(task, taskNow.value)).map(task => task._id))
+const canSelectOverdue = computed(() => taskFilter.value === 'overdue')
+const overdueTaskIds = computed(() => displayTasks.value.filter(task => task.deletionAllowed && task.status === 'open' && isTaskOverdue(task, taskNow.value)).map(task => task._id))
 function toggleOverdue(id, checked) {
-  if (!canSelectOverdue.value || deletingOverdue.value) return
+  if (!canSelectOverdue.value || deletingOverdue.value || !overdueTaskIds.value.includes(id)) return
   selectedOverdueIds.value = checked ? [...new Set([...selectedOverdueIds.value, id])] : selectedOverdueIds.value.filter(value => value !== id)
 }
 function selectAllOverdue(checked) {
@@ -143,7 +143,7 @@ const taskBoardTasks = computed(() => taskFilter.value === 'today' ? todayTasks.
       return taskFilter.value === 'all' || task.status === taskFilter.value
     }))
 const upcomingTasks = computed(() =>
-  groupRecurringTasks(taskBoardTasks.value, taskNow.value),
+  withDeletionPermissions(groupRecurringTasks(taskBoardTasks.value, taskNow.value)),
 )
 async function openMobileTaskForm() {
   mobilePanel.value = ''
@@ -176,8 +176,11 @@ const subtitle = computed(() =>
 const filterRecipient = ref(null),
   showNewTask = ref(false),
   showTransit = ref(false)
+function withDeletionPermissions(rows) {
+  return rows.map(task => ({ ...task, deletionAllowed: isAdmin.value || String(task.createdBy?._id || task.createdBy) === user.value.id }))
+}
 const displayTasks = computed(() =>
-  groupRecurringTasks(filterRecipient.value
+  withDeletionPermissions(groupRecurringTasks(filterRecipient.value
     ? allTasks.value
         .filter(
           (task) =>
@@ -185,7 +188,7 @@ const displayTasks = computed(() =>
               filterRecipient.value._id && task.status === 'open' && !isTaskOverdue(task, taskNow.value),
         )
         .sort((a, b) => new Date(a.startAt) - new Date(b.startAt))
-    : taskBoardTasks.value, taskNow.value),
+    : taskBoardTasks.value, taskNow.value)),
 )
 watch(overdueTaskIds, ids => { selectedOverdueIds.value = selectedOverdueIds.value.filter(id => ids.includes(id)) })
 function openRecipient(recipient) {

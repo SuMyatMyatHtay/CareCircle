@@ -19,6 +19,18 @@ export async function loginUser(email, password) {
   return response.data
 }
 
+export async function requestPasswordReset(email) {
+  return (await authApi.post('/auth/forgot-password', { email })).data
+}
+
+export async function verifyResetCode(email, code) {
+  return (await authApi.post('/auth/verify-reset-code', { email, code })).data
+}
+
+export async function resetPassword(email, resetToken, password, confirmPassword) {
+  return (await authApi.post('/auth/reset-password', { email, resetToken, password, confirmPassword })).data
+}
+
 export function getLoginErrorMessage(error) {
   if (!error.response) {
     if (error.code === 'ECONNABORTED') {

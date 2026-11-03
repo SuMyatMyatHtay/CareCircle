@@ -42,7 +42,7 @@ export async function updateRecipient(familyId, recipientId, changes) {
     return response.data.recipient
 }
 
-// Admin only. Recipients are archived, never deleted.
+// Recipient removal follows family recipient permissions. History is preserved by archiving.
 export async function archiveRecipient(familyId, recipientId) {
     const response = await http.post(`${recipientsUrl(familyId, recipientId)}/archive`, null, { headers: authHeaders() })
     return response.data.recipient

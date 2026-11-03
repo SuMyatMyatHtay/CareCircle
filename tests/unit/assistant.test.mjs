@@ -150,6 +150,12 @@ test('chat drafts without writing and sends credentials only in server headers',
   assert.equal(providerCalls[0].options.headers['x-goog-api-key'], 'test-only-never-real-key')
   assert.equal(JSON.stringify(providerCalls[0].body).includes('test-only-never-real-key'), false)
   assert.ok(providerCalls[0].body.generationConfig.responseFormat.text.schema)
+  const prompt = providerCalls[0].body.systemInstruction.parts[0].text
+  assert.ok(prompt.includes('"taskDeletion":"admin_or_creator"'))
+  assert.ok(prompt.includes('"recipientDeletion":"admin"'))
+  assert.ok(prompt.includes('"canRemoveRecipients":true'))
+  assert.ok(prompt.includes('Recipient permissions never grant task deletion permission'))
+  assert.ok(prompt.includes('Never turn a request to delete a recipient into a task deletion'))
 })
 test('confirm creates exactly once, ignores client task tampering and supports retries', async () => {
   const { data } = await chat(); const path = `proposals/${data.proposal.id}/confirm`
@@ -358,7 +364,7 @@ test('admins cannot propose or confirm deletion of another member’s task', asy
   tasks.get(taskId).startAt = new Date(Date.now() + 86400000)
   tasks.get(taskId).createdBy = member
   reply = { intent: 'delete', taskId, message: 'Delete task', suggestions: [] }
-  assert.equal((await chat()).status, 403)
+  assert.equal((await chat()).status, 200)
   const proposed = await chat({ user: member })
   assert.equal(proposed.status, 200)
   const path = `proposals/${proposed.data.proposal.id}/confirm`
@@ -368,10 +374,10 @@ test('admins cannot propose or confirm deletion of another member’s task', asy
   assert.equal(writes, 0)
 })
 
-test('manual endpoints also reject admin deletion and unclaiming for someone else', async () => {
+test('manual unclaim still rejects an unrelated admin', async () => {
   Object.assign(tasks.get(taskId), { createdBy: member, claimedBy: member, status: 'claimed' })
   const req = { family: { _id: familyId }, params: { taskId }, user: { userId: admin }, memberRole: 'admin' }
-  for (const handler of [deleteTask, unclaimTask]) {
+  for (const handler of [unclaimTask]) {
     const res = { status(code) { this.code = code; return this }, json(value) { this.body = value; return this } }
     await handler(req, res, error => { throw error })
     assert.equal(res.code, 403)
@@ -530,10 +536,10 @@ test('incomplete creation asks for missing details, then complete creation confi
 test('deletion refuses non-creators and locked tasks with explicit reasons', async () => {
   tasks.get(taskId).startAt = new Date(Date.now() + 86400000)
   reply = { intent: 'delete', taskId, message: 'Delete', suggestions: [] }
-  tasks.get(taskId).createdBy = member
-  const notOwner = await chat()
+  tasks.get(taskId).createdBy = admin
+  const notOwner = await chat({ user: member })
   assert.equal(notOwner.status, 403)
-  assert.match(notOwner.data.message, /cannot delete.*not its creator/)
+  assert.match(notOwner.data.message, /Only family admins or the task creator/)
   tasks.get(taskId).createdBy = admin
   tasks.get(taskId).status = 'completed'
   const locked = await chat()

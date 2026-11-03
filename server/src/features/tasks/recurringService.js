@@ -199,7 +199,7 @@ export async function setSeriesPaused(seriesId, familyId, userId, paused) {
   const helper = await transaction(async session => {
     const series = await lockSeries(seriesId, familyId, session)
     const family = await Family.findOne({ _id: familyId, 'members.userId': userId }).session(session)
-    if (!canManageFamilyTasks(family, userId)) throw error(403, 'Your family task permissions do not allow stopping or resuming repeating tasks')
+    if (!canManageFamilyTasks(family, userId) && !(family && id(series.createdBy) === userId)) throw error(403, 'Only family admins or the schedule creator can stop or resume repeating tasks')
     if (series.paused === paused) return id(series.usualHelper)
     series.paused = paused
     await series.save({ session })

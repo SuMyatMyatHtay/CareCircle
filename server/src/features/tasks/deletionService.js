@@ -14,10 +14,8 @@ export async function assertTaskDeletionAllowed(task, { familyId, userId }) {
   const family = await Family.findById(familyId)
   if (!familyMember(family, userId)) throw error(403, 'You are no longer a member of this family.')
   const overdue = isOverdueOpenTask(task)
-  if (overdue ? !canManageFamilyTasks(family, userId) : String(task.createdBy?._id || task.createdBy) !== String(userId)) {
-    throw error(403, overdue
-      ? 'Your family settings allow only admins to delete overdue tasks.'
-      : 'You cannot delete this task because you are not its creator.')
+  if (!canManageFamilyTasks(family, userId) && String(task.createdBy?._id || task.createdBy) !== String(userId)) {
+    throw error(403, 'Only family admins or the task creator can delete this task.')
   }
   if (['in_progress', 'completed'].includes(task.status)) throw error(409, `You cannot delete this task because it is ${task.status.replaceAll('_', ' ')}.`)
   return { family, overdue }

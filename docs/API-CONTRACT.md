@@ -346,7 +346,7 @@ Creation returns `{ task }`, the first occurrence, retaining the existing respon
 - `POST /:taskId/unclaim` releases only that occurrence and permanently detaches it. Any later claim of a detached occurrence is forced to `one`, regardless of supplied scope. Creator/claimer permissions and overdue restrictions still apply.
 - `PATCH /:taskId` accepts ordinary editable fields, optional `expectedUpdatedAt` and `scope`: `one` (default), `future`, or `all`. The creator can edit selected/upcoming attached sessions; started, completed, cancelled and independent sessions are preserved. Detached dates accept only `one`. A series-wide time change preserves occurrence dates; moving to another date requires `one`. Recurrence rule changes are not supported by this endpoint.
 - `GET /recurring` returns `{ series: [...] }` with template, rule, creator, usual helper and pause status.
-- `PATCH /recurring/:seriesId` accepts `{ "paused": true }` or `false`. Access follows the family task-permission setting (`overdueTaskDeletion`): admins only by default; all current family members when set to `member`. This is checked again in the transaction, including for the creator. Pause cancels attached future open/claimed sessions with a pause marker. Resume restores only those marked sessions and extends generation. Historical and detached sessions remain unchanged.
+- `PATCH /recurring/:seriesId` accepts `{ "paused": true }` or `false`. Only current family admins or the schedule creator may stop or resume a schedule. This is checked again in the transaction. Pause cancels attached future open/claimed sessions with a pause marker. Resume restores only those marked sessions and extends generation. Historical and detached sessions remain unchanged.
 
 Complete/start/cancel/delete apply to one occurrence. Assistant claim/assign defaults to the series; assistant updates apply to one occurrence. Existing event notifications remain event-triggered; this feature does not schedule Telegram reminders.
 
@@ -382,3 +382,10 @@ Each has a recommendation. Confirm in the group chat, then delete the line.
 4. **"Translation feature" in B's settings vs F's log translation.** Recommendation: B owns the preference (`preferredLang` via `PATCH /api/users/me`); F owns translating log text. If B also means translating the UI labels, that's vue-i18n on the frontend only and needs no API.
 5. **My Tasks overlap between D and E.** D delivers the page layout with static data first; E then connects `GET /api/me/tasks`, tabs, progress and reminders.
 6. **Transit step presets.** E proposes the final list. The design doc has `departed`, `arrived`, `consultation_done`, `heading_home`, `home`. The package description uses "fetched Grandpa", "reached hospital" and "going for lunch". Add `custom` either way.
+
+
+### Deletion permissions
+
+Task deletion is fixed to current family admins or the task creator, including overdue tasks. In-progress and completed tasks remain protected. Bulk overdue deletion filters members to their own created tasks. Recipient permissions do not grant task access.
+
+`PATCH /api/families/:familyId/recipient-permissions` accepts `{ "recipientDeletion": "admin" }` or `"member"`; only admins can change it. The default is admin. It controls `POST /api/families/:familyId/recipients/:recipientId/archive`, preserving historical tasks and logs. The old task-permissions setting and endpoint are retired; old values do not broaden recipient permissions.

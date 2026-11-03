@@ -188,11 +188,11 @@ test('a creator who has left the family cannot stop the series through the servi
   await assert.rejects(setSeriesPaused(first.recurringSeries, family, creator, true), { status: 403 })
 })
 
-test('member access to stopping schedules is controlled by the family setting, not task ownership', async t => {
+test('schedule stopping uses admin-or-creator rules independently of recipient permissions', async t => {
   const first = await create(true)
   t.mock.method(Family, 'findOne', () => query(() => ({ _id: family, members: [{ userId: creator, role: 'member' }] })))
-  await assert.rejects(setSeriesPaused(first.recurringSeries, family, creator, true), { status: 403 })
-  t.mock.method(Family, 'findOne', () => query(() => ({ _id: family, overdueTaskDeletion: 'member', members: [{ userId: helper, role: 'member' }] })))
-  await setSeriesPaused(first.recurringSeries, family, helper, true)
+  await setSeriesPaused(first.recurringSeries, family, creator, true)
   assert.equal(series.get(String(first.recurringSeries)).paused, true)
+  t.mock.method(Family, 'findOne', () => query(() => ({ _id: family, recipientDeletion: 'member', members: [{ userId: helper, role: 'member' }] })))
+  await assert.rejects(setSeriesPaused(first.recurringSeries, family, helper, false), { status: 403 })
 })

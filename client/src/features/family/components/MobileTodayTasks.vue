@@ -53,7 +53,7 @@ defineEmits(['see-all', 'retry', 'claim', 'create', 'select-task'])
     </p>
     <div v-else class="care-mobile-task-list">
       <div v-for="task in tasks" :key="task._id" class="mobile-task-selection-row" :class="{ 'has-selection': selectable }">
-        <label v-if="selectable" class="overdue-mobile-select">
+        <label v-if="selectable && task.deletionAllowed !== false" class="overdue-mobile-select">
           <input v-if="task.status === 'open' && isTaskOverdue(task, now)" type="checkbox" :checked="selectedIds.includes(task._id)" :disabled="selectionBusy" :aria-label="`Select ${task.title} for deletion`" @change="$emit('select-task', task._id, $event.target.checked)" />
         </label>
         <MobileTaskCard

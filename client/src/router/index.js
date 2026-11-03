@@ -2,6 +2,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import AppLayout from '../components/layout/AppLayout.vue'
 import LoginView from '../features/auth/views/LoginView.vue'
+import ForgotPasswordView from '../features/auth/views/ForgotPasswordView.vue'
 import SignupView from '../features/auth/views/SignupView.vue'
 import JoinFamilyView from '../features/auth/views/JoinFamilyView.vue'
 import CreateFamilyView from '../features/family/views/CreateFamilyView.vue'
@@ -29,6 +30,9 @@ import SearchView from '../features/search/views/SearchView.vue'
 import { verifySession, clearUserSession } from '../features/auth/services/authApi.js'
 const routes = [
   {path:'/login',component:LoginView},
+  {path:'/forgot-password',component:ForgotPasswordView},
+  {path:'/forgot-password/verify',component:ForgotPasswordView},
+  {path:'/forgot-password/new-password',component:ForgotPasswordView},
   {path:'/signup',component:SignupView},
   {path:'/create-family',name:'create-family',component:CreateFamilyView,meta:{requiresAuth:true}},
   {path:'/join-family',component:JoinFamilyView,meta:{requiresAuth:true}},

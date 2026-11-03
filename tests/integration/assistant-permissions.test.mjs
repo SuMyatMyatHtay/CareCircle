@@ -23,28 +23,26 @@ async function draft(task, user = 'may', options = {}) {
     generate: async request => { options.capture?.(request.context); return { intent: 'delete', taskId: String(task._id), message: 'Review', suggestions: [] } } })
 }
 const confirm = (proposal, user = 'may', familyId = ids.family) => api.request(`/families/${familyId}/assistant/proposals/${proposal.id}/confirm`, { method: 'POST', user, body: {} })
-const setPermission = value => api.request(`${family}/task-permissions`, { method: 'PATCH', body: { overdueTaskDeletion: value } })
+const setPermission = value => api.request(`${family}/recipient-permissions`, { method: 'PATCH', body: { recipientDeletion: value } })
 const notes = () => Notification.find({ family: ids.family, eventType: 'task.deleted' }).lean()
 
-test('default admins-only setting blocks a member deleting their own overdue task in assistant and manual paths', async () => {
+test('a creator can delete their own overdue task with the default recipient setting', async () => {
   const task = await makeTask()
   let context
-  await assert.rejects(draft(task, 'may', { capture: value => { context = value } }), { status: 403 })
-  assert.equal(context.permissions.overdueTaskDeletion, 'admin')
-  assert.equal(context.permissions.canDeleteOverdueTasks, false)
-  assert.equal(context.selectedTask.canDelete, false)
-  assert.equal((await api.request(`${family}/tasks/${task._id}`, { method: 'DELETE', user: 'may' })).status, 403)
-  assert.ok(await Task.exists({ _id: task._id }))
-  assert.equal(await Proposal.countDocuments(), 0)
-  assert.equal((await notes()).length, 0)
+  const { proposal } = await draft(task, 'may', { capture: value => { context = value } })
+  assert.equal(context.permissions.taskDeletion, 'admin_or_creator')
+  assert.equal(context.selectedTask.canDelete, true)
+  assert.equal((await confirm(proposal)).data.requiresSecondConfirmation, true)
+  assert.equal((await confirm(proposal)).status, 200)
+  assert.equal(await Task.findById(task._id), null)
 })
 
-test('enabled member can delete another creators overdue task with two confirmations and one actor/count summary', async () => {
+test('creator can delete an overdue task with two confirmations and one actor/count summary', async () => {
   await setPermission('member')
-  const task = await makeTask({ createdBy: ids.alex })
+  const task = await makeTask()
   let context
   const { proposal } = await draft(task, 'may', { capture: value => { context = value } })
-  assert.equal(context.permissions.overdueTaskDeletion, 'member')
+  assert.equal(context.permissions.taskDeletion, 'admin_or_creator')
   assert.equal(context.selectedTask.canDelete, true)
   assert.equal(context.tasks.find(entry => entry.id === String(task._id)).canDelete, true)
   assert.equal((await confirm(proposal)).data.requiresSecondConfirmation, true)
@@ -66,15 +64,16 @@ test('admin can delete another creators overdue task under the default policy', 
 })
 
 for (const afterFirst of [false, true]) {
-  test(`permission revoked ${afterFirst ? 'between confirmations' : 'after proposal'} prevents deletion`, async () => {
+  test(`recipient permission changed ${afterFirst ? 'between confirmations' : 'after proposal'} does not block the creator`, async () => {
     await setPermission('member')
     const task = await makeTask()
     const { proposal } = await draft(task)
     if (afterFirst) assert.equal((await confirm(proposal)).data.requiresSecondConfirmation, true)
     await setPermission('admin')
-    assert.equal((await confirm(proposal)).status, 403)
-    assert.ok(await Task.exists({ _id: task._id }))
-    assert.equal((await notes()).length, 0)
+    if (!afterFirst) assert.equal((await confirm(proposal)).data.requiresSecondConfirmation, true)
+    assert.equal((await confirm(proposal)).status, 200)
+    assert.equal(await Task.findById(task._id), null)
+    assert.equal((await notes()).length, 1)
   })
 }
 
@@ -90,7 +89,7 @@ test('demotion between confirmations is checked against current family membershi
 test('each family uses its own setting and proposals cannot be confirmed in a different family', async () => {
   assert.equal((await api.request('/families/join', { method: 'POST', user: 'may', body: { inviteCode: '1122334455' } })).status, 200)
   await setPermission('member')
-  const allowed = await makeTask(), denied = await makeTask({ familyId: ids.otherFamily })
+  const allowed = await makeTask(), denied = await makeTask({ familyId: ids.otherFamily, createdBy: ids.alex })
   const { proposal } = await draft(allowed)
   await assert.rejects(draft(denied), { status: 403 })
   assert.equal((await confirm(proposal, 'may', ids.otherFamily)).status, 404)
@@ -101,7 +100,7 @@ test('each family uses its own setting and proposals cannot be confirmed in a di
 test('member permission does not bypass creator checks for future tasks or locked-task checks', async () => {
   await setPermission('member')
   await assert.rejects(draft(await makeTask({ future: true, createdBy: ids.alex })), { status: 403 })
-  await assert.rejects(draft(await makeTask({ future: true }), 'alex'), { status: 403 })
+  assert.ok((await draft(await makeTask({ future: true }), 'alex')).proposal)
   for (const status of ['in_progress', 'completed']) await assert.rejects(draft(await makeTask({ status })), { status: 409 })
   const ownFuture = await makeTask({ future: true })
   const { proposal } = await draft(ownFuture)
@@ -112,7 +111,7 @@ test('member permission does not bypass creator checks for future tasks or locke
 
 test('overdue recurring deletion follows the setting and keeps its occurrence tombstone', async () => {
   await setPermission('member')
-  const created = await api.request(`${family}/tasks`, { method: 'POST', body: recurringTaskPayload({ never: true }) })
+  const created = await api.request(`${family}/tasks`, { method: 'POST', user: 'may', body: recurringTaskPayload({ never: true }) })
   assert.equal(created.status, 201)
   const task = await Task.findByIdAndUpdate(created.data.task._id, { startAt: new Date(Date.now() - 86400000) }, { new: true })
   const { proposal } = await draft(task)
@@ -148,12 +147,12 @@ test('manual overdue deletion uses the same conditional write when the schedule 
   assert.equal((await notes()).length, 0)
 })
 
-test('legacy pending proposals and forged request permission fields cannot bypass the current family setting', async () => {
-  const task = await makeTask()
+test('forged permission fields cannot authorize deletion of another creators task', async () => {
+  const task = await makeTask({ createdBy: ids.alex })
   const proposal = await Proposal.create({ family: ids.family, user: ids.may, action: 'delete', taskId: task._id,
     changes: {}, expectedUpdatedAt: task.updatedAt, deletionAcknowledged: true, expiresAt: new Date(Date.now() + 60000) })
   const result = await api.request(`${family}/assistant/proposals/${proposal._id}/confirm`, { method: 'POST', user: 'may',
-    body: { memberRole: 'admin', overdueTaskDeletion: 'member', deletionAcknowledged: true } })
+    body: { memberRole: 'admin', recipientDeletion: 'member', deletionAcknowledged: true } })
   assert.equal(result.status, 403)
   assert.ok(await Task.exists({ _id: task._id }))
   assert.equal((await notes()).length, 0)

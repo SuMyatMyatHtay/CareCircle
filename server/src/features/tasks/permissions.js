@@ -4,10 +4,10 @@ export function familyMember(family, userId) {
   return family?.members?.find(member => id(member.userId) === String(userId))
 }
 
-// The shared family setting controls overdue deletion and recurring schedule management.
+// Task management has fixed permissions; recipient settings never grant task access.
 export function canManageFamilyTasks(family, userId) {
   const member = familyMember(family, userId)
-  return Boolean(member && (member.role === 'admin' || family.overdueTaskDeletion === 'member'))
+  return Boolean(member && (member.role === 'admin'))
 }
 
 export function isOverdueOpenTask(task, now = Date.now()) {
@@ -16,5 +16,10 @@ export function isOverdueOpenTask(task, now = Date.now()) {
 
 export function canDeleteFamilyTask(task, family, userId) {
   if (!familyMember(family, userId) || ['in_progress', 'completed'].includes(task.status)) return false
-  return isOverdueOpenTask(task) ? canManageFamilyTasks(family, userId) : id(task.createdBy) === String(userId)
+  return canManageFamilyTasks(family, userId) || id(task.createdBy) === String(userId)
+}
+
+export function canRemoveRecipient(family, userId) {
+  const member = familyMember(family, userId)
+  return Boolean(member && (member.role === 'admin' || family.recipientDeletion === 'member'))
 }

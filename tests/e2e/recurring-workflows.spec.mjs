@@ -117,20 +117,12 @@ test('stops an overdue weekly series from the repeating-task panel, keeps histor
   saved = await sessions(api, task.recurringSeries)
   expect(saved.filter(entry => entry._id !== task._id).some(entry => entry.status === 'open')).toBe(true)
 })
-test('recurring task options follow the family setting and a permitted member can stop the series', async ({ page, isMobile, isolatedData }) => {
-  const { api, task } = await overdueWeeklySeries(page, isolatedData.apiURL)
+test('recipient permissions do not allow a member to stop someone elses schedule', async ({ page, isMobile, isolatedData }) => {
+  const { api } = await overdueWeeklySeries(page, isolatedData.apiURL)
+  expect((await api(`/families/${ids.family}/recipient-permissions`, { method: 'PATCH', data: { recipientDeletion: 'member' } })).status()).toBe(200)
   await login(page, 'may')
   await overdueBoard(page, isMobile)
-  const options = page.getByRole('button', { name: `Options for ${task.title}`, exact: true })
-  await expect(options).toHaveCount(0)
-  expect((await api(`/families/${ids.family}/task-permissions`, { method: 'PATCH', data: { overdueTaskDeletion: 'member' } })).status()).toBe(200)
-  await page.reload()
-  await overdueBoard(page, isMobile)
-  await expect(options).toHaveCount(0)
-  page.once('dialog', dialog => dialog.accept())
-  await page.getByRole('button', { name: 'Stop repeating', exact: true }).filter({ visible: true }).click()
-  await expect(options).toHaveCount(0)
-  expect((await (await api(`${path}/recurring`)).json()).series.find(series => series._id === task.recurringSeries).paused).toBe(true)
+  await expect(page.getByRole('button', { name: 'Stop repeating', exact: true })).toHaveCount(0)
 })
 
 test('future sessions stay grouped without a three-dot menu after deleting the missed date', async ({ page, isMobile, isolatedData }) => {

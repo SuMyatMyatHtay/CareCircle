@@ -3,12 +3,10 @@
 // Hub "Profile" tab: every detail about the recipient in three columns of cards.
 // Each "Edit" opens the recipient form; admins can also archive the recipient here.
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { useActiveFamily } from '../../../composables/useActiveFamily.js'
-import { useRecipients } from '../../../composables/useRecipients.js'
 import SectionCard from '../../../components/common/SectionCard.vue'
 import RecipientFormModal from '../components/RecipientFormModal.vue'
-import { archiveRecipient, getRecipientErrorMessage } from '../services/recipientsApi.js'
+import RemoveRecipientButton from '../components/RemoveRecipientButton.vue'
 import { careTypeLabel, mobilityLabel, ageLabel, formatDate, initials } from '../recipientLabels.js'
 
 const props = defineProps({
@@ -17,23 +15,7 @@ const props = defineProps({
 
 const emit = defineEmits(['updated'])
 
-const router = useRouter()
-const { selectedFamilyId, selectedFamily } = useActiveFamily()
-const { refresh } = useRecipients()
-
-function readUser() {
-    try {
-        return JSON.parse(sessionStorage.getItem('user') || '{}')
-    } catch {
-        return {}
-    }
-}
-const user = readUser()
-
-// Same check as FamilySidebar.vue's userRole
-const isAdmin = computed(() =>
-    selectedFamily.value?.members?.find((member) => member.userId === user.id)?.role === 'admin'
-)
+const { selectedFamily } = useActiveFamily()
 
 function memberName(userId) {
     return selectedFamily.value?.members?.find((member) => member.userId === userId)?.name || 'a family member'
@@ -57,25 +39,6 @@ const clinic = computed(() => props.recipient.preferredClinic)
 
 const editing = ref(false)
 
-// ---- Archive (admin only) ----
-const isArchiving = ref(false)
-const archiveError = ref('')
-
-async function archive() {
-    if (!window.confirm(`Archive ${props.recipient.nickname || props.recipient.name}? They'll be hidden from the family's lists. Their tasks and notes are kept.`)) return
-
-    isArchiving.value = true
-    archiveError.value = ''
-    try {
-        await archiveRecipient(selectedFamilyId.value, props.recipient._id)
-        await refresh()
-        router.push('/home')
-    } catch (error) {
-        archiveError.value = getRecipientErrorMessage(error)
-    } finally {
-        isArchiving.value = false
-    }
-}
 </script>
 
 <template>
@@ -220,13 +183,7 @@ async function archive() {
             </div>
         </div>
 
-        <div v-if="isAdmin" class="archive-row">
-            <p v-if="archiveError" class="archive-error" role="alert">{{ archiveError }}</p>
-            <button type="button" class="archive-button" :disabled="isArchiving" @click="archive">
-                <i class="bi bi-archive" aria-hidden="true"></i>
-                {{ isArchiving ? 'Archiving...' : 'Archive recipient' }}
-            </button>
-        </div>
+        <RemoveRecipientButton :recipient="recipient" />
 
         <RecipientFormModal v-if="editing" :recipient="recipient" @updated="emit('updated', $event)"
             @close="editing = false" />
