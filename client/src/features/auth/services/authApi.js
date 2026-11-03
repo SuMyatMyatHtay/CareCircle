@@ -1,6 +1,7 @@
 
 import axios from 'axios'
 import { queryClient } from '../../../services/queryClient.js'
+import { applyAccountAppearance } from '../../settings/composables/useAppearance.js'
 
 const authApi = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
@@ -80,6 +81,8 @@ export async function verifySession() {
         'user',
         JSON.stringify(response.data.user)
       )
+      // Use the theme saved with the account (once per sign-in or page load)
+      applyAccountAppearance(response.data.user)
 
       return { status: 'valid' }
     }
@@ -162,6 +165,15 @@ export async function updateMyProfile(profile) {
   return response.data.user
 }
 
+
+// Light/dark theme for the account: 'light' | 'dark' | 'system'
+export async function updateMyAppearance(appearance) {
+  const token = sessionStorage.getItem('token')
+  const response = await authApi.patch('/auth/me/appearance', { appearance }, {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+  return response.data.user
+}
 
 export async function updateMyPet(appearance) {
   const token = sessionStorage.getItem('token')

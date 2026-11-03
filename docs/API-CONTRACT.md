@@ -98,7 +98,7 @@ Family names are set at creation and cannot be changed. There is no family-renam
 | PATCH | `/api/users/me` | logged in | `{ name?, phone?, preferredLang?, telegramUsername? }` | `{ user }` | Planned |
 
 - **Dashboard:** Family Home doesn't need its own endpoint. It shares C's `GET /recipients` and D's `GET /tasks` query caches with the recipient pages, then filters the seven-day active-task window locally.
-- **Light and dark mode:** handled in the browser only, saved in `localStorage`. No API.
+- **Light and dark mode:** saved with the account, so it follows the user to every device. `PATCH /api/auth/me/appearance` with `{ appearance: 'light' | 'dark' | 'system' }` returns `{ user }` (`400` for any other value). `user.appearance` is `null` until the user first chooses one; the client then uploads the browser's existing choice. The browser keeps a copy in `localStorage` (`carecircle:appearance`) so `index.html` can apply the theme before Vue loads, with no light flash.
 - **`preferredLang`:** an app language code (`en`, `zh`, `ms` or `ta`). F's care notes open already translated into it (Azure Translator).
 - **Current UI language save:** uses the existing `PATCH /api/auth/me` endpoint. It fetches `/api/auth/me` first and sends the complete profile fields required by A's controller. `/api/users/me` remains planned.
 - **Current membership schema:** contains `userId`, `role`, `joinedAt`; no relationship field. The role endpoint accepts only `role` and rejects additional fields. Relationship editing requires an agreed schema extension with A.

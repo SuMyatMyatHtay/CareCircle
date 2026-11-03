@@ -6,7 +6,7 @@ export function toPublicUser(user) {
     id:user._id.toString(),name:user.name,email:user.email,phone:user.phone,
     preferredLang:user.preferredLang,telegramUsername:user.telegramUsername,
     isCaretaker:user.isCaretaker ?? false,petAppearance:user.petAppearance ?? null,
-    profilePicture:user.profilePicture || '',
+    profilePicture:user.profilePicture || '',appearance:user.appearance ?? null,
     avatarAppearance:user.avatarAppearance ?? null,
     createdAt:user.createdAt,updatedAt:user.updatedAt
   }
