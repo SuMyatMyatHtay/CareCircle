@@ -8,7 +8,7 @@
 // - "End transit" stops the trip without completing the task.
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import ClinicSearch from '../components/ClinicSearch.vue'
+import ClinicLookup from '../components/ClinicLookup.vue'
 import OneMapTiles from '../components/OneMapTiles.vue'
 import TransitMobile from '../components/TransitMobile.vue'
 import { useIsMobile } from '../../my-tasks/utils/useIsMobile.js'
@@ -46,7 +46,6 @@ const actionError = ref('')
 const notice = ref('')
 const isPosting = ref(false)
 const customText = ref('')
-const lookedUpPlace = ref(null)
 
 let me = {}
 try { me = JSON.parse(sessionStorage.getItem('user') || '{}') } catch { me = {} }
@@ -295,7 +294,10 @@ onUnmounted(stopPolling)
     <!-- Phones: Figma "Mobile prototype" → 16 · Transit mode -->
     <div v-if="isMobile">
         <p v-if="isLoading" class="status" role="status">Loading transit...</p>
-        <p v-else-if="loadError" class="status is-error" role="alert">{{ loadError }}</p>
+        <div v-else-if="loadError" class="status is-error" role="alert">
+            <span>{{ loadError }}</span>
+            <button type="button" class="btn-secondary" @click="load()">Try again</button>
+        </div>
         <TransitMobile
             v-else-if="task"
             :task="taskForView"
@@ -318,10 +320,15 @@ onUnmounted(stopPolling)
             @remove="removeStep"
             @start="startTrip"
             @resume="resumeTrip"
+            @end="endTrip"
             :other-trips="otherTrips"
             @open-trip="openLiveTransit"
             @dismiss="notice = ''"
         >
+            <template #place-tools>
+                <a v-if="directionsUrl(destination)" :href="directionsUrl(destination)" target="_blank" rel="noopener" class="btn-secondary">Directions</a>
+                <ClinicLookup />
+            </template>
             <template #notes>
                 <VisitNotesCard
                     :family-id="familyId"
@@ -429,17 +436,7 @@ onUnmounted(stopPolling)
                         <p>{{ telegramPreview }}</p>
                     </section>
 
-                    <details class="card lookup">
-                        <summary><i class="bi bi-search" aria-hidden="true"></i> Find a clinic with OneMap</summary>
-                        <ClinicSearch @select="(place) => (lookedUpPlace = place)" />
-                        <div v-if="lookedUpPlace" class="looked-up">
-                            <span>
-                                <strong>{{ lookedUpPlace.name }}</strong>
-                                <small>{{ lookedUpPlace.address }}</small>
-                            </span>
-                            <a :href="directionsUrl(lookedUpPlace)" target="_blank" rel="noopener">Directions</a>
-                        </div>
-                    </details>
+                    <ClinicLookup />
                 </div>
 
                 <!-- Journey updates -->
@@ -870,50 +867,6 @@ button:disabled {
     line-height: 20px;
     letter-spacing: 0.07px;
     color: var(--theme-text, #2e2e2e);
-}
-
-.lookup {
-    padding: 14px 16px;
-}
-
-.lookup summary {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--theme-green, #2f7a3f);
-    cursor: pointer;
-}
-
-.lookup[open] summary {
-    margin-bottom: 10px;
-}
-
-.looked-up {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-top: 12px;
-}
-
-.looked-up span {
-    display: flex;
-    flex-direction: column;
-}
-
-.looked-up strong {
-    font-size: 14px;
-    color: var(--theme-text, #2e2e2e);
-}
-
-.looked-up small {
-    font-size: 12px;
-    color: var(--theme-muted, #6b7280);
-}
-
-.looked-up a {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--theme-green, #2f7a3f);
 }
 
 /* Journey updates panel */

@@ -117,4 +117,27 @@ describe('TestSuite: TransitMobile (phone Transit mode)', () => {
         await wrapper.get('.also-live-chip').trigger('click')
         expect(wrapper.emitted('open-trip')[0]).toEqual([trip])
     })
+
+    it('offers ending only to the active companion, without completing the task', async () => {
+        const wrapper = render({ session: activeSession(), isCompanion: true })
+        await button(wrapper, 'End the trip').trigger('click')
+        expect(wrapper.emitted('end')).toHaveLength(1)
+        expect(wrapper.emitted('post')).toBeUndefined()
+        await wrapper.setProps({ isCompanion: false })
+        expect(button(wrapper, 'End the trip')).toBeUndefined()
+        await wrapper.setProps({ isCompanion: true, session: { status: 'ended', milestones: [] } })
+        expect(button(wrapper, 'End the trip')).toBeUndefined()
+    })
+
+    it('makes every remaining quick update available through More updates', async () => {
+        const wrapper = render({ session: activeSession(), isCompanion: true })
+        expect(chipLabels(wrapper)).not.toContain('Going for lunch')
+        await button(wrapper, 'More updates').trigger('click')
+        expect(chipLabels(wrapper)).toContain('Going for lunch')
+        expect(chipLabels(wrapper)).toContain('Heading home')
+        await button(wrapper, 'Heading home').trigger('click')
+        expect(wrapper.emitted('post')[0]).toEqual([{ type: 'heading_home', label: 'Heading home' }])
+        await button(wrapper, 'Fewer updates').trigger('click')
+        expect(chipLabels(wrapper)).toHaveLength(4)
+    })
 })

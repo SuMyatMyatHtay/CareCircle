@@ -548,6 +548,7 @@ label.search-filter-group .search-filter-label {
 }
 .search-input--mobile {
   flex: 1;
+  min-width: 0;
   height: 46px;
   gap: 10px;
   padding: 0 4px 0 12px;
@@ -563,6 +564,7 @@ label.search-filter-group .search-filter-label {
   font-size: 14px;
 }
 .search-cancel {
+  flex: 0 0 auto;
   min-height: 44px;
   padding: 0 4px;
   border: 0;
@@ -606,6 +608,36 @@ label.search-filter-group .search-filter-label {
   padding: 6px 4px 2px;
   font-size: 12px;
   font-weight: 800;
+}
+.search-mobile-filters {
+  margin-bottom: 10px;
+  border: 1px solid var(--theme-border, #e5e7eb);
+  border-radius: 12px;
+  background: var(--theme-panel, #fff);
+}
+.search-mobile-filters summary {
+  padding: 12px;
+  min-height: 44px;
+  color: var(--theme-green, #2f7a3f);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.search-mobile-filter-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 12px;
+  padding: 0 12px 16px;
+}
+.search-mobile-filter-fields fieldset,
+.search-mobile-filter-fields > button {
+  grid-column: 1 / -1;
+}
+.search-mobile-filter-fields .search-check { min-height: 44px; }
+.search-page .search-mobile-filter-fields select { width: 100%; min-height: 44px; }
+.search-mobile-filter-fields > button { min-height: 44px; justify-self: start; }
+@media (max-width: 359px) {
+  .search-mobile-filter-fields { grid-template-columns: minmax(0, 1fr); }
 }
 .search-mobile-list {
   display: flex;

@@ -5,6 +5,24 @@
 .care-home-desktop {
   display: block;
 }
+.care-mobile-home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+.care-mobile-home-actions > button {
+  flex: 1 1 auto;
+  justify-content: center;
+  min-height: 44px;
+}
+.care-mobile-people-panel .care-recipient-overview {
+  margin-top: 20px;
+}
+.care-mobile-people-panel > .care-button {
+  margin: 0 8px 8px 0;
+  min-height: 44px;
+}
 .care-mobile-home-header {
   display: flex;
   align-items: center;

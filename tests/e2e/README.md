@@ -14,6 +14,12 @@ codes, member profile links, calendar filters, task-modal actions and form field
 It also checks drawer state across viewport resizes and the assistant's clearance
 from the task footer, including its composer in a short landscape viewport.
 
+`mobile-actions.spec.mjs` checks the Home New task action at 320, 390, 767, 768
+and 1280px, including empty/error states, recipient actions, household recurring
+task editing/pause/resume, sidebar destinations, device appearance and search
+filters. Transit workflows also verify phone directions, clinic search controls,
+extra updates and ending/resuming without completing the task.
+
 The same workflows run in desktop Chromium and a 390px mobile Chromium context:
 signup validation/duplicate emails, family creation and joining, login/logout,
 language saving, global dark mode, recipient create/edit/archive,

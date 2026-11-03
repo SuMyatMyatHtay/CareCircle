@@ -20,7 +20,6 @@ import { previewState } from '../data/previewFamily.js'
 import MobileHomeHeader from '../components/MobileHomeHeader.vue'
 import MobileTransitCard from '../components/MobileTransitCard.vue'
 import MobileTodayTasks from '../components/MobileTodayTasks.vue'
-import ProfileAvatar from '../../../components/common/ProfileAvatar.vue'
 import '../styles/mobileFamilyHome.css'
 import { useActiveTransit } from '../../transit/utils/useActiveTransit.js' // E: live trip banner
 
@@ -148,8 +147,16 @@ const taskBoardTasks = computed(() => taskFilter.value === 'today' ? todayTasks.
       return taskFilter.value === 'all' || task.status === taskFilter.value
     }))
 const upcomingTasks = computed(() =>
-  [...taskBoardTasks.value].sort((a, b) => new Date(a.startAt) - new Date(b.startAt)),
+  [...displayTasks.value].sort((a, b) => new Date(a.startAt) - new Date(b.startAt)),
 )
+function showRecipientTasks(recipient) {
+  filterRecipient.value = recipient
+  taskFilter.value = 'open'
+}
+function showMobileRecipientTasks(recipient) {
+  showRecipientTasks(recipient)
+  mobilePanel.value = 'tasks'
+}
 async function openMobileTaskForm() {
   mobilePanel.value = ''
   await nextTick()
@@ -179,11 +186,11 @@ const filterRecipient = ref(null),
   showTransit = ref(false)
 const displayTasks = computed(() =>
   filterRecipient.value
-    ? allTasks.value
+    ? taskBoardTasks.value
         .filter(
           (task) =>
             (task.recipient?._id || task.recipient) ===
-              filterRecipient.value._id && task.status === 'open' && !isTaskOverdue(task, taskNow.value),
+              filterRecipient.value._id,
         )
         .sort((a, b) => new Date(a.startAt) - new Date(b.startAt))
     : taskBoardTasks.value,
@@ -263,7 +270,7 @@ watch(selectedFamilyId, () => {
           :preview="isPreview"
           @retry="loadRecipients"
           @open="openRecipient"
-          @show-open-tasks="filterRecipient = $event"
+          @show-open-tasks="showRecipientTasks"
         />
         <RecurringSeriesPanel v-if="!isPreview && allTasks.some(task => task.recurringSeries)" :tasks="allTasks" />
         <div class="care-dashboard-grid">
@@ -314,6 +321,17 @@ watch(selectedFamilyId, () => {
         @retry="loadFamilies"
       />
       <template v-else-if="selectedFamily">
+        <div class="care-mobile-home-actions" aria-label="Family home actions">
+          <NewTaskButton
+            :key="selectedFamilyId"
+            :save="savePreviewTask"
+            @created="onTaskCreated"
+          />
+          <button type="button" class="care-button" @click="mobilePanel = 'people'">
+            <i class="bi bi-people" aria-hidden="true"></i>
+            Care recipients
+          </button>
+        </div>
         <MobileTransitCard
           v-for="(banner, i) in transitBanners"
           :key="banner.taskId || i"
@@ -340,6 +358,7 @@ watch(selectedFamilyId, () => {
           @retry="loadTasks()"
           @claim="claimTask"
         />
+        <RecurringSeriesPanel v-if="!isPreview && allTasks.some(task => task.recurringSeries)" :tasks="allTasks" />
         <!-- Phones use the left menu (☰) only, so Recent updates sits on the page
              instead of behind a bottom-bar "Activity" tab -->
         <RecentUpdates class="care-mobile-recent" :updates="activity" :preview="isPreview" />
@@ -359,7 +378,11 @@ watch(selectedFamilyId, () => {
       @close="mobilePanel = ''"
     >
       <div v-if="mobilePanel === 'tasks'" class="care-home-task-filters" role="group" aria-label="Filter family tasks">
-        <button v-for="option in taskFilters" :key="option.key" type="button" :aria-pressed="taskFilter === option.key" :class="{ selected: taskFilter === option.key }" @click="taskFilter = option.key">{{ option.label }}</button>
+        <button v-for="option in taskFilters" :key="option.key" type="button" :aria-pressed="taskFilter === option.key" :class="{ selected: taskFilter === option.key }" @click="taskFilter = option.key; filterRecipient = null">{{ option.label }}</button>
+      </div>
+      <div v-if="mobilePanel === 'tasks' && filterRecipient" class="care-task-filter">
+        Unclaimed · {{ filterRecipient.nickname || filterRecipient.name }}
+        <button type="button" class="care-text-button" @click="filterRecipient = null">Clear</button>
       </div>
       <DeleteOverdueTasks v-if="mobilePanel === 'tasks' && taskFilter === 'overdue'" :selected-ids="selectedOverdueIds" :task-ids="overdueTaskIds" :disabled="loading || Boolean(error)" @select-all="selectAllOverdue" @busy="deletingOverdue = $event" @deleted="afterOverdueDeleted" />
       <MobileTodayTasks
@@ -391,26 +414,20 @@ watch(selectedFamilyId, () => {
         <RouterLink :to="settingsPath" class="care-button">
           View family members
         </RouterLink>
-        <h3>Care recipients</h3>
-        <p
-          v-if="recipientsLoading || recipientsError || !recipients.length"
-          class="care-muted care-small"
-        >
-          {{
-            recipientsLoading
-              ? 'Loading care recipients…'
-              : recipientsError || 'No care recipients yet.'
-          }}
-        </p>
-        <div
-          v-for="recipient in recipients"
-          :key="recipient._id || recipient.id"
-          class="care-mobile-person"
-        >
-          <ProfileAvatar :person="recipient" recipient size="small" />
-          <button type="button" class="care-text-button" @click="openMobileRecipient(recipient)">{{ recipient.nickname || recipient.name }}</button>
-          <i class="bi bi-chevron-right" aria-hidden="true"></i>
-        </div>
+        <RouterLink v-if="!isPreview && recipients.length" to="/recipients/new" class="care-button">
+          <i class="bi bi-plus-lg" aria-hidden="true"></i> Add care recipient
+        </RouterLink>
+        <RecipientOverview
+          :recipients="recipients"
+          :loading="recipientsLoading"
+          :error="recipientsError"
+          :tasks="allTasks"
+          :tasks-available="!error && !loading"
+          :preview="isPreview"
+          @retry="loadRecipients"
+          @open="openMobileRecipient"
+          @show-open-tasks="showMobileRecipientTasks"
+        />
       </div>
       <div
         v-else-if="mobilePanel === 'families'"

@@ -119,7 +119,7 @@ describe('TestSuite: TransitView + TransitMobile working together', () => {
         await wrapper.findAll('.chip')[0].trigger('click') // "Departed home"
         await flushPromises()
         await wrapper.get('input[aria-label="Your own update"]').setValue('Stuck in traffic')
-        await wrapper.get('form').trigger('submit')
+        await wrapper.get('form.own').trigger('submit')
         await flushPromises()
 
         expect(steps(wrapper)).toEqual(['Departed home', 'Stuck in traffic'])
@@ -131,7 +131,7 @@ describe('TestSuite: TransitView + TransitMobile working together', () => {
         await button(wrapper, 'Start the trip').trigger('click')
         await flushPromises()
         await wrapper.get('input[aria-label="Your own update"]').setValue('asdfgh')
-        await wrapper.get('form').trigger('submit')
+        await wrapper.get('form.own').trigger('submit')
         await flushPromises()
 
         vi.spyOn(window, 'confirm').mockReturnValue(true)

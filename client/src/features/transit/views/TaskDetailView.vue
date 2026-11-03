@@ -210,7 +210,10 @@ watch(() => [props.familyId, props.taskId], () => { editingRecurring.value = fal
     <!-- Phones: Figma "Mobile prototype" → 09 · Task detail -->
     <div v-if="isMobile">
         <p v-if="isLoading && !task" class="status" role="status">Loading task...</p>
-        <p v-else-if="loadError" class="status is-error" role="alert">{{ loadError }}</p>
+        <div v-else-if="loadError" class="status is-error" role="alert">
+            <span>{{ loadError }}</span>
+            <button type="button" class="btn-secondary" @click="load">Try again</button>
+        </div>
         <TaskDetailMobile
             v-else-if="task"
             :task="task"

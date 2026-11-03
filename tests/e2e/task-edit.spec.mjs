@@ -4,6 +4,19 @@ import { accounts, password } from '../../server/test/support/fixtures.js'
 
 const taskPage = `/families/${ids.family}/tasks/${ids.task}`
 
+test('task detail offers retry after a temporary load failure on either layout', async ({ page }) => {
+  await loginAsJasmine(page)
+  const url = `**/api/families/${ids.family}/tasks/${ids.task}`
+  await page.route(url, route => route.fulfill({ status: 503, json: { error: 'Temporary task outage' } }))
+  await page.goto(taskPage)
+  const retry = page.getByRole('button', { name: 'Try again', exact: true })
+  await expect(retry).toBeVisible()
+  await page.unroute(url)
+  await retry.click()
+  await expect(retry).not.toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Collect medicine', exact: true })).toBeVisible()
+})
+
 // fixtures.mjs login() only knows Alex and May; Jasmine created the fixture task
 async function loginAsJasmine(page) {
   await page.goto('/login')

@@ -10,7 +10,7 @@ defineEmits(['appearance', 'language', 'telegram'])
 </script>
 <template>
   <section class="care-mobile-preferences" aria-label="Your preferences">
-    <div class="care-mobile-preference-row">
+    <div class="care-mobile-preference-row care-mobile-appearance-row">
       <h2>Appearance</h2>
       <div
         class="care-mobile-theme-switch"
@@ -18,13 +18,14 @@ defineEmits(['appearance', 'language', 'telegram'])
         aria-label="Color appearance"
       >
         <button
-          v-for="option in ['light', 'dark']"
+          v-for="option in ['light', 'dark', 'system']"
           :key="option"
           :aria-pressed="appearance === option"
+          :aria-label="option === 'system' ? 'Match my device' : undefined"
           :class="{ selected: appearance === option }"
           @click="$emit('appearance', option)"
         >
-          {{ option === 'light' ? 'Light' : 'Dark' }}
+          {{ option === 'system' ? 'Device' : option === 'light' ? 'Light' : 'Dark' }}
         </button>
       </div>
     </div>

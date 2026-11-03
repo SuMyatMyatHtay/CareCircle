@@ -98,7 +98,7 @@
   padding: 3px;
 }
 .care-mobile-theme-switch button {
-  min-height: 35px;
+  min-height: 44px;
   min-width: 53px;
   padding: 6px 10px;
   border: 1px solid transparent;
@@ -107,6 +107,9 @@
   color: var(--care-muted);
   font-size: 12px;
   font-weight: 600;
+}
+.care-mobile-appearance-row {
+  flex-wrap: wrap;
 }
 .care-mobile-theme-switch button.selected {
   background: var(--care-panel);

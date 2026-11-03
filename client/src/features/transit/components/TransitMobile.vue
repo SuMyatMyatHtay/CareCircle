@@ -26,7 +26,7 @@ const props = defineProps({
     liveNote: { type: String, default: '' },       // photo-pin bubble: "Heading home"
     otherTrips: { type: Array, default: () => [] } // other family members on a trip right now
 })
-const emit = defineEmits(['back', 'post', 'start', 'dismiss', 'resume', 'open-trip', 'remove'])
+const emit = defineEmits(['back', 'post', 'start', 'dismiss', 'resume', 'end', 'open-trip', 'remove'])
 
 // The fixed steps in order, with the labels used on the phone design
 // Same steps and quick updates as the laptop layout (utils/wording.js)
@@ -53,7 +53,8 @@ const currentIndex = computed(() => milestones.value.length - 1)
 const nextIndex = computed(() => steps.value.findIndex((s) => !s.done))
 
 // Four chips: the next preset step (highlighted), two common custom ones, then later steps
-const chips = computed(() => {
+const showAllUpdates = ref(false)
+const allChips = computed(() => {
     const posted = new Set(milestones.value.map((m) => m.label.toLowerCase()))
     const upcoming = steps.value.filter((s) => !s.done && s.type !== 'home')
     const list = []
@@ -62,8 +63,9 @@ const chips = computed(() => {
         if (!posted.has(label.toLowerCase())) list.push({ type: 'custom', label })
     }
     for (const step of upcoming.slice(1)) list.push({ type: step.type, label: step.label })
-    return list.slice(0, 4)
+    return list
 })
+const chips = computed(() => showAllUpdates.value ? allChips.value : allChips.value.slice(0, 4))
 
 const subtitle = computed(() => {
     if (!props.session) return 'Transit not started yet'
@@ -106,6 +108,10 @@ function safelyHome() {
             <span v-else-if="isEnded" class="live ended">{{ WORDS.ended }}</span>
         </header>
 
+        <div v-if="isActive && isCompanion" class="trip-actions body">
+            <button type="button" class="trip-end" :disabled="isPosting" @click="emit('end')">{{ WORDS.endTrip }}</button>
+        </div>
+
         <div v-if="otherTrips.length" class="also-live body">
             <span>{{ WORDS.alsoOnTrip }}</span>
             <button v-for="trip in otherTrips" :key="trip.taskId" type="button" class="also-live-chip" @click="emit('open-trip', trip)">
@@ -115,8 +121,10 @@ function safelyHome() {
             </button>
         </div>
 
-        <div v-if="notice" class="msg" role="status" @click="emit('dismiss')">{{ notice }}</div>
+        <div v-if="notice" class="msg" role="status"><span>{{ notice }}</span><button type="button" class="dismiss" aria-label="Dismiss" @click="emit('dismiss')">×</button></div>
         <div v-if="actionError" class="msg is-error" role="alert">{{ actionError }}</div>
+
+        <div v-if="$slots['place-tools']" class="place-tools body"><slot name="place-tools" /></div>
 
         <!-- Not started -->
         <div v-if="!session" class="body">
@@ -186,6 +194,9 @@ function safelyHome() {
                         {{ chip.label }}
                     </button>
                 </div>
+                <button v-if="allChips.length > 4" type="button" class="more-updates" :aria-expanded="showAllUpdates" @click="showAllUpdates = !showAllUpdates">
+                    {{ showAllUpdates ? 'Fewer updates' : 'More updates' }}
+                </button>
                 <form class="own" @submit.prevent="postCustom">
                     <input v-model="customText" type="text" maxlength="80" placeholder="Or type your own update" aria-label="Your own update" />
                     <button type="submit" class="send" :disabled="isPosting || !customText.trim()" aria-label="Post update">
@@ -225,6 +236,13 @@ function safelyHome() {
 </template>
 
 <style scoped>
+.trip-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
+.trip-end, .more-updates { min-height: 44px; border: 1px solid var(--theme-border, #dce3dc); border-radius: 10px; padding: 8px 12px; background: var(--theme-panel, #fff); color: var(--theme-green, #2f7a3f); font-size: 14px; font-weight: 700; }
+.more-updates { margin-top: 10px; }
+.place-tools { display: grid; justify-items: start; gap: 12px; margin-top: 16px; }
+.place-tools :deep(.clinic-lookup) { width: 100%; }
+.msg { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.dismiss { flex-shrink: 0; min-width: 44px; min-height: 44px; border: 0; background: none; color: inherit; font-size: 22px; }
 .visit-notes {
     padding: 14px 16px;
     border: 1px solid var(--theme-border, #e4ece5);

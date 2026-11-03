@@ -54,7 +54,7 @@ const {
   changeProfile,
   run,
 } = useFamilySettings()
-const { appearance, theme, setAppearance } = useAppearance()
+const { appearance, setAppearance } = useAppearance()
 const { loggingOut, logoutError, logOut } = useSettingsAccountActions()
 const mobilePanel = ref(''),
   managedMember = ref(null),
@@ -264,7 +264,7 @@ function requestMobileLogout() {
         {{ error }}
       </p>
       <MobilePreferencesPanel
-        :appearance="appearance === 'system' ? theme : appearance"
+        :appearance="appearance"
         :language="language"
         :family-name="selectedFamily?.name || 'Your family'"
         :preview="isPreview && Boolean(selectedFamily)"
