@@ -57,11 +57,8 @@ const canUnclaim = computed(() => (isCreator.value || isClaimer.value) && task.v
 const { families: taskFamilies } = useActiveFamily()
 const canDelete = computed(() => {
     if (!me.id || !task.value || ['in_progress', 'completed'].includes(task.value.status)) return false
-    if (task.value.status === 'open' && overdue.value) {
-        const family = taskFamilies.value.find(entry => entry.id === props.familyId)
-        return family?.overdueTaskDeletion === 'member' || family?.members?.some(member => member.userId === me.id && member.role === 'admin')
-    }
-    return isCreator.value
+    const family = taskFamilies.value.find(entry => entry.id === props.familyId)
+    return isCreator.value || Boolean(family?.members?.some(member => String(member.userId?._id || member.userId) === me.id && member.role === 'admin'))
 })
 const status = computed(() => task.value?.status)
 const who = computed(() => recipientName(task.value))

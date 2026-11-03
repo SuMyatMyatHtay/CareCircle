@@ -1,7 +1,18 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 const props = defineProps({ proposal: { type: Object, required: true }, state: { type: String, default: 'pending' }, busy: Boolean })
-defineEmits(['confirm', 'dismiss'])
+const emit = defineEmits(['confirm', 'dismiss', 'change-location'])
+const editingLocation = ref(false)
+const newLocation = ref('')
+function editLocation() {
+  newLocation.value = [props.proposal.task.location?.name, props.proposal.task.location?.address, props.proposal.task.location?.postal].filter(Boolean).join(', ')
+  editingLocation.value = true
+}
+function submitLocation() {
+  if (props.busy || !newLocation.value.trim()) return
+  emit('change-location', newLocation.value.trim())
+  editingLocation.value = false
+}
 const labels = { title: 'Task', recipient: 'For', startAt: 'Starts', endAt: 'Ends', location: 'Location', category: 'Category', needsTransit: 'Transport', description: 'Notes' }
 const actionLabels = { create: 'New task', update: 'Task changes', unclaim: 'Unclaim task', delete: 'Delete task', claim: 'Claim task for yourself', assign: 'Assign task', start: 'Start task', complete: 'Complete task', cancel: 'Cancel task' }
 const confirmLabel = computed(() => ({ create: 'Confirm task', update: 'Confirm changes', unclaim: 'Confirm unclaim', delete: props.proposal.deletionAcknowledged ? 'Yes, permanently delete' : 'Review deletion', claim: 'Confirm claim', assign: 'Confirm assignment', start: 'Confirm start', complete: 'Confirm completion', cancel: 'Confirm cancellation' })[props.proposal.action])
@@ -28,8 +39,19 @@ const rows = computed(() => Object.keys(labels).filter(field => props.proposal.a
     <p v-if="['claim', 'assign', 'start', 'complete', 'cancel', 'unclaim'].includes(proposal.action)">Status: {{ proposal.before?.status?.replaceAll('_', ' ') }} → {{ proposal.task.status?.replaceAll('_', ' ') }}</p>
     <dl><div v-for="row in rows" :key="row.label"><dt>{{ row.label }}</dt><dd><span v-if="proposal.action === 'update' && row.before !== row.after" class="preview-before">{{ row.before }}</span>{{ row.after }}</dd></div></dl>
     <p class="preview-timezone">Times shown in Singapore time.</p>
+    <template v-if="proposal.action === 'create' && state === 'pending'">
+      <p>Is the location above correct? You can change it before confirming this task.</p>
+      <form v-if="editingLocation" class="location-editor" @submit.prevent="submitLocation">
+        <label>Location or address (or type “no location”)
+          <input v-model="newLocation" :disabled="busy" maxlength="1000" required />
+        </label>
+        <button type="button" :disabled="busy" @click="editingLocation = false">Cancel edit</button>
+        <button type="submit" :disabled="busy || !newLocation.trim()">Review new location</button>
+      </form>
+      <button v-else type="button" :disabled="busy" @click="editLocation">Change location</button>
+    </template>
     <p v-if="proposal.action === 'delete' && state === 'pending'" class="text-danger" role="alert">{{ proposal.confirmationWarning || 'Deleting permanently removes this task. You will be asked to confirm again.' }}</p>
-    <div v-if="state === 'pending'" class="preview-actions"><button type="button" :disabled="busy" @click="$emit('dismiss')">Dismiss</button><button type="button" class="preview-confirm" :disabled="busy" @click="$emit('confirm')">{{ busy ? 'Please wait…' : confirmLabel }}</button></div>
+    <div v-if="state === 'pending'" class="preview-actions"><button type="button" :disabled="busy" @click="$emit('dismiss')">Dismiss</button><button type="button" class="preview-confirm" :disabled="busy || editingLocation" @click="$emit('confirm')">{{ busy ? 'Please wait…' : confirmLabel }}</button></div>
     <p v-else class="preview-state" role="status">{{ ({ saved: '✓ Saved to your family’s tasks', cancelled: 'Dismissed · no changes saved', replaced: 'Replaced by your next message', unavailable: 'No longer available · please prepare a new proposal' })[state] }}</p>
   </div>
 </template>
@@ -42,4 +64,7 @@ dl { margin: 0; font-size: 12px; } dl > div { display: grid; grid-template-colum
 .preview-timezone { font-size: 10px; color: var(--theme-muted, #6d7b75); margin: 12px 0; }
 .preview-actions { display: flex; justify-content: flex-end; gap: 8px; } button { padding: 9px 12px; border: 1px solid var(--theme-border, #dce7df); border-radius: 10px; background: var(--theme-panel, #fff); color: inherit; font-size: 12px; font-weight: 650; } .preview-confirm { background: #2d7d43; border-color: #2d7d43; color: white; } button:disabled { opacity: .6; }
 .preview-state { margin: 12px 0 0; font-size: 12px; color: var(--theme-green, #246e58); }
+.location-editor { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.location-editor label { width: 100%; font-size: 12px; }
+.location-editor input { display: block; box-sizing: border-box; width: 100%; margin-top: 6px; padding: 9px; border: 1px solid var(--theme-border, #dce7df); border-radius: 8px; background: var(--theme-panel, #fff); color: inherit; }
 </style>

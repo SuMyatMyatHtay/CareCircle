@@ -7,8 +7,10 @@
 //   req.user.userId, req.family, req.memberRole
 
 import mongoose from 'mongoose'
+import { deleteFamilyTask } from './deletionService.js'
+import { canManageFamilyTasks } from './permissions.js'
 import User from '../auth/User.model.js'
-import Task, { LOCKED_STATUSES, UNDELETABLE_STATUSES } from './TaskModel.js'
+import Task, { LOCKED_STATUSES } from './TaskModel.js'
 import { TASK_CATEGORIES, TASK_STATUS, TASK_STATUSES, EVENTS } from '../../constants.js'
 import { notify } from '../../utils/notify.js'
 import { createRecurringTasks, ensureRecurringTasks, changeRecurringClaim, updateRecurringTasks, deleteRecurringOccurrence, listRecurringSeries, setSeriesPaused } from './recurringService.js'
@@ -457,38 +459,12 @@ export async function updateFamilyTask({ body, familyId, taskId, userId, memberR
     return populated
 }
 
-// DELETE /api/families/:familyId/tasks/:taskId   (creator only)
-// in_progress and completed tasks can't be deleted; cancel them instead.
+// Manual and assistant deletion share current family permissions and audit wording.
 export async function deleteTask(req, res, next) {
     try {
-        const task = await findTaskInFamily(req.family._id, req.params.taskId)
-
-        const overdue = task.status === 'open' && +new Date(task.startAt) <= Date.now()
-        if (overdue ? !canDeleteOverdue(req) : task.createdBy.toString() !== req.user.userId) {
-            throw httpError(403, overdue ? 'Only family admins can delete overdue tasks' : 'Only the task creator can delete this task')
-        }
-        if (UNDELETABLE_STATUSES.includes(task.status)) {
-            throw httpError(409, `Task is ${task.status} and cannot be deleted. Cancel it instead.`)
-        }
-
-        const populated = await Task.getPopulatedTaskById(task._id)
-        const result = task.recurringSeries
-            ? (await deleteRecurringOccurrence(task), { deletedCount: 1 })
-            : await Task.deleteDeletableTask(req.family._id, task._id)
-        if (!result.deletedCount) {
-            throw httpError(409, 'Task was changed by someone else. Refresh and try again.')
-        }
-
-        if (overdue) {
-            const actor = await User.findById(req.user.userId).select('name').lean()
-            await notify(req.family._id, EVENTS.TASK_DELETED, { deletedCount: 1, changedBy: actor })
-        } else {
-            await announce(EVENTS.TASK_DELETED, populated)
-        }
-        return res.json({ message: 'Task deleted', taskId: task._id.toString() })
-    } catch (error) {
-        return handleError(error, res, next)
-    }
+        const result = await deleteFamilyTask({ familyId: req.family._id, taskId: req.params.taskId, userId: req.user.userId })
+        return res.json({ message: 'Task deleted', taskId: result.taskId })
+    } catch (error) { return handleError(error, res, next) }
 }
 
 // POST /api/families/:familyId/tasks/:taskId/<action>
@@ -511,18 +487,20 @@ export async function pauseRecurringSeries(req, res, next) {
 }
 
 function canDeleteOverdue(req) {
-    return req.memberRole === 'admin' || req.family.overdueTaskDeletion === 'member'
+    return canManageFamilyTasks(req.family, req.user.userId)
 }
 
 export async function deleteOverdueTasks(req, res, next) {
     try {
-        if (!canDeleteOverdue(req)) throw httpError(403, 'Only family admins can delete overdue tasks')
+        // Members can remove their own overdue tasks; admins can remove any.
         const taskIds = req.body?.taskIds
         if (taskIds !== undefined && (!Array.isArray(taskIds) || !taskIds.length || taskIds.length > 1000 || taskIds.some(id => typeof id !== 'string' || !mongoose.isValidObjectId(id)))) {
             throw httpError(400, 'Select between 1 and 1000 valid task IDs')
         }
         const cutoff = new Date()
         const filter = { family: req.family._id, status: 'open', startAt: { $lte: cutoff } }
+        if (!canDeleteOverdue(req)) filter.createdBy = req.user.userId
+        if (!canDeleteOverdue(req)) filter.createdBy = req.user.userId
         if (taskIds !== undefined) filter._id = { $in: [...new Set(taskIds)] }
         const tasks = await Task.find(filter)
         const actor = tasks.length ? await User.findById(req.user.userId).select('name').lean() : null

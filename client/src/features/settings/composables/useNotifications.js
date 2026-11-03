@@ -190,8 +190,9 @@ export function useRecentNotifications(source, { intervalMs = 20000, limit = 8 }
   const onOverdueDeleted = event => { if (event.detail?.familyId === resolve(source)) load() }
   onMounted(() => {
     window.addEventListener('carecircle:overdue-deleted', onOverdueDeleted)
+    window.addEventListener('carecircle:notifications-updated', onOverdueDeleted)
     timer = setInterval(() => { if (document.visibilityState === 'visible') load() }, intervalMs)
   })
-  onUnmounted(() => { clearInterval(timer); window.removeEventListener('carecircle:overdue-deleted', onOverdueDeleted) })
+  onUnmounted(() => { clearInterval(timer); window.removeEventListener('carecircle:overdue-deleted', onOverdueDeleted); window.removeEventListener('carecircle:notifications-updated', onOverdueDeleted) })
   return { items }
 }

@@ -46,7 +46,7 @@ const familySchema = new mongoose.Schema({
         default: []
     },
 
-    overdueTaskDeletion: { type: String, enum: ['admin', 'member'], default: 'admin' },
+    recipientDeletion: { type: String, enum: ['admin', 'member'], default: 'admin' },
 
     telegram: {
         type: mongoose.Schema.Types.Mixed,

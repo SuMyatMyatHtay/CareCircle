@@ -317,7 +317,7 @@ All assistant routes require authentication and membership of `:familyId`.
 
 Supported proposal actions: `create`, `update`, `claim`, `assign`, `unclaim`, `start`, `complete`, `cancel`, `delete`. All writes require confirmation. Deletion requires two confirmations. Confirmation accepts a proposal ID, never a replacement task payload.
 
-Claim acts for the signed-in person. Assign requires task-creator ownership and a current family-member assignee. Claim/assign require an open task before its start time. Start/complete require the current claimer. Assistant cancellation requires creator or claimer ownership; admin status alone does not qualify. Unclaim requires creator or claimer and claimed status. Update/delete remain creator-only. Confirmation rechecks current state and the original task version, returning a conflict for stale proposals. Status actions share the manual task/transit lifecycle.
+Claim acts for the signed-in person. Assign requires task-creator ownership and a current family-member assignee. Claim/assign require an open task before its start time. Start/complete require the current claimer. Assistant cancellation requires creator or claimer ownership; admin status alone does not qualify. Unclaim requires creator or claimer and claimed status. Update remains creator-only. Deleting overdue open tasks follows the target family's current task-permission setting (admins only by default; all members when enabled), even if the actor created the task. Other deletions remain creator-only. Both deletion confirmations recheck current membership and family permissions. Successful overdue deletion records one actor/count summary. Confirmation rechecks current state and the original task version, returning a conflict for stale proposals. Status actions share the manual task/transit lifecycle.
 
 `selectedTaskId` explicitly anchors a follow-up to a family task. `selectTask: true` returns a clarification without a provider call. Change time/location follow-ups also ask for the new value directly. Empty model edits never create a proposal.
 
@@ -342,11 +342,11 @@ Frequencies: `daily`, `weekly`, `monthly`; interval is an integer 1–365. Weekd
 
 Creation returns `{ task }`, the first occurrence, retaining the existing response shape. Refetch the family task list to retrieve every generated occurrence. Each has `recurringSeries`, `occurrenceIndex`, `originalStartAt`, `recurrenceLabel`, `recurrenceDetached` and `recurrencePaused`. Occurrence indexes are stable; deletions leave tombstones. An open-ended series extends four weeks ahead when the family task list, series list or My tasks is read.
 
-- `POST /:taskId/claim` accepts `{ "scope": "series" }` (default), `one`, or `next4`. Series claims reserve every attached open future occurrence and future generated sessions; next4 takes this and up to three later available attached dates. Limited claims detach those dates. Already assigned sessions are never overwritten.
+- `POST /:taskId/claim` accepts `{ "scope": "series" }` (default), or `one`. Series claims reserve every attached open future occurrence and future generated sessions. One-session claims detach only that date. Already assigned sessions are never overwritten.
 - `POST /:taskId/unclaim` releases only that occurrence and permanently detaches it. Any later claim of a detached occurrence is forced to `one`, regardless of supplied scope. Creator/claimer permissions and overdue restrictions still apply.
 - `PATCH /:taskId` accepts ordinary editable fields, optional `expectedUpdatedAt` and `scope`: `one` (default), `future`, or `all`. The creator can edit selected/upcoming attached sessions; started, completed, cancelled and independent sessions are preserved. Detached dates accept only `one`. A series-wide time change preserves occurrence dates; moving to another date requires `one`. Recurrence rule changes are not supported by this endpoint.
 - `GET /recurring` returns `{ series: [...] }` with template, rule, creator, usual helper and pause status.
-- `PATCH /recurring/:seriesId` accepts `{ "paused": true }` or `false`, creator only. Pause cancels attached future open/claimed sessions with a pause marker. Resume restores only those marked sessions and extends generation. Historical and detached sessions remain unchanged.
+- `PATCH /recurring/:seriesId` accepts `{ "paused": true }` or `false`. Only current family admins or the schedule creator may stop or resume a schedule. This is checked again in the transaction. Pause cancels attached future open/claimed sessions with a pause marker. Resume restores only those marked sessions and extends generation. Historical and detached sessions remain unchanged.
 
 Complete/start/cancel/delete apply to one occurrence. Assistant claim/assign defaults to the series; assistant updates apply to one occurrence. Existing event notifications remain event-triggered; this feature does not schedule Telegram reminders.
 
@@ -382,3 +382,10 @@ Each has a recommendation. Confirm in the group chat, then delete the line.
 4. **"Translation feature" in B's settings vs F's log translation.** Recommendation: B owns the preference (`preferredLang` via `PATCH /api/users/me`); F owns translating log text. If B also means translating the UI labels, that's vue-i18n on the frontend only and needs no API.
 5. **My Tasks overlap between D and E.** D delivers the page layout with static data first; E then connects `GET /api/me/tasks`, tabs, progress and reminders.
 6. **Transit step presets.** E proposes the final list. The design doc has `departed`, `arrived`, `consultation_done`, `heading_home`, `home`. The package description uses "fetched Grandpa", "reached hospital" and "going for lunch". Add `custom` either way.
+
+
+### Deletion permissions
+
+Task deletion is fixed to current family admins or the task creator, including overdue tasks. In-progress and completed tasks remain protected. Bulk overdue deletion filters members to their own created tasks. Recipient permissions do not grant task access.
+
+`PATCH /api/families/:familyId/recipient-permissions` accepts `{ "recipientDeletion": "admin" }` or `"member"`; only admins can change it. The default is admin. It controls `POST /api/families/:familyId/recipients/:recipientId/archive`, preserving historical tasks and logs. The old task-permissions setting and endpoint are retired; old values do not broaden recipient permissions.

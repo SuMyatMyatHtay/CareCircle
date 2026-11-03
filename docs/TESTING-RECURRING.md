@@ -40,7 +40,7 @@ corepack pnpm exec playwright show-report
 - **Unit:** calendar boundaries, end limits, stable occurrence indexes, whole-series claims, competing claims, one-day handovers, next-four/one-date scopes, rolling generation, scoped edits, stale versions, pause/resume and departed helpers. Service unit tests use an in-memory transaction double.
 - **Frontend integration:** recurrence controls, default series selection, claim cancellation/family switching, scoped editing, errors and independent exceptions.
 - **API integration:** real MongoDB transactions, competing claim requests, permissions/family isolation, persisted sessions, one-day replacements, limited claims, stale edits, pause/resume and generation/deletion behavior.
-- **E2E:** creating a repeating task through the form, claiming a series, releasing/replacing one date, cancelling a claim and choosing next four. Each scenario runs on desktop and mobile Chromium.
+- **E2E:** creating a repeating task through the form, claiming a series, releasing/replacing one date, cancelling a claim and choosing just one session. Each scenario runs on desktop and mobile Chromium.
 - **Support:** `tests/support/api-harness.mjs` starts/resets/stops the real API and authenticates fixture accounts; `recurring-fixtures.mjs` provides future-dated task payloads. `database.test.mjs` tests isolation guards and fixture dates. Support is test infrastructure, not a separate product feature.
 
 Existing suites also cover accounts, family settings, recipients, assistant confirmations, contributions, calendars, transit and care logs. These additions focus on the new recurrence behavior.

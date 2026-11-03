@@ -51,7 +51,7 @@ defineEmits(['retry', 'claim', 'clear-filter', 'filter', 'select-task'])
       @retry="$emit('retry')"
     >
       <template #selection="{ task }">
-        <label v-if="selectable && task.status === 'open' && isTaskOverdue(task, now)" class="overdue-task-select">
+        <label v-if="selectable && task.deletionAllowed !== false && task.status === 'open' && isTaskOverdue(task, now)" class="overdue-task-select">
           <span class="visually-hidden">Select {{ task.title }} for deletion</span>
           <input type="checkbox" :checked="selectedIds.includes(task._id)" :disabled="selectionBusy" :aria-label="`Select ${task.title} for deletion`" @change="$emit('select-task', task._id, $event.target.checked)" />
         </label>

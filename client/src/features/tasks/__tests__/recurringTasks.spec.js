@@ -48,12 +48,13 @@ describe('recurring task controls', () => {
     expect(recurringClaim.value).toBe(null)
     wrapper.unmount()
   })
-  it('lets members choose next four, cancel, or claim an exception for one date only', async () => {
+  it('offers only one date or the whole series, supports cancellation and one-date exceptions', async () => {
     const wrapper = mount(RecurringClaimDialog, options)
     let pending = askRecurringClaim(task); await nextTick()
-    await wrapper.get('input[value=next4]').setValue()
+    expect(wrapper.findAll('input[type=radio]').map(input => input.element.value)).toEqual(['one', 'series'])
+    await wrapper.get('input[value=one]').setValue()
     await button(wrapper, "I'll take it").trigger('click')
-    expect(await pending).toBe('next4')
+    expect(await pending).toBe('one')
     pending = askRecurringClaim(task); await nextTick()
     await button(wrapper, 'Not now').trigger('click'); expect(await pending).toBe(null)
     expect(await askRecurringClaim({ ...task, recurrenceDetached: true })).toBe('one')

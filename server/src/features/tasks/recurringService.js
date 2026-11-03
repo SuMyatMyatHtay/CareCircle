@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { canManageFamilyTasks } from './permissions.js'
 import Task from './TaskModel.js'
 import Series from './RecurringSeries.model.js'
 import Family from '../families/Family.model.js'
@@ -118,7 +119,7 @@ export async function changeRecurringClaim(action, context) {
       if (+task.startAt <= +now) throw error(409, 'This task is overdue and can no longer be claimed')
       if (series.paused && !task.recurrenceDetached) throw error(409, 'This repeating task is paused')
       const scope = task.recurrenceDetached ? 'one' : (context.scope || 'series')
-      if (!['one', 'next4', 'series'].includes(scope)) throw error(400, 'Choose this date, next four sessions or the whole series')
+      if (!['one', 'series'].includes(scope)) throw error(400, 'Choose this session only or every upcoming session')
       if (scope === 'series') {
         if (series.usualHelper && id(series.usualHelper) !== userId) throw error(409, 'Someone already claimed this repeating series')
         series.usualHelper = userId; series.helperClaimedAt = now
@@ -127,9 +128,7 @@ export async function changeRecurringClaim(action, context) {
         await Task.updateMany({ recurringSeries: series._id, family: familyId, recurrenceDetached: false, status: 'open', startAt: { $gt: now } },
           { $set: { status: 'claimed', claimedBy: userId, claimedAt: now } }, { session })
       } else {
-        const selected = scope === 'one' ? [task] : await Task.find({ recurringSeries: series._id, family: familyId,
-          recurrenceDetached: false, status: 'open', startAt: { $gte: task.startAt, $gt: now } }).sort({ startAt: 1 }).limit(4).session(session)
-        await Task.updateMany({ _id: { $in: selected.map(item => item._id) }, family: familyId, status: 'open', startAt: { $gt: now } },
+        await Task.updateMany({ _id: task._id, family: familyId, status: 'open', startAt: { $gt: now } },
           { $set: { status: 'claimed', claimedBy: userId, claimedAt: now, recurrenceDetached: true } }, { session })
       }
     }
@@ -199,7 +198,8 @@ export async function setSeriesPaused(seriesId, familyId, userId, paused) {
   if (typeof paused !== 'boolean') throw error(400, 'Paused must be true or false')
   const helper = await transaction(async session => {
     const series = await lockSeries(seriesId, familyId, session)
-    if (id(series.createdBy) !== userId) throw error(403, 'Only the creator can pause or resume this repeating task')
+    const family = await Family.findOne({ _id: familyId, 'members.userId': userId }).session(session)
+    if (!canManageFamilyTasks(family, userId) && !(family && id(series.createdBy) === userId)) throw error(403, 'Only family admins or the schedule creator can stop or resume repeating tasks')
     if (series.paused === paused) return id(series.usualHelper)
     series.paused = paused
     await series.save({ session })

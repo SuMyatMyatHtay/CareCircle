@@ -1,5 +1,6 @@
 <script setup>
 import CareAvatar from '../../../components/common/CareAvatar.vue'
+import RemoveRecipientButton from './RemoveRecipientButton.vue'
 // Owner: Jhen (C)
 // Top of the recipient hub: initials, name and age, key care chips, Edit / New task, and the four tabs.
 //   <RecipientHubHeader :recipient="recipient" @updated="replace" />
@@ -67,6 +68,7 @@ const indicator = useTabIndicator(tabBar, () => route.name)
             </div>
 
             <div class="hub-actions">
+                <RemoveRecipientButton :recipient="recipient" />
                 <button type="button" class="edit-button" @click="editing = true">Edit profile</button>
                 <NewTaskButton :recipient="recipient" />
             </div>

@@ -8,6 +8,7 @@ const familyId = '000000000000000000000001', taskId = '000000000000000000000002'
 const creator = '000000000000000000000003', member = '000000000000000000000004'
 let stored, transit
 beforeEach(t => {
+  t.mock.method(Task, 'updateOne', async () => ({ matchedCount: 1, modifiedCount: 1 }))
   t.mock.method(Family, 'findById', () => ({ select: () => ({ lean: async () => null }) }))
   stored = { _id: taskId, family: familyId, createdBy: creator, claimedBy: null, status: 'open', needsTransit: true, startAt: new Date(Date.now() + 3600000) }
   transit = []

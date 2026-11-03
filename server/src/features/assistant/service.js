@@ -1,12 +1,13 @@
 import mongoose from 'mongoose'
-import Task, { LOCKED_STATUSES, UNDELETABLE_STATUSES } from '../tasks/TaskModel.js'
+import Task, { LOCKED_STATUSES } from '../tasks/TaskModel.js'
 import Recipient from '../recipients/CareRecipient.model.js'
 import Proposal from './Proposal.model.js'
 import { parseTaskInput, createFamilyTask, updateFamilyTask, performFamilyTaskAction } from '../tasks/controller.js'
 import Family from '../families/Family.model.js'
 import User from '../auth/User.model.js'
 import { syncInBackground } from '../calendar-sync/sync.js'
-import { deleteRecurringOccurrence } from '../tasks/recurringService.js'
+import { assertTaskDeletionAllowed, deleteFamilyTask } from '../tasks/deletionService.js'
+import { familyMember, canDeleteFamilyTask, canRemoveRecipient } from '../tasks/permissions.js'
 import { assistantError, generateReply, validateConversation } from './gemini.js'
 import { TASK_STATUSES, TASK_CATEGORIES } from '../../constants.js'
 
@@ -83,8 +84,7 @@ export async function validateDraft(reply, { familyId, userId, memberRole }) {
       if (id(before.claimedBy) !== userId && id(before.createdBy) !== userId) throw assistantError(403, 'Only the task creator or the person who claimed it can unclaim this task.')
       if (before.status !== 'claimed') throw assistantError(409, 'Only a claimed task that has not started can be unclaimed.')
     } else {
-      if (id(before.createdBy) !== userId) throw assistantError(403, 'You cannot delete this task because you are not its creator. Family admins cannot delete another member’s task.')
-      if (UNDELETABLE_STATUSES.includes(before.status)) throw assistantError(409, `You cannot delete this task because it is ${before.status.replaceAll('_', ' ')}.`)
+      await assertTaskDeletionAllowed(before, { familyId, userId })
     }
     return { changes: {}, before, preview: { ...taskSummary(before), ...(reply.intent === 'unclaim' ? { status: 'open' } : {}) } }
   }
@@ -194,15 +194,19 @@ export async function chat({ body, familyId, familyName, userId, memberRole, gen
       .sort({ startAt: 1 }).limit(80).lean()
   ])
   const family = await Family.findById(familyId)
+  const currentMember = familyMember(family, userId)
+  if (!currentMember) throw assistantError(403, 'You are no longer a member of this family.')
   const memberIds = family?.members.map(member => member.userId) || []
   const members = await User.find({ _id: { $in: memberIds } }).select('name').lean()
-  const context = { family: familyName, userId, role: memberRole,
-    selectedTask: selectedTask ? taskSummary(selectedTask, recipients) : null,
+  const context = { family: family.name || familyName, userId, role: currentMember.role,
+    permissions: { taskDeletion: 'admin_or_creator', recipientDeletion: family.recipientDeletion || 'admin',
+      canRemoveRecipients: canRemoveRecipient(family, userId) },
+    selectedTask: selectedTask ? { ...taskSummary(selectedTask, recipients), canDelete: canDeleteFamilyTask(selectedTask, family, userId) } : null,
     members: members.map(member => ({ id: id(member), name: member.name })),
     recipients: recipients.map(person => ({ id: id(person), name: person.name, nickname: person.nickname })),
     tasks: recent.map(task => ({ ...taskSummary(task, recipients),
       canUnclaim: task.status === 'claimed' && (id(task.claimedBy) === userId || id(task.createdBy) === userId),
-      canDelete: !UNDELETABLE_STATUSES.includes(task.status) && id(task.createdBy) === userId,
+      canDelete: canDeleteFamilyTask(task, family, userId),
       canEdit: !LOCKED_STATUSES.includes(task.status) &&
       id(task.createdBy) === userId,
       canClaim: task.status === 'open' && new Date(task.startAt) > new Date(),
@@ -294,13 +298,8 @@ export async function confirm({ proposalId, familyId, userId, memberRole }) {
       task = result.task
       syncInBackground(userId, id(before.claimedBy), id(task.claimedBy))
     } else if (proposal.action === 'delete') {
-      if (+new Date(before.updatedAt) !== +new Date(proposal.expectedUpdatedAt)) throw assistantError(409, 'This task changed. Please prepare a new proposal.')
-      const filter = { _id: before._id, family: familyId, updatedAt: new Date(proposal.expectedUpdatedAt), status: before.status, claimedBy: before.claimedBy ?? null }
-      const result = before.recurringSeries
-        ? (await deleteRecurringOccurrence(before, proposal.expectedUpdatedAt), { deletedCount: 1 })
-        : await Task.deleteOne(filter)
-      if (!result.deletedCount) throw assistantError(409, 'This task changed. Please prepare a new proposal.')
-      syncInBackground(userId, id(before.claimedBy))
+      const deleted = await deleteFamilyTask({ familyId, taskId: proposal.taskId, userId, expectedUpdatedAt: proposal.expectedUpdatedAt })
+      syncInBackground(userId, id(deleted.claimedBy))
     } else task = proposal.action === 'create'
       ? await createFamilyTask({ body: changes, familyId, userId, taskId: proposal.taskId })
       : await updateFamilyTask({ body: changes, familyId, userId, memberRole, taskId: proposal.taskId,

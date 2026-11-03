@@ -28,7 +28,7 @@ router.patch('/recurring/:seriesId', pauseRecurringSeries)
 router.delete('/overdue', deleteOverdueTasks)
 router.get('/:taskId', getTask)                     // member
 router.patch('/:taskId', updateTask)                // creator only
-router.delete('/:taskId', deleteTask)               // creator only
+router.delete('/:taskId', deleteTask)               // overdue: family setting; otherwise creator
 
 // ---- Status changes ----
 router.post('/:taskId/claim', claimTask)            // member: open -> claimed

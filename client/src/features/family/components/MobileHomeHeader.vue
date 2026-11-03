@@ -1,5 +1,4 @@
 <script setup>
-import CareAvatar from '../../../components/common/CareAvatar.vue'
 defineProps({
   familyName: { type: String, default: 'Your family' },
   date: { type: String, required: true },
@@ -39,13 +38,6 @@ defineEmits(['switch-family'])
       </RouterLink>
       <RouterLink v-if="!preview" to="/calendar" class="care-mobile-calendar" aria-label="Open the family calendar">
         <i class="bi bi-calendar3" aria-hidden="true"></i>
-      </RouterLink>
-      <RouterLink
-        :to="preview ? settingsPath : '/profile'"
-        class="care-mobile-account"
-        aria-label="Open my profile"
-      >
-        <CareAvatar :person="user" size="small" />
       </RouterLink>
     </div>
   </header>

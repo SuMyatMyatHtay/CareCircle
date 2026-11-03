@@ -8,7 +8,7 @@ import TransitBanner from '../components/TransitBanner.vue'
 import RecipientOverview from '../components/RecipientOverview.vue'
 import DeleteOverdueTasks from '../../tasks/components/DeleteOverdueTasks.vue'
 import TodayTasks from '../components/TodayTasks.vue'
-import RecurringSeriesPanel from '../../tasks/components/RecurringSeriesPanel.vue'
+import UrgentUpcomingTasks from '../components/UrgentUpcomingTasks.vue'
 import RecentUpdates from '../components/RecentUpdates.vue'
 import LiveUpdateToast from '../components/LiveUpdateToast.vue'
 import NewTaskModal from '../../tasks/components/NewTaskModal.vue'
@@ -16,6 +16,7 @@ import CareModal from '../../../components/common/CareModal.vue'
 import { useFamilyWorkspace } from '../composables/useFamilyWorkspace.js'
 import { useFamilyDashboard, singaporeDay } from '../composables/useFamilyDashboard.js'
 import { isTaskOverdue, useTaskClock } from '../../tasks/composables/useTaskOverdue.js'
+import { groupRecurringTasks } from '../../tasks/composables/groupRecurringTasks.js'
 import { previewState } from '../data/previewFamily.js'
 import MobileHomeHeader from '../components/MobileHomeHeader.vue'
 import MobileTransitCard from '../components/MobileTransitCard.vue'
@@ -109,12 +110,16 @@ const mobilePanel = ref('')
 // claim, and stays in view as "Claimed" after you take it
 const taskFilter = ref('upcoming')
 const taskNow = useTaskClock()
+const urgentUpcomingTasks = computed(() => withDeletionPermissions(groupRecurringTasks(
+  allTasks.value.filter(task => task.status === 'open' && !task.claimedBy && !isTaskOverdue(task, taskNow.value)),
+  taskNow.value,
+)).slice(0, 3))
 const selectedOverdueIds = ref([])
 const deletingOverdue = ref(false)
-const canSelectOverdue = computed(() => taskFilter.value === 'overdue' && (isAdmin.value || selectedFamily.value?.overdueTaskDeletion === 'member'))
-const overdueTaskIds = computed(() => displayTasks.value.filter(task => task.status === 'open' && isTaskOverdue(task, taskNow.value)).map(task => task._id))
+const canSelectOverdue = computed(() => taskFilter.value === 'overdue')
+const overdueTaskIds = computed(() => displayTasks.value.filter(task => task.deletionAllowed && task.status === 'open' && isTaskOverdue(task, taskNow.value)).map(task => task._id))
 function toggleOverdue(id, checked) {
-  if (!canSelectOverdue.value || deletingOverdue.value) return
+  if (!canSelectOverdue.value || deletingOverdue.value || !overdueTaskIds.value.includes(id)) return
   selectedOverdueIds.value = checked ? [...new Set([...selectedOverdueIds.value, id])] : selectedOverdueIds.value.filter(value => value !== id)
 }
 function selectAllOverdue(checked) {
@@ -184,8 +189,11 @@ const subtitle = computed(() =>
 const filterRecipient = ref(null),
   showNewTask = ref(false),
   showTransit = ref(false)
+function withDeletionPermissions(rows) {
+  return rows.map(task => ({ ...task, deletionAllowed: isAdmin.value || String(task.createdBy?._id || task.createdBy) === user.value.id }))
+}
 const displayTasks = computed(() =>
-  filterRecipient.value
+  withDeletionPermissions(groupRecurringTasks(filterRecipient.value
     ? taskBoardTasks.value
         .filter(
           (task) =>
@@ -193,7 +201,7 @@ const displayTasks = computed(() =>
               filterRecipient.value._id,
         )
         .sort((a, b) => new Date(a.startAt) - new Date(b.startAt))
-    : taskBoardTasks.value,
+    : taskBoardTasks.value, taskNow.value)),
 )
 watch(overdueTaskIds, ids => { selectedOverdueIds.value = selectedOverdueIds.value.filter(id => ids.includes(id)) })
 function openRecipient(recipient) {
@@ -272,7 +280,7 @@ watch(selectedFamilyId, () => {
           @open="openRecipient"
           @show-open-tasks="showRecipientTasks"
         />
-        <RecurringSeriesPanel v-if="!isPreview && allTasks.some(task => task.recurringSeries)" :tasks="allTasks" />
+        <UrgentUpcomingTasks :tasks="urgentUpcomingTasks" :loading="loading" :error="error" :busy-id="busyId" @claim="claimTask" @retry="loadTasks()" />
         <div class="care-dashboard-grid">
           <TodayTasks
             :selectable="canSelectOverdue"
@@ -358,7 +366,7 @@ watch(selectedFamilyId, () => {
           @retry="loadTasks()"
           @claim="claimTask"
         />
-        <RecurringSeriesPanel v-if="!isPreview && allTasks.some(task => task.recurringSeries)" :tasks="allTasks" />
+        <MobileTodayTasks :tasks="urgentUpcomingTasks" title="Upcoming tasks needing someone" :show-all="false" show-date :loading="loading" :error="error" :busy-id="busyId" @claim="claimTask" @retry="loadTasks()" />
         <!-- Phones use the left menu (☰) only, so Recent updates sits on the page
              instead of behind a bottom-bar "Activity" tab -->
         <RecentUpdates class="care-mobile-recent" :updates="activity" :preview="isPreview" />

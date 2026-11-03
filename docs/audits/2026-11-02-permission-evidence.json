@@ -1,0 +1,315 @@
+[
+  {
+    "name": "family read isolation matrix",
+    "checks": [
+      {
+        "path": "/members",
+        "user": "may",
+        "status": 200,
+        "expected": 200
+      },
+      {
+        "path": "/members",
+        "user": "outsider",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "path": "/members",
+        "user": null,
+        "status": 401,
+        "expected": 401
+      },
+      {
+        "path": "/tasks",
+        "user": "may",
+        "status": 200,
+        "expected": 200
+      },
+      {
+        "path": "/tasks",
+        "user": "outsider",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "path": "/tasks",
+        "user": null,
+        "status": 401,
+        "expected": 401
+      },
+      {
+        "path": "/recipients",
+        "user": "may",
+        "status": 200,
+        "expected": 200
+      },
+      {
+        "path": "/recipients",
+        "user": "outsider",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "path": "/recipients",
+        "user": null,
+        "status": 401,
+        "expected": 401
+      },
+      {
+        "path": "/logs",
+        "user": "may",
+        "status": 200,
+        "expected": 200
+      },
+      {
+        "path": "/logs",
+        "user": "outsider",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "path": "/logs",
+        "user": null,
+        "status": 401,
+        "expected": 401
+      },
+      {
+        "path": "/notifications",
+        "user": "may",
+        "status": 200,
+        "expected": 200
+      },
+      {
+        "path": "/notifications",
+        "user": "outsider",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "path": "/notifications",
+        "user": null,
+        "status": 401,
+        "expected": 401
+      },
+      {
+        "path": "/notify-settings",
+        "user": "may",
+        "status": 200,
+        "expected": 200
+      },
+      {
+        "path": "/notify-settings",
+        "user": "outsider",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "path": "/notify-settings",
+        "user": null,
+        "status": 401,
+        "expected": 401
+      },
+      {
+        "path": "/transit",
+        "user": "may",
+        "status": 200,
+        "expected": 200
+      },
+      {
+        "path": "/transit",
+        "user": "outsider",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "path": "/transit",
+        "user": null,
+        "status": 401,
+        "expected": 401
+      },
+      {
+        "path": "/search?q=medicine",
+        "user": "may",
+        "status": 200,
+        "expected": 200
+      },
+      {
+        "path": "/search?q=medicine",
+        "user": "outsider",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "path": "/search?q=medicine",
+        "user": null,
+        "status": 401,
+        "expected": 401
+      }
+    ],
+    "mismatches": []
+  },
+  {
+    "name": "member cannot use admin management routes",
+    "checks": [
+      {
+        "path": "/task-permissions",
+        "status": 403
+      },
+      {
+        "path": "/members/000000000000000000000101",
+        "status": 403
+      },
+      {
+        "path": "/members/000000000000000000000102",
+        "status": 403
+      },
+      {
+        "path": "/invite-code",
+        "status": 403
+      },
+      {
+        "path": "/recipients/000000000000000000000201/archive",
+        "status": 403
+      },
+      {
+        "path": "/notify-settings",
+        "status": 403
+      },
+      {
+        "path": "/notify-settings/test",
+        "status": 403
+      },
+      {
+        "path": "/notify-settings/telegram",
+        "status": 403
+      }
+    ],
+    "mismatches": []
+  },
+  {
+    "name": "task writes remain creator/claimer scoped",
+    "checks": [
+      {
+        "path": "PATCH",
+        "status": 403
+      },
+      {
+        "path": "DELETE",
+        "status": 403
+      },
+      {
+        "path": "/start",
+        "status": 403
+      },
+      {
+        "path": "/complete",
+        "status": 403
+      },
+      {
+        "path": "/unclaim",
+        "status": 403
+      },
+      {
+        "path": "/cancel",
+        "status": 403
+      }
+    ],
+    "mismatches": []
+  },
+  {
+    "name": "creator member assistant overdue permission bypass and missing audit summary",
+    "manualStatus": 403,
+    "assistantStatus": 200,
+    "taskStillExists": false,
+    "notificationCount": 0
+  },
+  {
+    "name": "permitted admin rejected by assistant but allowed by ordinary deletion",
+    "assistantStatus": 403,
+    "manualStatus": 200,
+    "summary": "Alex deleted 1 overdue task."
+  },
+  {
+    "name": "enabled member deletes selected overdue tasks only",
+    "status": 200,
+    "body": {
+      "deletedCount": 1
+    },
+    "futureKept": true,
+    "completedKept": true,
+    "summary": "Aunt May deleted 1 overdue task."
+  },
+  {
+    "name": "removed creator and helper leaves an ordinary claimed task without someone who can unclaim it",
+    "removalStatus": 204,
+    "removedUserReadStatus": 403,
+    "adminUnclaimStatus": 403,
+    "taskStatus": "claimed",
+    "claimedBy": "000000000000000000000103"
+  },
+  {
+    "name": "ordinary task creation accepts archived recipient",
+    "status": 201,
+    "recipient": "000000000000000000000201"
+  },
+  {
+    "name": "care log ownership restrictions",
+    "otherMemberStatus": 403,
+    "adminStatus": 200
+  },
+  {
+    "name": "individual overdue deletion still deletes after task is rescheduled during the request",
+    "status": 200,
+    "taskStillExists": false,
+    "actorWasCreator": false
+  },
+  {
+    "name": "calendar follow-up appointment API truncates to 50 with more appointments in range",
+    "status": 200,
+    "totalMatching": 51,
+    "returned": 50,
+    "hasNextPageMetadata": false
+  },
+  {
+    "name": "registration, public profile privacy, avatar and optional provider access",
+    "registrationStatus": 201,
+    "registeredRole": null,
+    "passwordExposed": false,
+    "sharedProfileStatus": 200,
+    "unrelatedProfileStatus": 404,
+    "validAvatarStatus": 200,
+    "lockedAvatarStatus": 403,
+    "calendar": {
+      "available": false,
+      "connected": false
+    },
+    "unconfiguredAssistantStatus": 503
+  },
+  {
+    "name": "long passwords with the same first 72 bytes authenticate as each other",
+    "registrationStatus": 201,
+    "differentPasswordLoginStatus": 200,
+    "registeredPasswordBytes": 77,
+    "differentPasswordBytes": 81
+  },
+  {
+    "name": "disabled unclaimed reminders still create a reminder notification",
+    "unclaimedTaskSetting": false,
+    "reminderNotifications": 1
+  },
+  {
+    "name": "invalid JSON primitive is misclassified as server failure",
+    "status": 500,
+    "body": {
+      "error": "Internal server error"
+    }
+  },
+  {
+    "name": "login endpoint has no request throttle in app",
+    "attempts": 20,
+    "statusCounts": {
+      "401": 20
+    }
+  }
+]

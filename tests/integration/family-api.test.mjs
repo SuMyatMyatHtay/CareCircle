@@ -41,8 +41,7 @@ async function request(path, { method = 'GET', user = 'alex', body, authenticate
 beforeEach(async () => {
   translationProvider.reset()
   await resetFixtures()
-  // The shared browser fixture is at 14:00 Singapore time. These API cases
-  // exercise future-task ownership/claiming, so keep it ahead at any run time.
+  // Keep ordinary task ownership and claim cases in the future at any run time.
   await Task.updateOne({ _id: ids.task }, { $set: { startAt: new Date(Date.now() + 3600000) } })
   tokens = {}
   for (const [name, email] of Object.entries(accounts)) {

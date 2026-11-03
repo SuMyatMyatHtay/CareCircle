@@ -46,7 +46,7 @@ watch(() => props.user?.id, () => { opened.value = false })
         <div v-for="(message, index) in messages" :key="index" class="assistant-message" :class="`assistant-message--${message.role}`">
           <p class="assistant-bubble">{{ message.content }}</p>
           <div v-if="message.tasks?.length" class="assistant-results"><button v-for="task in message.tasks" :key="task.id" type="button" :disabled="busy" @click="chooseTask(task)"><strong>{{ task.title }}</strong><span>{{ task.recipientName }} &middot; {{ dateLabel(task.startAt) }}</span><small>{{ task.location?.name || 'No location' }} &middot; {{ task.status.replaceAll('_', ' ') }}</small></button><p v-if="message.hasMore" class="assistant-more">Showing the first 10 matches. Add a date or keyword to narrow the search.</p></div>
-          <AssistantTaskPreview v-if="message.proposal" :proposal="message.proposal" :state="message.proposalState" :busy="busy" @confirm="chat.confirm(message)" @dismiss="chat.dismiss(message)" />
+          <AssistantTaskPreview v-if="message.proposal" :proposal="message.proposal" :state="message.proposalState" :busy="busy" @confirm="chat.confirm(message)" @dismiss="chat.dismiss(message)" @change-location="location => chat.send(`For the new task proposal, use this location instead: ${location}. Keep the other task details and prepare a revised creation proposal for review.`)" />
           <div v-if="index === messages.length - 1 && !busy && message.suggestions?.length" class="assistant-suggestions"><button v-for="suggestion in message.suggestions" :key="suggestion" type="button" @click="chat.send(suggestion)">{{ suggestion }}</button></div>
         </div>
         </TransitionGroup>

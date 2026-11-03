@@ -5,6 +5,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { VueQueryPlugin } from '@tanstack/vue-query'
 import FamilyHomeView from '../views/FamilyHomeView.vue'
 import TodayTasks from '../components/TodayTasks.vue'
+import UrgentUpcomingTasks from '../components/UrgentUpcomingTasks.vue'
 import MobileTodayTasks from '../components/MobileTodayTasks.vue'
 import { useActiveFamily } from '../../../composables/useActiveFamily.js'
 import { http } from '../../../services/http.js'
@@ -57,6 +58,48 @@ beforeEach(async () => {
 afterEach(() => { wrapper?.unmount(); queryClient.clear() })
 
 describe('Family home task board and navigation', () => {
+  it('shows at most three soonest unclaimed tasks and combines recurring dates in the urgency section', async () => {
+    const next = (id, days, extra = {}) => ({ _id: id, family: 'one', title: id, status: 'open', startAt: new Date(Date.now() + days * 86400000).toISOString(), ...extra })
+    queryClient.setQueryData(queryKeys.tasks('one'), [
+      next('later', 8), next('claimed', 1, { status: 'claimed', claimedBy: 'alex' }),
+      next('missed', -1), next('soonest', 1), next('weekly-next', 2, { recurringSeries: 'series' }),
+      next('weekly-later', 9, { recurringSeries: 'series' }), next('third', 3), next('completed', 1, { status: 'completed' }),
+    ])
+    await flushPromises()
+    const expected = ['soonest', 'weekly-next', 'third']
+    expect(wrapper.getComponent(UrgentUpcomingTasks).props('tasks').map(task => task._id)).toEqual(expected)
+    const mobile = wrapper.findAllComponents(MobileTodayTasks).find(list => list.props('title') === 'Upcoming tasks needing someone')
+    expect(mobile.props('tasks').map(task => task._id)).toEqual(expected)
+    queryClient.setQueryData(queryKeys.tasks('one'), [])
+    await flushPromises()
+    expect(wrapper.getComponent(UrgentUpcomingTasks).props('tasks')).toEqual([])
+    expect(wrapper.getComponent(UrgentUpcomingTasks).text()).toContain('No upcoming tasks need someone')
+  })
+
+  it('shows one future recurring row on desktop and mobile while preserving the missed occurrence', async () => {
+    const sessions = [-1, 7, 14, 21, 28].map((days, index) => ({
+      _id: `session-${index}`, family: 'one', recurringSeries: 'weekly',
+      title: 'Weekly care', status: 'open',
+      startAt: new Date(Date.now() + days * 86400000).toISOString(),
+    }))
+    queryClient.setQueryData(queryKeys.tasks('one'), sessions)
+    await flushPromises()
+    const board = wrapper.getComponent(TodayTasks)
+    await findButton(board, 'Needs someone').trigger('click')
+    expect(board.props('tasks').map(task => task._id)).toEqual(['session-1'])
+    expect(board.text()).toContain('4 upcoming sessions')
+    await findButton(board, 'Overdue').trigger('click')
+    expect(board.props('tasks').map(task => task._id)).toEqual(['session-0'])
+    wrapper.getComponent(MobileTodayTasks).vm.$emit('see-all')
+    await flushPromises()
+    await findButton(board, 'Needs someone').trigger('click')
+    const mobile = wrapper.findAllComponents(MobileTodayTasks).find(list => list.props('title') === 'Family tasks')
+    expect(mobile.props('tasks').map(task => task._id)).toEqual(['session-1'])
+    expect(mobile.text()).toContain('4 upcoming sessions')
+    await findButton(board, 'Overdue').trigger('click')
+    expect(mobile.props('tasks').map(task => task._id)).toEqual(['session-0'])
+  })
+
   it('separates expired unclaimed tasks from tasks that still need someone', async () => {
     const past = new Date(Date.now() - 3600000).toISOString()
     queryClient.setQueryData(queryKeys.tasks('one'), [...tasks,
@@ -96,7 +139,7 @@ describe('Family home task board and navigation', () => {
       tasks[1] = saved
       return { data: { task: saved } }
     })
-    await board.findAll('article').find(row => row.text().includes('Future appointment')).get('button').trigger('click')
+    await board.findAll('article').find(row => row.text().includes('Future appointment')).get('.care-claim-button').trigger('click')
     await flushPromises()
     // The claim button shows a check for ~400ms before the row leaves the filtered list
     await vi.waitFor(() => expect(board.text()).not.toContain('Future appointment'))
@@ -158,4 +201,15 @@ it('select all includes overdue tasks only and resets when changing filters', as
   expect(board.find('.overdue-select-all').exists()).toBe(false)
   await findButton(board, 'Overdue').trigger('click')
   expect(board.get('input[aria-label="Select Buy groceries for deletion"]').element.checked).toBe(false)
+})
+
+it('assistant deletion refreshes the recorded summary without adding a task-title activity', async () => {
+  const previousGet = http.get.getMockImplementation()
+  vi.spyOn(http, 'get').mockImplementation(async path => path.endsWith('/notifications')
+    ? { data: { notifications: [{ _id: 'summary', text: 'Alex deleted 1 overdue task.', createdAt: new Date().toISOString() }] } }
+    : previousGet(path))
+  window.dispatchEvent(new CustomEvent('carecircle:task-updated', { detail: { familyId: 'one', action: 'delete', deleted: true, title: 'Private task title' } }))
+  await flushPromises()
+  expect(wrapper.text()).toContain('Alex deleted 1 overdue task.')
+  expect(wrapper.text()).not.toContain('Private task title')
 })

@@ -1,4 +1,5 @@
 <script setup>
+import TaskDeleteMenu from '../../tasks/components/TaskDeleteMenu.vue'
 import { computed } from 'vue'
 import ProfileAvatar from '../../../components/common/ProfileAvatar.vue'
 import TaskStatusBadge from '../../tasks/components/TaskStatusBadge.vue'
@@ -49,11 +50,13 @@ const context = computed(() =>
     class="care-mobile-task"
     :class="{ 'care-mobile-task--open': task.status === 'open' }"
   >
+    <TaskDeleteMenu :task="task" :disabled="Boolean(busyId)" />
     <div class="care-mobile-task-row">
       <ProfileAvatar :person="recipient" recipient size="small" />
       <div class="care-mobile-task-copy">
         <h3>{{ task.title }}</h3>
         <RecurringTaskBadge :task="task" />
+        <p v-if="task.upcomingSessionCount">Next session: {{ date }} · {{ task.upcomingSessionCount }} upcoming {{ task.upcomingSessionCount === 1 ? 'session' : 'sessions' }}</p>
         <p>
           <template v-if="showDate">{{ date }} ·</template>
           {{ time }}
@@ -83,3 +86,8 @@ const context = computed(() =>
     </button>
   </article>
 </template>
+
+<style scoped>
+.care-mobile-task { position: relative; }
+.care-mobile-task:has(.task-delete-menu) { padding-right: 48px; }
+</style>
