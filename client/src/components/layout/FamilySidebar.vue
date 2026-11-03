@@ -1,5 +1,6 @@
 
 <script setup>
+import BrandLogo from '../common/BrandLogo.vue'
 import { ref, computed } from 'vue'
 import '../../styles/components/familySidebar.css'
 import CareAvatar from '../common/CareAvatar.vue'
@@ -80,9 +81,7 @@ async function copyInviteCode(inviteCode) {
     <aside class="family-sidebar">
         <div class="d-flex align-items-center justify-content-between mb-4">
             <RouterLink :to="homePath" class="sidebar-brand mb-0">
-                <span class="brand-icon">
-                <i class="bi bi-heart-pulse" aria-hidden="true"></i>
-                </span>
+                <BrandLogo />
                 CareCircle
             </RouterLink>
 
