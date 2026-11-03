@@ -10,18 +10,28 @@ const hasCoords = (p) => Number.isFinite(p?.lat) && Number.isFinite(p?.lng)
 
 export function usePlaceSpot(getPlace) {
     const found = ref(null)
+    let lastQuery = ''
 
+    // The trip page reloads the task every few seconds (a new object each time). Only look
+    // the place up again when the place itself changes, and keep the pin meanwhile: a pin
+    // that blinked away made the map forget where you had zoomed to.
     watch(getPlace, async (place) => {
+        if (!place || hasCoords(place)) {
+            found.value = null
+            lastQuery = ''
+            return
+        }
+        const query = place.postal || place.name || place.address || ''
+        if (query === lastQuery) return
+        lastQuery = query
         found.value = null
-        if (!place || hasCoords(place)) return
-        const query = place.postal || place.name || place.address
         if (!query) return
         try {
             const { clinics, otherPlaces } = await searchClinics(query)
             const hit = [...clinics, ...otherPlaces].find(hasCoords)
-            if (hit && getPlace() === place) found.value = { lat: hit.lat, lng: hit.lng }
+            if (hit && lastQuery === query) found.value = { lat: hit.lat, lng: hit.lng }
         } catch {
-            // No map then; the address line still shows
+            lastQuery = '' // try again on the next refresh
         }
     }, { immediate: true })
 

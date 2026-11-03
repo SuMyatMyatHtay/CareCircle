@@ -9,13 +9,23 @@
 // the phone locks. To help, the screen is kept awake while sharing (where supported).
 import { ref, watch, onUnmounted } from 'vue'
 
-const SEND_MS = 20 * 1000
+const SEND_MS = 10 * 1000   // more points = the trail follows the roads more closely
+const POOR_FIX_M = 60        // a fix this unsure (indoors, no GPS yet) would zigzag the trail
+const MIN_MOVE_M = 10        // standing still: don't send the same spot again and again
+
+function metres(a, b) {
+    const rad = (d) => (d * Math.PI) / 180
+    const h = Math.sin(rad(b.lat - a.lat) / 2) ** 2 +
+        Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lng - a.lng) / 2) ** 2
+    return 2 * 6371000 * Math.asin(Math.sqrt(h))
+}
 
 export function useLiveLocation({ enabled, send }) {
     const position = ref(null)
     const status = ref('off')
     let watchId = null
     let lastSent = 0
+    let lastSentPoint = null
     let wakeLock = null
 
     // Keep the screen on while sharing; the browser drops this when the tab is hidden
@@ -44,13 +54,22 @@ export function useLiveLocation({ enabled, send }) {
 
     function onFix(fix) {
         const point = { lat: fix.coords.latitude, lng: fix.coords.longitude, at: new Date().toISOString() }
+        // Skip unsure fixes once we have a good one (the very first fix is still shown)
+        if (position.value && fix.coords.accuracy > POOR_FIX_M) return
+        // Skip a glitch: over 300 m away at more than 180 km/h since the last good fix
+        if (position.value) {
+            const gap = metres(position.value, point)
+            const seconds = Math.max(1, (Date.now() - new Date(position.value.at).getTime()) / 1000)
+            if (gap > 300 && gap / seconds > 50 && seconds < 120) return
+        }
         position.value = point
         status.value = 'sharing'
-        if (Date.now() - lastSent >= SEND_MS) {
-            lastSent = Date.now()
-            // A failed send is fine: the next fix tries again
-            send({ lat: point.lat, lng: point.lng }).catch(() => { lastSent = 0 })
-        }
+        if (Date.now() - lastSent < SEND_MS) return
+        if (lastSentPoint && metres(lastSentPoint, point) < MIN_MOVE_M) return
+        lastSent = Date.now()
+        lastSentPoint = point
+        // A failed send is fine: the next fix tries again
+        send({ lat: point.lat, lng: point.lng }).catch(() => { lastSent = 0; lastSentPoint = null })
     }
 
     function onError(error) {
@@ -69,6 +88,7 @@ export function useLiveLocation({ enabled, send }) {
         if (watchId !== null) return
         status.value = 'waiting'
         lastSent = 0
+        lastSentPoint = null
         watchId = navigator.geolocation.watchPosition(onFix, onError, {
             enableHighAccuracy: true,
             maximumAge: 10 * 1000,

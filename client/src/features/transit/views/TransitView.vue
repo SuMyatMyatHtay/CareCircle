@@ -23,6 +23,7 @@ import { formatTime, recipientName } from '../../my-tasks/utils/formatters.js'
 import { useActiveFamily } from '../../../composables/useActiveFamily.js'
 import VisitNotesCard from '../../logs/components/VisitNotesCard.vue'
 import SavedToast from '../../logs/components/SavedToast.vue'
+import { useRouteAhead } from '../utils/useRouteAhead.js'
 
 const props = defineProps({
     familyId: { type: String, required: true },
@@ -55,7 +56,9 @@ const isActive = computed(() => session.value?.status === 'active')
 const isEnded = computed(() => session.value?.status === 'ended')
 const isCompanion = computed(() => Boolean(me.id) && idOf(session.value?.companion) === me.id)
 const isClaimer = computed(() => Boolean(me.id) && idOf(task.value?.claimedBy) === me.id)
-const canStart = computed(() => !session.value && isClaimer.value && task.value?.status === 'claimed')
+// The claimer starts the trip from a claimed task, or (older tasks started without a
+// trip) from one that is already in progress
+const canStart = computed(() => !session.value && isClaimer.value && ['claimed', 'in_progress'].includes(task.value?.status))
 const taskDone = computed(() => task.value?.status === 'completed')
 // Undo an accidental "End transit" while the task is still in progress
 const canResume = computed(() => isEnded.value && isCompanion.value && task.value?.status === 'in_progress')
@@ -88,6 +91,8 @@ const liveSpot = computed(() => {
 })
 // Browsers only share location while this page is open, so a position older than
 // STALE_MS means it is paused (page closed, phone locked or no signal)
+// Green road line from the person to the place, while the trip is live
+const routeAhead = useRouteAhead(() => (isActive.value ? liveSpot.value : null), () => destination.value)
 const STALE_MS = 2 * 60 * 1000
 const now = ref(Date.now())
 const isStale = computed(() => Boolean(liveSpot.value?.at) && now.value - new Date(liveSpot.value.at).getTime() > STALE_MS)
@@ -254,6 +259,11 @@ function resumeTrip() {
 
 function startTrip() {
     run(async () => {
+        if (task.value?.status === 'in_progress') {
+            // Already started as a task: just add the trip
+            session.value = await resumeTransit(props.familyId, props.taskId)
+            return
+        }
         const result = await startTask(props.familyId, props.taskId)
         task.value = { ...task.value, ...result.task }
         session.value = result.transitSession
@@ -310,6 +320,7 @@ onUnmounted(stopPolling)
             :action-error="actionError"
             :notice="notice"
             :live-spot="liveSpot"
+            :route-ahead="routeAhead"
             :location-note="locationNote"
             :live-caption="mapCaption"
             :live-time="liveBubbleTime"
@@ -400,6 +411,7 @@ onUnmounted(stopPolling)
                             :live-time="liveBubbleTime"
                             :live-note="liveBubbleNote"
                             :trail="session?.path || []"
+                            :route="routeAhead"
                             :label="mapCaption"
                             :height="680"
                             :fit-width="560"

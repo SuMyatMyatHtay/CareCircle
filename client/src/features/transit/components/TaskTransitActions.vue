@@ -8,7 +8,7 @@
 //     <template #middle>  ✓ Mark as done  </template>
 //     <template #end>     Give back task  </template>
 //   </TaskTransitActions>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getTransitSession } from '../services/transitApi.js'
 import { startTask, getErrorMessage } from '../../my-tasks/services/myTasksApi.js'
@@ -40,17 +40,18 @@ const isLive = computed(() => session.value?.status === 'active')
 
 // Which transit button to show
 // Same rule as the My Tasks cards and the phone layout:
-//   claimed (by me): trip -> Start the trip, no trip -> Start task
-//   in progress: trip -> Open the trip · finished trip -> View trip
+//   claimed (by me): needs transport -> Start the trip, otherwise -> Start task
+//   in progress: live trip -> Open the trip · finished trip -> View trip
+//   in progress with no trip yet (older tasks), for the person doing it -> Continue the trip
 const transitButton = computed(() => {
-    if (!props.task.needsTransit) return props.task.status === 'claimed' && isClaimer.value ? 'startTask' : null
     if (session.value) return isLive.value ? 'open' : 'view'
-    if (props.task.status === 'claimed' && isClaimer.value) return 'start'
+    if (props.task.status === 'claimed' && isClaimer.value) return props.task.needsTransit ? 'start' : 'startTask'
+    if (props.task.status === 'in_progress' && isClaimer.value) return 'continue'
     return null
 })
 
 async function loadSession() {
-    if (!props.task?.needsTransit) {
+    if (!['in_progress', 'completed'].includes(props.task?.status)) {
         session.value = null
         return
     }
@@ -92,6 +93,12 @@ async function startPlainTask() {
 }
 
 watch(() => [props.task?._id, props.task?.status], loadSession, { immediate: true })
+// While the task is in progress, check for new trip updates every 15 s, so the family
+// sees "Arrived at …" here without reloading (stops when you leave the page)
+const sessionTimer = setInterval(() => {
+    if (props.task?.status === 'in_progress' && document.visibilityState === 'visible') loadSession()
+}, 15 * 1000)
+onUnmounted(() => clearInterval(sessionTimer))
 </script>
 
 <template>
@@ -127,6 +134,9 @@ watch(() => [props.task?._id, props.task?.status], loadSession, { immediate: tru
             </button>
             <button v-else-if="transitButton === 'open'" type="button" class="btn-primary-lg" @click="openTransit">
                 {{ WORDS.openTrip }}
+            </button>
+            <button v-else-if="transitButton === 'continue'" type="button" class="btn-primary-lg" @click="openTransit">
+                {{ WORDS.continueTrip }}
             </button>
 
             <slot name="middle"></slot>
