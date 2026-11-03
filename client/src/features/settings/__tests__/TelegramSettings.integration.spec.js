@@ -9,7 +9,9 @@ import { http } from '../../../services/http.js'
 // transport is doubled, so this checks their integration without sending Telegram.
 let workspace, settings
 const path = '/families/one/notify-settings'
-const eventLabels = ['A task is posted', 'Someone claims or gives back a task', 'A transit milestone is marked', 'A note or medication change is added', 'A task is completed']
+const POSTED = 'A task is posted, edited or removed'
+const COMPLETED = 'A task is started, completed or cancelled'
+const eventLabels = [POSTED, 'Someone claims or gives back a task', 'A transit milestone is marked', 'A care note is added, edited or deleted, or medication changes', COMPLETED]
 const switchFor = (wrapper, label) => wrapper.get(`input[aria-label="${label}"]`)
 const button = (wrapper, label) => wrapper.findAll('button').find(node => node.text().trim() === label)
 const deferred = () => {
@@ -56,18 +58,18 @@ describe('Telegram card, switches and settings adapter', () => {
     const request = deferred()
     const save = vi.spyOn(http, 'patch').mockReturnValue(request.promise)
     const wrapper = await render()
-    await switchFor(wrapper, 'A task is posted').setValue(true)
-    expect(switchFor(wrapper, 'A task is posted').element.checked).toBe(true)
+    await switchFor(wrapper, POSTED).setValue(true)
+    expect(switchFor(wrapper, POSTED).element.checked).toBe(true)
     expect(save).toHaveBeenCalledWith(path, {
       notifyOn: ['task.created', 'task.updated', 'task.deleted'],
     }, expect.objectContaining({ headers: { Authorization: 'Bearer component-test-only' } }))
     for (const input of wrapper.findAll('input[role="switch"]')) expect(input.element.disabled).toBe(true)
-    await switchFor(wrapper, 'A task is completed').setValue(false)
+    await switchFor(wrapper, COMPLETED).setValue(false)
     expect(save).toHaveBeenCalledTimes(1)
     request.resolve({ data: { notifyOn: ['task.created', 'task.updated', 'task.deleted'] } })
     await flushPromises()
     expect(wrapper.get('[role="status"]').text()).toBe('Telegram preferences saved.')
-    expect(switchFor(wrapper, 'A task is posted').element.disabled).toBe(false)
+    expect(switchFor(wrapper, POSTED).element.disabled).toBe(false)
     expect(wrapper.emitted('change')).toBeUndefined()
   })
 
@@ -76,16 +78,16 @@ describe('Telegram card, switches and settings adapter', () => {
     const save = vi.spyOn(http, 'patch').mockReturnValueOnce(request.promise)
       .mockResolvedValue({ data: { notifyOn: ['task.created', 'task.updated', 'task.deleted'] } })
     const wrapper = await render()
-    await switchFor(wrapper, 'A task is posted').setValue(true)
+    await switchFor(wrapper, POSTED).setValue(true)
     request.reject(new Error('Network disconnected'))
     await flushPromises()
-    expect(switchFor(wrapper, 'A task is posted').element.checked).toBe(false)
+    expect(switchFor(wrapper, POSTED).element.checked).toBe(false)
     expect(wrapper.get('[role="alert"]').text()).toContain('Network disconnected')
-    await switchFor(wrapper, 'A task is posted').setValue(true)
+    await switchFor(wrapper, POSTED).setValue(true)
     await flushPromises()
     expect(save).toHaveBeenCalledTimes(2)
     expect(wrapper.find('[role="alert"]').exists()).toBe(false)
-    expect(switchFor(wrapper, 'A task is posted').element.checked).toBe(true)
+    expect(switchFor(wrapper, POSTED).element.checked).toBe(true)
   })
 
   it('saves a reminder separately and renders the returned flags', async () => {
@@ -106,6 +108,17 @@ describe('Telegram card, switches and settings adapter', () => {
     for (const input of wrapper.findAll('input[role="switch"]')) expect(input.element.disabled).toBe(true)
     expect(button(wrapper, 'Send test message')).toBeUndefined()
     expect(button(wrapper, 'Unlink group')).toBeUndefined()
+    expect(wrapper.text()).toContain('Only family admins can change Telegram settings.')
+  })
+
+  it('locks every switch while no Telegram group is linked, even for an admin', async () => {
+    settings.telegram = { linked: false }
+    const save = vi.spyOn(http, 'patch')
+    const wrapper = await render()
+    for (const input of wrapper.findAll('input[role="switch"]')) expect(input.element.disabled).toBe(true)
+    expect(wrapper.text()).toContain('Link a Telegram group first to choose what gets sent.')
+    await switchFor(wrapper, POSTED).trigger('change')
+    expect(save).not.toHaveBeenCalled()
   })
 
   it('does not let an old family response replace the newly selected family settings', async () => {
@@ -141,7 +154,7 @@ describe('Telegram card, switches and settings adapter', () => {
   it('emits preview changes without requesting or writing real family settings', async () => {
     const save = vi.spyOn(http, 'patch')
     const wrapper = await render({ preview: true })
-    await switchFor(wrapper, 'A task is posted').setValue(false)
+    await switchFor(wrapper, POSTED).setValue(false)
     expect(wrapper.emitted('change')).toEqual([['taskPosted', false]])
     expect(http.get).not.toHaveBeenCalled()
     expect(save).not.toHaveBeenCalled()

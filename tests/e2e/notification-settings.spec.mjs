@@ -1,4 +1,5 @@
 import { test, expect, login, ids, authenticatedApi } from './fixtures.mjs'
+import Family from '../../server/src/features/families/Family.model.js'
 
 async function openTelegram(page, isMobile) {
   await page.goto('/settings')
@@ -10,9 +11,12 @@ async function openTelegram(page, isMobile) {
 }
 
 test('persists Telegram switches and reminders, isolates families and prevents member editing', async ({ page, isMobile, isolatedData }) => {
+  // Switches stay locked until a group is linked, so link both families' groups first
+  await Family.updateOne({ _id: ids.family }, { $set: { telegram: { chatId: '-1001' } } })
+  await Family.updateOne({ _id: ids.otherFamily }, { $set: { telegram: { chatId: '-1002' } } })
   await login(page)
   let card = await openTelegram(page, isMobile)
-  const posted = card.getByRole('switch', { name: 'A task is posted', exact: true })
+  const posted = card.getByRole('switch', { name: 'A task is posted, edited or removed', exact: true })
   await expect(posted).toBeEnabled()
   await expect(posted).toBeChecked()
   await posted.uncheck()
@@ -32,7 +36,7 @@ test('persists Telegram switches and reminders, isolates families and prevents m
   } else await page.getByRole('button', { name: /Tan family.*members/ }).click()
   await page.getByRole('button', { name: /Lee family/ }).click()
   card = await openTelegram(page, isMobile)
-  await expect(card.getByRole('switch', { name: 'A task is posted', exact: true })).toBeChecked()
+  await expect(card.getByRole('switch', { name: 'A task is posted, edited or removed', exact: true })).toBeChecked()
   await expect(card.getByRole('switch', { name: 'Daily summary at 8am', exact: true })).not.toBeChecked()
   if (isMobile) {
     const dialog = page.getByRole('dialog', { name: 'Telegram updates', exact: true })
@@ -43,7 +47,7 @@ test('persists Telegram switches and reminders, isolates families and prevents m
   await expect(page).toHaveURL(/\/login$/)
   await login(page, 'may')
   card = await openTelegram(page, isMobile)
-  await expect(card.getByRole('switch', { name: 'A task is posted', exact: true })).not.toBeChecked()
+  await expect(card.getByRole('switch', { name: 'A task is posted, edited or removed', exact: true })).not.toBeChecked()
   await expect(card.getByRole('switch', { name: 'Daily summary at 8am', exact: true })).toBeChecked()
   const switches = card.getByRole('switch')
   await expect(switches).toHaveCount(8)
