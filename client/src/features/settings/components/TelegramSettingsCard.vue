@@ -13,11 +13,11 @@ const props = defineProps({
 const emit = defineEmits(['change'])
 const workspace = useFamilyWorkspace()
 const events = [
-  { key: 'taskPosted', label: 'A task is posted' },
+  { key: 'taskPosted', label: 'A task is posted, edited or removed' },
   { key: 'taskClaimed', label: 'Someone claims or gives back a task' },
   { key: 'transitMilestone', label: 'A transit milestone is marked' },
-  { key: 'careNote', label: 'A note or medication change is added' },
-  { key: 'taskCompleted', label: 'A task is completed' },
+  { key: 'careNote', label: 'A care note is added, edited or deleted, or medication changes' },
+  { key: 'taskCompleted', label: 'A task is started, completed or cancelled' },
 ]
 const reminders = [
   { key: 'beforeTask', label: 'Remind me 1 hour before a task I’ve claimed' },
@@ -32,7 +32,16 @@ const telegram = useTelegramSettings(() => familyId.value)
 const { loading, saving, testing, error, feedback, linked, linkedAt, linkedByName, groups } = telegram
  
 const isOn = (key) => (live.value ? Boolean(groups.value[key]) : Boolean(props.preferences[key]))
-const canEdit = computed(() => (live.value ? isAdmin.value && !loading.value && !saving.value : props.preview))
+// Nothing is sent without a linked group, so its switches stay locked until then
+const canEdit = computed(() =>
+  live.value ? isAdmin.value && linked.value && !loading.value && !saving.value : props.preview,
+)
+const lockReason = computed(() => {
+  if (!live.value || loading.value) return ''
+  if (!linked.value) return 'Link a Telegram group first to choose what gets sent.'
+  if (!isAdmin.value) return 'Only family admins can change Telegram settings.'
+  return ''
+})
  
 function onChange(key, value) {
   if (live.value) telegram.toggle(key, value)
@@ -92,6 +101,7 @@ function onReminderChange(key, value) {
       sent.
     </p>
     <h3 class="care-settings-label">SEND TO TELEGRAM WHEN…</h3>
+    <p v-if="lockReason" class="care-muted care-tiny" data-testid="telegram-lock-reason">{{ lockReason }}</p>
     <NotificationToggle
       v-for="option in events"
       :key="option.key"
