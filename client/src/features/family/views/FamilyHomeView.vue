@@ -357,19 +357,27 @@ watch(selectedFamilyId, () => {
           {{ moreTripsLabel }}
           <i class="bi" :class="showAllTrips ? 'bi-chevron-up' : 'bi-chevron-down'" aria-hidden="true"></i>
         </button>
-        <MobileTodayTasks
-          :tasks="todayTasks"
-          :loading="loading"
-          :error="error"
-          :busy-id="busyId"
-          @see-all="showAllMobileTasks"
-          @retry="loadTasks()"
-          @claim="claimTask"
-        />
-        <MobileTodayTasks :tasks="urgentUpcomingTasks" title="Upcoming tasks needing someone" :show-all="false" show-date :loading="loading" :error="error" :busy-id="busyId" @claim="claimTask" @retry="loadTasks()" />
+        <section class="care-mobile-home-section care-mobile-priority" aria-labelledby="mobile-priority-heading">
+          <div class="care-mobile-section-heading">
+            <span class="care-mobile-section-icon" aria-hidden="true"><i class="bi bi-clock"></i></span>
+            <div><h2 id="mobile-priority-heading">Needs help soon</h2><p>Up to 3 upcoming tasks still waiting for someone.</p></div>
+          </div>
+          <MobileTodayTasks :tasks="urgentUpcomingTasks" title="Upcoming tasks needing someone" show-date :loading="loading" :error="error" :busy-id="busyId" @see-all="showAllMobileTasks" @claim="claimTask" @retry="loadTasks()" />
+        </section>
+        <section class="care-mobile-home-section care-mobile-family-board" aria-labelledby="mobile-board-heading">
+          <div class="care-mobile-section-heading">
+            <span class="care-mobile-section-icon" aria-hidden="true"><i class="bi bi-list-task"></i></span>
+            <div><h2 id="mobile-board-heading">Across the family</h2><p>Browse all tasks by date or status.</p></div>
+          </div>
+          <div class="care-home-task-filters" role="group" aria-label="Filter family tasks">
+            <button v-for="option in taskFilters" :key="option.key" type="button" :aria-pressed="taskFilter === option.key" :class="{ selected: taskFilter === option.key }" @click="taskFilter = option.key; filterRecipient = null">{{ option.label }}</button>
+          </div>
+          <DeleteOverdueTasks v-if="taskFilter === 'overdue'" :selected-ids="selectedOverdueIds" :task-ids="overdueTaskIds" :disabled="loading || Boolean(error)" @select-all="selectAllOverdue" @busy="deletingOverdue = $event" @deleted="afterOverdueDeleted" />
+          <MobileTodayTasks :tasks="upcomingTasks" title="Family tasks" :show-all="false" show-date :selectable="canSelectOverdue" :selected-ids="selectedOverdueIds" :selection-busy="deletingOverdue" :loading="loading" :error="error" :busy-id="busyId" @select-task="toggleOverdue" @claim="claimTask" @retry="loadTasks()" />
+        </section>
         <!-- Phones use the left menu (☰) only, so Recent updates sits on the page
              instead of behind a bottom-bar "Activity" tab -->
-        <RecentUpdates class="care-mobile-recent" :updates="activity" :preview="isPreview" />
+        <RecentUpdates class="care-mobile-recent" description="See what your family has claimed, completed or changed." :updates="activity" :preview="isPreview" />
       </template>
     </div>
     <CareModal
@@ -515,4 +523,15 @@ watch(selectedFamilyId, () => {
 .care-more-trips:hover {
   background: var(--theme-soft, #e8f5e9);
 }
+.care-mobile-home-section { margin: 24px 0; padding: 18px 16px; border: 1px solid var(--theme-border, #e4ece5); border-radius: 20px; background: var(--theme-panel, #fff); }
+.care-mobile-section-heading { display: flex; align-items: flex-start; gap: 10px; padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--theme-border, #e4ece5); }
+.care-mobile-section-heading > div { min-width: 0; }
+.care-mobile-section-heading h2 { margin: 0 0 5px; font-size: 19px; line-height: 1.3; font-weight: 750; }
+.care-mobile-section-heading p { margin: 0; font-size: 12px; line-height: 1.5; color: var(--theme-muted, #717b8e); }
+.care-mobile-section-icon { display: grid; place-items: center; flex-shrink: 0; width: 34px; height: 34px; border-radius: 10px; background: var(--theme-soft, #e8f5e9); color: var(--theme-green, #2d7d43); }
+.care-mobile-priority { border-top: 3px solid var(--theme-green, #2d7d43); }
+.care-mobile-priority :deep(.care-mobile-today > header h2) { display: none; }
+.care-mobile-priority :deep(.care-mobile-today > header) { justify-content: flex-end; margin-bottom: 10px; }
+.care-mobile-family-board .care-home-task-filters { margin-bottom: 16px; }
+.care-mobile-family-board :deep(.care-mobile-today > header) { display: none; }
 </style>

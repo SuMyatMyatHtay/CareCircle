@@ -5,7 +5,7 @@ import ProfileAvatar from '../../../components/common/ProfileAvatar.vue'
 import { useFamilyWorkspace } from '../composables/useFamilyWorkspace.js'
 import { useRecentNotifications } from '../../settings/composables/useNotifications.js'
 
-const props = defineProps({ updates: { type: Array, default: () => [] }, preview: Boolean })
+const props = defineProps({ updates: { type: Array, default: () => [] }, preview: Boolean, description: { type: String, default: '' } })
 
 // Real families: show the family's notifications. Until the first ones arrive (and in preview),
 // fall back to the in-session updates passed in by the dashboard.
@@ -15,6 +15,7 @@ const shown = computed(() => (feed.items.value.length ? feed.items.value : props
 </script>
 <template>
   <SectionCard title="Recent updates" class="care-recent-updates">
+    <p v-if="description" class="care-muted care-small">{{ description }}</p>
     <div class="care-home-panel-scroll" role="region" aria-label="Recent family updates" tabindex="0">
     <TransitionGroup
       v-if="shown.length"
