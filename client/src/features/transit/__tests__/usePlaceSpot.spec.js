@@ -1,6 +1,6 @@
 // Owner: Chaithra (E) · unit test: finding where to pin a place on the map
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { nextTick } from 'vue'
+import { nextTick, ref } from 'vue'
 import { flushPromises } from '@vue/test-utils'
 
 vi.mock('../services/transitApi.js', () => ({ searchClinics: vi.fn() }))
@@ -31,6 +31,18 @@ describe('TestSuite: usePlaceSpot', () => {
         const spot = usePlaceSpot(() => place)
         await flushPromises()
         expect(spot.value).toBeNull()
+    })
+
+    it('Test5: keeps the pin when the page refreshes the same place, without searching again', async () => {
+        searchClinics.mockResolvedValue({ clinics: [], otherPlaces: [{ name: 'Junction 8', lat: 1.3501, lng: 103.8486 }] })
+        const place = ref({ name: 'FairPrice, Junction 8', postal: '579837' })
+        const spot = usePlaceSpot(() => place.value)
+        await flushPromises()
+        place.value = { name: 'FairPrice, Junction 8', postal: '579837' } // new object, same place
+        await nextTick()
+        expect(spot.value).toEqual({ lat: 1.3501, lng: 103.8486 }) // no blink to null
+        await flushPromises()
+        expect(searchClinics).toHaveBeenCalledTimes(1)
     })
 
     it('Test4: does nothing for a task with no place', async () => {

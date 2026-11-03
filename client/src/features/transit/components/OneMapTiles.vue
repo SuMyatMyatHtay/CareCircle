@@ -50,10 +50,15 @@ const styleIndex = ref(0)
 const isNum = (v) => Number.isFinite(v)
 const dest = computed(() => (isNum(props.lat) && isNum(props.lng) ? { lat: props.lat, lng: props.lng } : null))
 const live = computed(() => (isNum(props.liveLat) && isNum(props.liveLng) ? { lat: props.liveLat, lng: props.liveLng } : null))
-// The trail, ending at the live dot so the line reaches it
+// The trail, ending at the live dot so the line reaches it. Only when the dot is close to
+// the last saved point: a longer stretch would be a straight line cutting across
+// buildings, and the server fills it in along the roads on the next update anyway.
+const JOIN_LIVE_M = 80
 const trailPoints = computed(() => {
     const points = props.trail.filter((p) => isNum(p?.lat) && isNum(p?.lng))
-    return live.value ? [...points, live.value] : points
+    const last = points[points.length - 1]
+    if (!live.value || (last && metres(last, live.value) > JOIN_LIVE_M)) return points
+    return [...points, live.value]
 })
 // Room above the points for the photo pin (about 55 px) and its bubble (about 55 px)
 const topSpace = computed(() => (live.value ? (props.liveTime || props.liveNote ? 110 : 55) : 0))
@@ -112,10 +117,53 @@ const autoView = computed(() => {
     return { z, cx, cy }
 })
 
-// Once someone drags or zooms, the map stays where they put it ({ z, cx, cy } in world
-// pixels) until they press Recentre. Live updates still move the pins and trail.
-const manual = ref(null)
-const view = computed(() => manual.value || autoView.value)
+// The camera: where the map looks ({ z, cx, cy } in world pixels). It is fitted once, then
+// stays still: live updates move the pins and the trail, not the map. It only changes when
+//  - something new needs fitting (e.g. the person's first location after the place pin),
+//    unless you have moved the map yourself
+//  - the person walks off the edge: the map slides to keep them in view, same zoom
+//  - you drag or zoom, press Recentre, or open a different place
+// (Before, the map re-fitted on every location update, so it kept zooming in and out.)
+const camera = ref(null)
+const userMoved = ref(false)
+const view = computed(() => camera.value || autoView.value)
+// What is on the map: the place pin, the person, the route ahead
+const fitKey = computed(() => `${dest.value ? 1 : 0}${live.value ? 1 : 0}${routePoints.value.length ? 1 : 0}`)
+let fittedKey = '000'
+function fitNow() {
+    if (!autoView.value) return
+    camera.value = { ...autoView.value }
+    fittedKey = fitKey.value
+}
+// Only something NEW appearing re-fits the map (e.g. the person's first location).
+// Something going missing for a moment (a refresh) never does.
+function hasNewPoint() {
+    return [...fitKey.value].some((on, i) => on === '1' && fittedKey[i] !== '1')
+}
+// Keep the person inside the card (away from the edges, the photo bubble and any bottom card)
+const EDGE_PX = 40
+function keepLiveInView() {
+    if (!live.value || !camera.value) return
+    const { z, cx, cy } = camera.value
+    const p = toPixels(live.value, z)
+    const halfW = Math.max(40, props.fitWidth / 2 - EDGE_PX)
+    const insideX = Math.abs(p.x - cx) <= halfW
+    const insideY = p.y - cy >= -props.height / 2 + topSpace.value + EDGE_PX &&
+        p.y - cy <= props.height / 2 - props.bottomSpace - EDGE_PX
+    if (insideX && insideY) return
+    noGlide()
+    camera.value = clampView({ z, cx: p.x, cy: p.y + (props.bottomSpace - topSpace.value) / 2 })
+}
+watch([autoView, fitKey], () => {
+    if (!autoView.value) return
+    if (!camera.value) return fitNow()
+    if (userMoved.value) return
+    if (hasNewPoint()) {
+        noGlide()
+        return fitNow()
+    }
+    keepLiveInView()
+}, { immediate: true })
 
 // Singapore's box in pixels at zoom z
 function sgBox(z) {
@@ -132,7 +180,7 @@ function clampView(v) {
         cy: Math.min(box.maxY, Math.max(box.minY, v.cy))
     }
 }
-const isMoved = computed(() => Boolean(manual.value))
+const isMoved = computed(() => userMoved.value)
 
 const grid = computed(() => {
     if (!view.value) return null
@@ -225,25 +273,28 @@ function noGlide() {
     instantTimer = setTimeout(() => { instant.value = dragging.value }, 80)
 }
 
+// You moved the map: from now on it stays where you put it, until Recentre
 function takeOver() {
-    if (!manual.value && autoView.value) manual.value = { ...autoView.value }
+    if (!camera.value && autoView.value) camera.value = { ...autoView.value }
+    userMoved.value = true
 }
 
 // Zoom in (+1) or out (-1), keeping the spot under `anchor` (px from the card's centre) still
 function zoomBy(step, anchor = { x: 0, y: 0 }) {
     takeOver()
-    const m = manual.value
+    const m = camera.value
     if (!m) return
     const z = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, m.z + step))
     if (z === m.z) return
     const f = 2 ** (z - m.z)
     noGlide()
-    manual.value = clampView({ z, cx: (m.cx + anchor.x) * f - anchor.x, cy: (m.cy + anchor.y) * f - anchor.y })
+    camera.value = clampView({ z, cx: (m.cx + anchor.x) * f - anchor.x, cy: (m.cy + anchor.y) * f - anchor.y })
 }
 
 function recentre() {
     noGlide()
-    manual.value = null
+    userMoved.value = false
+    fitNow()
 }
 
 function fromCentre(event) {
@@ -278,7 +329,7 @@ function onPointerMove(event) {
         const dy = now.y - last.y
         if (!dx && !dy) return
         takeOver()
-        manual.value = clampView({ ...manual.value, cx: manual.value.cx - dx, cy: manual.value.cy - dy })
+        camera.value = clampView({ ...camera.value, cx: camera.value.cx - dx, cy: camera.value.cy - dy })
     } else if (pointers.size === 2 && pinchStart) {
         const [a, b] = [...pointers.values()]
         const distance = Math.hypot(a.x - b.x, a.y - b.y)
@@ -312,8 +363,16 @@ function onDoubleClick(event) {
     zoomBy(1, fromCentre(event))
 }
 
-// A different place (new task): start from the automatic view again
-watch(() => [props.lat, props.lng], () => { manual.value = null })
+// A different place (new task): start from the automatic view again.
+// A refresh that sends the same place (or blinks it away for a moment) keeps your zoom.
+let lastPlace = dest.value
+watch(dest, (place) => {
+    if (!place) return
+    if (lastPlace && metres(lastPlace, place) < 5) return
+    lastPlace = place
+    userMoved.value = false
+    fitNow()
+})
 
 const recentreLabel = computed(() => (props.liveLabel && live.value ? `Recentre on ${props.liveLabel}` : 'Recentre map'))
 

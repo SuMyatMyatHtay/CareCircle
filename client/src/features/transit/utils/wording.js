@@ -10,6 +10,7 @@ export const WORDS = {
     viewTrip: 'View trip',
     endTrip: 'End the trip',
     resumeTrip: 'Resume the trip',
+    continueTrip: 'Continue the trip',
     postUpdate: 'Post the next update',
     safelyHome: 'Safely back home',
 

@@ -70,7 +70,8 @@ const statusLabel = computed(() => {
             </template>
 
             <template v-else-if="task.status === 'in_progress'">
-                <button v-if="task.needsTransit" type="button" class="btn-secondary" @click="emit('open-trip')">{{ WORDS.openTrip }}</button>
+                <!-- Every started task has a trip page for updates (older ones can start one there) -->
+                <button type="button" class="btn-secondary" @click="emit('open-trip')">{{ WORDS.openTrip }}</button>
                 <button type="button" class="btn-primary-cc" :disabled="busy" @click="emit('complete')">{{ WORDS.markDone }}</button>
             </template>
 

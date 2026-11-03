@@ -56,6 +56,13 @@ describe('TestSuite: MyTaskCard', () => {
         expect(wrapper.emitted('complete')).toHaveLength(1)
     })
 
+    it('Test4b: a task started without transport still offers "Open the trip" for updates', async () => {
+        const wrapper = render({ status: 'in_progress', needsTransit: false })
+        expect(wrapper.text()).toContain('In progress')
+        await button(wrapper, 'Open the trip').trigger('click')
+        expect(wrapper.emitted('open-trip')).toHaveLength(1)
+    })
+
     it('Test5: a finished trip shows "Done" and only "View trip"', () => {
         const wrapper = render({ status: 'completed' })
         expect(wrapper.text()).toContain('Done')
