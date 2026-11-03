@@ -38,7 +38,7 @@ onUnmounted(() => { document.removeEventListener('visibilitychange', onVisible);
   <div class="contributions-page">
     <header class="contributions-header">
       <div><div class="contributions-eyebrow">{{ selectedFamily?.name || 'Your family' }}</div><h1>Contributions</h1><p>Every helping hand makes a difference. Celebrate the care you give together.</p></div>
-      <label v-if="families.length > 1" class="contributions-family"><span>Family</span><select :value="selectedFamilyId" @change="selectFamily($event.target.value)"><option v-for="family in families" :key="family.id" :value="family.id">{{ family.name }}</option></select></label>
+      <label v-if="families.length > 1" class="contributions-family"><span>Family</span><select class="form-select" :value="selectedFamilyId" @change="selectFamily($event.target.value)"><option v-for="family in families" :key="family.id" :value="family.id">{{ family.name }}</option></select></label>
     </header>
     <FamilyEmptyState v-if="isLoading || errorMessage || !selectedFamily" :loading="isLoading" :error="errorMessage" @retry="loadFamilies" />
     <template v-else>
