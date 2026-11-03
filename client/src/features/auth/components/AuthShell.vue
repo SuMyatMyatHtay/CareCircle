@@ -1,4 +1,5 @@
 <script setup>
+import BrandLogo from '../../../components/common/BrandLogo.vue'
 import familyArt from '../../../assets/family-banner.png'
 import './auth-design.css'
 </script>

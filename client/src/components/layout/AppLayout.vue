@@ -1,5 +1,6 @@
 
 <script setup>
+import BrandLogo from '../common/BrandLogo.vue'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import AssistantLauncher from '../../features/avatar/components/AssistantLauncher.vue'
@@ -127,7 +128,7 @@ onUnmounted(() => {
             :to="homePath"
             class="text-decoration-none fw-bold app-topbar-brand"
           >
-            <i class="bi bi-heart-pulse me-2"></i>
+            <BrandLogo class="me-2" />
             CareCircle
           </RouterLink>
         </div>

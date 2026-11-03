@@ -58,6 +58,18 @@ beforeEach(async () => {
 afterEach(() => { wrapper?.unmount(); queryClient.clear() })
 
 describe('Family home task board and navigation', () => {
+  it('uses the same task filters on mobile and desktop without a separate Today list', async () => {
+    const board = wrapper.getComponent(TodayTasks)
+    const mobile = wrapper.get('.care-mobile-family-board')
+    expect(mobile.findAll('.care-home-task-filters button').map(button => button.text())).toEqual(board.props('filters').map(option => option.label))
+    expect(wrapper.findAllComponents(MobileTodayTasks).some(list => list.props('title') === 'Today')).toBe(false)
+    const overdue = mobile.findAll('button').find(button => button.text() === 'Overdue')
+    await overdue.trigger('click')
+    expect(board.props('filter')).toBe('overdue')
+    const mobileList = wrapper.findAllComponents(MobileTodayTasks).find(list => list.props('title') === 'Family tasks')
+    expect(mobileList.props('tasks').map(task => task._id)).toEqual(board.props('tasks').map(task => task._id))
+  })
+
   it('shows at most three soonest unclaimed tasks and combines recurring dates in the urgency section', async () => {
     const next = (id, days, extra = {}) => ({ _id: id, family: 'one', title: id, status: 'open', startAt: new Date(Date.now() + days * 86400000).toISOString(), ...extra })
     queryClient.setQueryData(queryKeys.tasks('one'), [
