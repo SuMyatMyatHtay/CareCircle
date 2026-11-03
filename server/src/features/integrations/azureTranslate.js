@@ -1,7 +1,7 @@
 // Runs on the server only, so the API key never reaches the browser.
-// App language code -> LibreTranslate language code.
+// App language code -> Azure Translator language code.
 // The keys must match LANGUAGE_LABELS in client/src/features/logs/logTypes.js.
-// If a language fails, check https://libretranslate.com/languages
+// If a language fails, check https://learn.microsoft.com/azure/ai-services/translator/language-support
 const LANGUAGE_CODES = {
     en: 'en',
     zh: 'zh-Hans',
@@ -16,7 +16,15 @@ export function isSupportedLanguage(lang) {
     return Object.hasOwn(LANGUAGE_CODES, lang)
 }
 
-export async function translateText(text, targetLang, sourceLang = 'en') {
+// Azure language code -> app language code, for the language Azure detected ("zh-Hans" -> "zh")
+function appLanguage(azureCode = '') {
+    if (azureCode.startsWith('zh')) return 'zh'
+    return SUPPORTED_LANGUAGES.find((code) => LANGUAGE_CODES[code] === azureCode) || azureCode
+}
+
+// sourceLang is optional: without it Azure detects the language of the text itself.
+// Returns { text, detectedLang } (detectedLang is '' when a sourceLang was given).
+export async function translateText(text, targetLang, sourceLang = null) {
     const apiKey = process.env.AZURE_TRANSLATOR_KEY
     const region = process.env.AZURE_TRANSLATOR_REGION
 
@@ -51,7 +59,8 @@ export async function translateText(text, targetLang, sourceLang = 'en') {
 
     if (!response.ok) {
         const body = await response.json().catch(() => ({}))
-        throw new Error(body.error || `Azure responded with ${response.status}`)
+        // Azure sends { error: { code, message } }; the message is what's useful in the server log
+        throw new Error(body.error?.message || (typeof body.error === 'string' ? body.error : '') || `Azure responded with ${response.status}`)
     }
 
     const data = await response.json()
@@ -59,5 +68,16 @@ export async function translateText(text, targetLang, sourceLang = 'en') {
     if (!translatedText) {
         throw new Error('Azure Translator returned an empty or unexpected payload structure')
     }
-    return translatedText
+    return { text: translatedText, detectedLang: appLanguage(data[0].detectedLanguage?.language) }
+}
+
+// A care note in targetLang. Azure detects the note's language, but its guess on a short
+// note can be wrong (e.g. "Grandpa ate lunch." as Punjabi, "translated" to "Grandpa and Lunch").
+// Notes are written in the app's languages, so a guess outside them is treated as English.
+export async function translateNote(text, targetLang) {
+    const detected = await translateText(text, targetLang)
+    if (isSupportedLanguage(detected.detectedLang)) return detected
+    if (targetLang === 'en') return { text, detectedLang: 'en' }
+    const fromEnglish = await translateText(text, targetLang, 'en')
+    return { text: fromEnglish.text, detectedLang: 'en' }
 }

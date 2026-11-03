@@ -5,7 +5,6 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { VueQueryPlugin } from '@tanstack/vue-query'
 import FamilyHomeView from '../views/FamilyHomeView.vue'
 import TodayTasks from '../components/TodayTasks.vue'
-import MobileHomeNavigation from '../components/MobileHomeNavigation.vue'
 import MobileTodayTasks from '../components/MobileTodayTasks.vue'
 import { useActiveFamily } from '../../../composables/useActiveFamily.js'
 import { http } from '../../../services/http.js'
@@ -72,7 +71,7 @@ describe('Family home task board and navigation', () => {
     expect(board.text()).toContain('4 upcoming sessions')
     await findButton(board, 'Overdue').trigger('click')
     expect(board.props('tasks').map(task => task._id)).toEqual(['session-0'])
-    wrapper.getComponent(MobileHomeNavigation).vm.$emit('select', 'tasks')
+    wrapper.getComponent(MobileTodayTasks).vm.$emit('see-all')
     await flushPromises()
     await findButton(board, 'Needs someone').trigger('click')
     const mobile = wrapper.findAllComponents(MobileTodayTasks).find(list => list.props('title') === 'Family tasks')
@@ -105,6 +104,10 @@ describe('Family home task board and navigation', () => {
 
   it('keeps all task filters and claiming inside the existing home dashboard', async () => {
     const board = wrapper.getComponent(TodayTasks)
+    // Opens on what's coming up, so a task for a later day can be claimed straight away
+    expect(board.text()).toContain('Future appointment')
+    expect(board.text()).not.toContain('Completed walk')
+    await findButton(board, 'Today').trigger('click')
     expect(board.text()).toContain('Today across the family')
     expect(board.text()).toContain('Buy groceries')
     expect(board.text()).not.toContain('Future appointment')
@@ -130,8 +133,8 @@ describe('Family home task board and navigation', () => {
     expect(wrapper.text()).toContain('Recent updates')
   })
 
-  it('opens mobile tasks within Home and supports navigating away and back', async () => {
-    wrapper.getComponent(MobileHomeNavigation).vm.$emit('select', 'tasks')
+  it('opens all family tasks from "See all" on phones and supports navigating away and back', async () => {
+    wrapper.findAllComponents(MobileTodayTasks)[0].vm.$emit('see-all')
     await flushPromises()
     expect(router.currentRoute.value.path).toBe('/home')
     const lists = wrapper.findAllComponents(MobileTodayTasks)
@@ -141,8 +144,12 @@ describe('Family home task board and navigation', () => {
     expect(wrapper.text()).toBe('My tasks')
     await router.push('/home')
     await flushPromises()
-    expect(wrapper.text()).toContain('Today across the family')
+    expect(wrapper.text()).toContain('Across the family')
     expect(wrapper.text()).toContain('Recent updates')
+  })
+
+  it('has no bottom bar on phones: navigation is the left menu only', () => {
+    expect(wrapper.find('.care-mobile-home-navigation').exists()).toBe(false)
   })
 })
 

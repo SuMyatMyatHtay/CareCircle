@@ -14,7 +14,7 @@
 import mongoose from 'mongoose'
 import Family from '../features/families/Family.model.js'
 import Notification from '../features/notifications/Notifications.model.js'
-import { sendTelegramMessage } from '../features/integrations/telegram.js'
+import { sendToGroup } from '../features/integrations/telegram.js'
 import { EVENTS, EVENT_TYPES, NOTIFICATION_STATUS, NOTIFY_NONE } from '../constants.js'
 const REMINDER_EVENTS = [EVENTS.TASK_STARTING_SOON, EVENTS.TASK_UNCLAIMED_SOON, EVENTS.DAILY_SUMMARY]
 
@@ -133,7 +133,6 @@ function logMessage(log, sentence) {
 }
 // Whoever edited or deleted it (set by the logs controller), else the author
 const editorName = (log) => shortName(log.changedBy?.name || log.author?.name) || 'Someone'
-const LOG_EVENTS = [EVENTS.LOG_CREATED, EVENTS.LOG_UPDATED, EVENTS.LOG_DELETED]
 
 const BUILDERS = {
   [EVENTS.TASK_CREATED]: (task) => {
@@ -197,23 +196,6 @@ export function buildMessage(eventType, payload) {
   return message?.text ? message : null
 }
 
-// Deep link to the page the event is about, using the real client routes.
-// Needs APP_URL (the website address); returns '' when it isn't set.
-export function deepLink({ eventType, refType, refId, familyId }) {
-  const base = (process.env.APP_URL || '').replace(/\/+$/, '')
-  if (!base || !refId) return ''
-  if (refType === 'task') {
-    if (eventType === EVENTS.TASK_DELETED) return '' // the task page no longer exists
-    return eventType === EVENTS.TRANSIT_MILESTONE
-      ? `${base}/transit/${familyId}/${refId}`
-      : `${base}/families/${familyId}/tasks/${refId}`
-  }
-  if (refType === 'careRecipient') {
-    return LOG_EVENTS.includes(eventType) ? `${base}/recipients/${refId}/log` : `${base}/recipients/${refId}`
-  }
-  return ''
-}
-
 // ---------- Notify ----------
 // { send: false } records the update for "Recent updates" without a Telegram message
 // (e.g. a care note posted with "Notify the family Telegram group" unticked).
@@ -243,9 +225,9 @@ export async function notify(familyId, eventType, payload, { send = true } = {})
     })
     if (skip) return record
 
-    const link = deepLink({ eventType, refType: message.refType, refId: message.refId, familyId: String(id) })
     try {
-      await sendTelegramMessage(chatId, link ? `${message.text}\n${link}` : message.text)
+      // Just the message: no link back to the app
+      await sendToGroup(chatId, message.text)
       record.status = NOTIFICATION_STATUS.SENT
       record.sentAt = new Date()
     } catch (error) {

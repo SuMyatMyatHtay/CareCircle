@@ -70,18 +70,25 @@ function closeEdit() {
             @delete="actions.removeLog"
         />
 
+        <!-- Household tasks have no recipient: the pop-up then asks who the note is about -->
         <button
-            v-if="recipientId"
             type="button"
             class="add-note-button"
             data-testid="task-add-note"
             @click="isAdding = true"
         >
-            <i class="bi bi-plus-lg" aria-hidden="true"></i> Add consultation note
+            <i class="bi bi-plus-lg" aria-hidden="true"></i> {{ recipientId ? 'Add consultation note' : 'Add care note' }}
         </button>
-        <p v-else class="visit-notes-hint">
-            Consultation notes go in a care recipient's log, and this task isn't for one.
-        </p>
+        <!-- Chaithra (E): link to the recipient's whole care log -->
+        <RouterLink
+            v-if="recipientId"
+            class="see-all-notes"
+            data-testid="task-see-all-notes"
+            :to="{ name: 'recipient-log', params: { recipientId } }"
+        >
+            See all of {{ recipientName ? `${recipientName}'s` : 'their' }} notes
+            <i class="bi bi-arrow-right" aria-hidden="true"></i>
+        </RouterLink>
 
         <ConsultationNoteModal
             v-if="isAdding"
@@ -140,6 +147,20 @@ function closeEdit() {
     color: var(--theme-text, #2f2f2f);
     font-size: 14px;
     font-weight: 700;
+}
+
+.see-all-notes {
+    display: block;
+    width: fit-content;
+    margin-top: 12px;
+    color: var(--theme-green, #2d7d43);
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.see-all-notes:hover {
+    text-decoration: underline;
 }
 
 .add-note-button:hover {

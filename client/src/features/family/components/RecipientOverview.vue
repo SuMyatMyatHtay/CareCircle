@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, useId } from 'vue'
 import RecipientCard from './RecipientCard.vue'
 const props = defineProps({
   recipients: { type: Array, default: () => [] },
@@ -13,6 +13,7 @@ defineEmits(['retry', 'open', 'show-open-tasks'])
 const id = (value) =>
   typeof value === 'object' && value ? value._id || value.id : value
 const page = ref(1)
+const headingId = useId()
 const pageSize = 3
 const pageCount = computed(() => Math.ceil(props.recipients.length / pageSize))
 const visibleRecipients = computed(() => props.recipients.slice((page.value - 1) * pageSize, page.value * pageSize))
@@ -41,8 +42,8 @@ function nextTask(tasks, recipient) {
 }
 </script>
 <template>
-  <section class="care-recipient-overview" aria-labelledby="recipients-heading">
-    <h2 id="recipients-heading" class="care-section-title">
+  <section class="care-recipient-overview" :aria-labelledby="headingId">
+    <h2 :id="headingId" class="care-section-title">
       Who are we caring for?
     </h2>
     <div v-if="loading" class="care-inline-state" role="status">

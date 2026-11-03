@@ -132,10 +132,9 @@ const isMobile = ref(window.innerWidth < 768)
 const expanded = ref(false)
 watch([trimmed, shown], () => { expanded.value = false })
 
-// Frame 21 has no People pill; people still show under "All"
 const mobilePills = computed(() => [
     { key: 'all', label: 'All', count: counts.value.all },
-    ...GROUPS.filter((group) => group.key !== 'people').map((group) => ({ key: group.key, label: group.label, count: counts.value[group.key] }))
+    ...GROUPS.map((group) => ({ key: group.key, label: group.label, count: counts.value[group.key] }))
 ])
 const mobilePill = computed(() => (shown.value.length === GROUP_KEYS.length ? 'all' : shown.value.length === 1 ? shown.value[0] : ''))
 
@@ -208,6 +207,43 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
             </header>
 
             <div class="search-mobile-body">
+                <details class="search-mobile-filters">
+                    <summary>Filters and sort<span v-if="hasFilters"> · Active</span></summary>
+                    <div class="search-mobile-filter-fields" role="group" aria-label="Search filters">
+                        <fieldset class="search-filter-group">
+                            <legend class="search-filter-label">Show</legend>
+                            <label v-for="group in GROUPS" :key="group.key" class="search-check">
+                                <input type="checkbox" :checked="shown.includes(group.key)" @change="toggleShown(group.key)">
+                                <span>{{ group.show }}</span>
+                            </label>
+                        </fieldset>
+                        <label v-if="recipients.length" class="search-filter-group">
+                            <span class="search-filter-label">For</span>
+                            <select v-model="filters.recipient" aria-label="For" class="form-select search-select">
+                                <option v-for="person in recipientPills" :key="person.id" :value="person.id">{{ person.name }}</option>
+                            </select>
+                        </label>
+                        <label class="search-filter-group">
+                            <span class="search-filter-label">When</span>
+                            <select v-model="filters.when" aria-label="When" class="form-select search-select">
+                                <option v-for="option in WHEN_OPTIONS" :key="option.value" :value="option.value">{{ option.label }}</option>
+                            </select>
+                        </label>
+                        <label class="search-filter-group">
+                            <span class="search-filter-label">Task status</span>
+                            <select v-model="filters.status" aria-label="Task status" class="form-select search-select">
+                                <option v-for="option in STATUS_OPTIONS" :key="option.value" :value="option.value">{{ option.label }}</option>
+                            </select>
+                        </label>
+                        <label class="search-filter-group">
+                            <span class="search-filter-label">Sort</span>
+                            <select v-model="filters.sort" aria-label="Sort" class="form-select search-select">
+                                <option v-for="option in SORT_OPTIONS" :key="option.value" :value="option.value">{{ option.label }}</option>
+                            </select>
+                        </label>
+                        <button type="button" class="search-text-button" :disabled="!hasFilters" @click="clearFilters">Clear filters</button>
+                    </div>
+                </details>
                 <p v-if="state === 'idle'" class="search-card search-state">Type at least 2 letters.</p>
                 <div v-else-if="state === 'loading'" class="search-card" aria-hidden="true">
                     <span v-for="n in 3" :key="n" class="search-skeleton"><span></span><span></span></span>

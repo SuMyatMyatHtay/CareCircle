@@ -46,8 +46,11 @@ function closeMobileSidebar() {
 }
 
 function handleResize() {
-  isMobile.value = window.innerWidth < 768
-  sidebarOpen.value = window.innerWidth >= 768
+  const nextMobile = window.innerWidth < 768
+  // Phone keyboards and browser chrome also resize the viewport. Keep an open
+  // drawer until the layout actually crosses the mobile breakpoint.
+  if (nextMobile !== isMobile.value) sidebarOpen.value = !nextMobile
+  isMobile.value = nextMobile
 }
 function handleKeydown(event) {
   if (event.key === 'Escape') closeMobileSidebar()
@@ -70,7 +73,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="app-layout d-flex" :class="{ 'family-surface': isFamilyPage, 'family-home-surface': isHomePage, 'family-settings-surface': isSettingsPage }">
+  <div class="app-layout d-flex" :class="{ 'family-surface': isFamilyPage, 'family-home-surface': isHomePage, 'family-settings-surface': isSettingsPage, 'task-form-surface': route.name === 'task-new' }">
 
     <!-- Overlay on mobile -->
     <div

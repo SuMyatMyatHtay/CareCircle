@@ -404,14 +404,15 @@ watch(selectedFamilyId, (newId, oldId) => {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    margin: 0 -18px -25px;
-    padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+    margin: 0;
+    padding: 12px 0 calc(12px + env(safe-area-inset-bottom, 0px));
     border-top: 1px solid var(--theme-border, #EEF0EC);
     background: var(--theme-page, #FBFBF7);
 }
 
 .summary {
     min-height: 44px;
+    min-width: 0;
     padding: 0;
     overflow: hidden;
     border: none;
@@ -451,6 +452,7 @@ watch(selectedFamilyId, (newId, oldId) => {
 @media (min-width: 768px) {
     .sticky-footer {
         margin: 0;
+        padding: 12px 18px;
         border: 1px solid var(--theme-border, #EEF0EC);
         border-radius: 14px;
     }

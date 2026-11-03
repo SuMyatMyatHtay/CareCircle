@@ -173,7 +173,10 @@ onUnmounted(() => {
     <!-- Phones: Figma "Mobile prototype" layout -->
     <MyTasksMobile
         v-if="isMobile"
+        v-model:family-filter="familyFilter"
         :tasks="filteredTasks"
+        :open-tasks="openTasks"
+        :families="families"
         :active-tab="activeTab"
         :counts="counts"
         :visible-tasks="visibleTasks"
@@ -181,9 +184,20 @@ onUnmounted(() => {
         :is-loading="isLoading"
         :error-message="errorMessage"
         :now="now"
+        :expanded-id="expandedId"
+        :busy-task-id="busyTaskId"
+        :tone-for="toneFor"
+        :notice="notice"
+        :action-error="actionError"
         @select-tab="selectTab"
         @retry="loadTasks"
         @calendar="calendarOpen = true"
+        @toggle="toggle"
+        @start="(task) => runAction(task, 'start')"
+        @give-back="(task) => runAction(task, 'give-back')"
+        @complete="(task) => runAction(task, 'complete')"
+        @open-trip="openTrip"
+        @dismiss="notice = ''"
     />
 
     <!-- Laptops: Figma "Web wireframes" layout -->

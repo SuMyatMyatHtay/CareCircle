@@ -81,7 +81,7 @@ async function copyInviteCode(inviteCode) {
         <div class="d-flex align-items-center justify-content-between mb-4">
             <RouterLink :to="homePath" class="sidebar-brand mb-0">
                 <span class="brand-icon">
-                <i class="bi bi-heart-pulse"></i>
+                <i class="bi bi-heart-pulse" aria-hidden="true"></i>
                 </span>
                 CareCircle
             </RouterLink>
@@ -92,7 +92,7 @@ async function copyInviteCode(inviteCode) {
                 aria-label="Hide sidebar"
                 @click="emit('collapse')"
             >
-                <i class="bi bi-layout-sidebar-inset-reverse"></i>
+                <i class="bi bi-layout-sidebar-inset-reverse" aria-hidden="true"></i>
             </button>
         </div>
 
@@ -123,13 +123,14 @@ async function copyInviteCode(inviteCode) {
                     <i
                         class="bi"
                         :class="copiedInviteCode === selectedFamily.inviteCode ? 'bi-check2' : 'bi-copy'"
+                        aria-hidden="true"
                     ></i>
                     {{ copiedInviteCode === selectedFamily.inviteCode ? 'Copied!' : selectedFamily.inviteCode }}
                 </span>
             </div>
             <small v-else>No family selected</small>
             </span>
-            <i class="bi bi-chevron-down"></i>
+            <i class="bi bi-chevron-down" aria-hidden="true"></i>
         </button>
 
         <div v-if="showSwitcher" class="switcher-menu">
@@ -152,17 +153,18 @@ async function copyInviteCode(inviteCode) {
             <i
                 v-if="family.id === selectedFamilyId"
                 class="bi bi-check-lg"
+                aria-hidden="true"
             ></i>
             </button>
 
             <div class="switcher-divider"></div>
 
             <RouterLink v-if="!preview" to="/create-family" class="switcher-action" >
-            <i class="bi bi-plus-lg"></i> Create a new family
+            <i class="bi bi-plus-lg" aria-hidden="true"></i> Create a new family
             </RouterLink>
 
             <RouterLink v-if="!preview" to="/join-family" class="switcher-action">
-            <i class="bi bi-person-plus"></i> Join with invite code
+            <i class="bi bi-person-plus" aria-hidden="true"></i> Join with invite code
             </RouterLink>
         </div>
         </div>
@@ -170,17 +172,17 @@ async function copyInviteCode(inviteCode) {
         <!-- NAVIGATION -->
         <nav class="sidebar-nav" aria-label="Family navigation">
         <RouterLink :to="homePath" class="nav-item" exact-active-class="active" @click="emit('navigate')">
-            <i class="bi bi-house-door"></i>
+            <i class="bi bi-house-door" aria-hidden="true"></i>
             Family home
         </RouterLink>
 
         <template v-if="selectedFamily">
             <RouterLink v-if="!preview" to="/my-tasks" class="nav-item" active-class="active" @click="emit('navigate')">
-            <i class="bi bi-list-check"></i>
+            <i class="bi bi-list-check" aria-hidden="true"></i>
             My tasks
             </RouterLink>
             <div v-else class="nav-item unavailable">
-            <i class="bi bi-list-check"></i>
+            <i class="bi bi-list-check" aria-hidden="true"></i>
             My tasks <span class="coming-tag">Soon</span>
             </div>
 
@@ -189,12 +191,12 @@ async function copyInviteCode(inviteCode) {
             Calendar
             </RouterLink>
             <div v-else class="nav-item unavailable">
-            <i class="bi bi-calendar3"></i>
+            <i class="bi bi-calendar3" aria-hidden="true"></i>
             Calendar <span class="coming-tag">Soon</span>
             </div>
 
             <RouterLink v-if="!preview" to="/contributions" class="nav-item" active-class="active" @click="emit('navigate')">
-                <i class="bi bi-trophy"></i> Contributions
+                <i class="bi bi-trophy" aria-hidden="true"></i> Contributions
             </RouterLink>
 
             <div class="nav-heading">CARE RECIPIENTS</div>
@@ -205,9 +207,9 @@ async function copyInviteCode(inviteCode) {
             <template v-if="preview"><button v-for="recipient in recipients" :key="recipient._id || recipient.id" type="button" class="care-sidebar-recipient" @click="emit('open-recipient', recipient)"><CareAvatar :person="recipient" size="small" /><span><strong>{{ displayName(recipient) }}</strong><small>{{ careTypeLabel(recipient.careType) }}</small></span></button></template>
             <template v-else><div v-for="recipient in recipients" :key="recipient._id" class="nav-item recipient-item" :class="{ active: route.params.recipientId === recipient._id }"><ProfileAvatar :person="recipient" recipient size="small" /><RouterLink :to="{ name: 'recipient-overview', params: { recipientId: recipient._id } }" class="recipient-text text-reset text-decoration-none" @click="emit('navigate')"><strong>{{ displayName(recipient) }}</strong><small>{{ careTypeLabel(recipient.careType) }}</small></RouterLink></div></template>
 
-            <RouterLink v-if="!preview" to="/recipients/new" class="nav-item add-recipient" @click="emit('navigate')"><i class="bi bi-plus-lg"></i>Add care recipient</RouterLink>
+            <RouterLink v-if="!preview" to="/recipients/new" class="nav-item add-recipient" @click="emit('navigate')"><i class="bi bi-plus-lg" aria-hidden="true"></i>Add care recipient</RouterLink>
             <div v-else class="nav-item unavailable">
-            <i class="bi bi-plus-lg"></i>
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
             Add care recipient
             <span class="coming-tag">Soon</span>
             </div>
@@ -222,7 +224,7 @@ async function copyInviteCode(inviteCode) {
         <!-- BOTTOM AREA -->
         <div class="sidebar-bottom">
             <RouterLink v-if="selectedFamily" :to="settingsPath" class="nav-item" exact-active-class="active" @click="emit('navigate')">
-                <i class="bi bi-gear"></i>
+                <i class="bi bi-gear" aria-hidden="true"></i>
                 Family settings
             </RouterLink>
             <!-- The name row is the link to My profile, highlighted like a nav item when you're there -->
@@ -247,7 +249,7 @@ async function copyInviteCode(inviteCode) {
                 :disabled="isLoggingOut"
                 @click="handleLogout"
                 >
-                <i class="bi bi-box-arrow-right"></i>
+                <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
                 {{ isLoggingOut ? 'Logging out...' : 'Log out' }}
             </button>
 

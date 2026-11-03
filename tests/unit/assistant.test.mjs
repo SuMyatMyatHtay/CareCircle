@@ -6,6 +6,7 @@ import User from '../../server/src/features/auth/User.model.js'
 import Family from '../../server/src/features/families/Family.model.js'
 import Task from '../../server/src/features/tasks/TaskModel.js'
 import Recipient from '../../server/src/features/recipients/CareRecipient.model.js'
+import Notification from '../../server/src/features/notifications/Notifications.model.js'
 import Proposal from '../../server/src/features/assistant/Proposal.model.js'
 import { requireAuth } from '../../server/src/middleware/requireAuth.js'
 import { requireFamilyMember } from '../../server/src/middleware/requireFamilyMember.js'
@@ -73,6 +74,14 @@ beforeEach(async t => {
   })
   t.mock.method(User, 'find', () => query([{ _id: admin, name: 'Sera' }, { _id: member, name: 'Jasmine' }]))
   t.mock.method(Task, 'getTaskById', async value => clone(tasks.get(String(value))))
+  // Reminder bookkeeping is separate from the primary content/status writes
+  // counted below. Apply it to the same task store and reject unexpected writes.
+  t.mock.method(Task, 'updateOne', async (filter, update) => {
+    assert.deepEqual(Object.keys(update.$set), ['unclaimedReminderAt'])
+    const found = [...tasks.values()].find(task => matches(task, filter))
+    if (found) Object.assign(found, clone(update.$set))
+    return { matchedCount: found ? 1 : 0, modifiedCount: found ? 1 : 0 }
+  })
   t.mock.method(Task, 'findOneAndUpdate', async (filter, update) => {
     const found = [...tasks.values()].find(task => matches(task, filter))
     if (!found) return null
@@ -81,10 +90,19 @@ beforeEach(async t => {
   })
   t.mock.method(Task, 'startTransitSession', async task => task.needsTransit ? { task: task._id, companion: task.claimedBy, status: 'active' } : null)
   t.mock.method(Task, 'endTransitSession', async () => {})
-  t.mock.method(Family, 'findById', async value => eq(value, familyId) ? { _id: familyId, name: 'Tan family',
-    members: [{ userId: admin, role: 'admin' }, { userId: member, role: 'member' },
-      // Give each rate-limit test a fresh authenticated member.
-      { userId: `00000000000000000000${String(requestUserCounter).padStart(4, '0')}`, role: 'member' }] } : null)
+  t.mock.method(Family, 'findById', value => {
+    const family = eq(value, familyId) ? { _id: familyId, name: 'Tan family',
+      members: [{ userId: admin, role: 'admin' }, { userId: member, role: 'member' },
+        // Give each rate-limit test a fresh authenticated member.
+        { userId: `00000000000000000000${String(requestUserCounter).padStart(4, '0')}`, role: 'member' }] } : null
+    // Auth awaits the query directly; notifications use select().lean().
+    return { select() { return this }, lean: async () => clone(family),
+      then: (resolve, reject) => Promise.resolve(clone(family)).then(resolve, reject) }
+  })
+  t.mock.method(Notification, 'create', async record => {
+    assert.equal(record.status, 'skipped') // No group or live Telegram in this unit suite.
+    return clone(record)
+  })
   t.mock.method(Recipient, 'find', filter => query(people.filter(person => matches(person, filter))))
   t.mock.method(Recipient, 'findOne', async filter => clone(people.find(person => matches(person, filter))))
   t.mock.method(Task, 'find', filter => query([...tasks.values()].filter(task => matches(task, filter))))
@@ -271,6 +289,7 @@ test('unclaim blocks unrelated admins and rechecks the claimer at confirmation',
   assert.equal(saved.status, 200)
   assert.equal(saved.data.task.status, 'open')
   assert.equal(saved.data.task.claimedBy, null)
+  assert.ok(tasks.get(taskId).unclaimedReminderAt instanceof Date)
   assert.equal(writes, 1)
   Object.assign(tasks.get(taskId), { status: 'claimed', claimedBy: member })
   const next = await chat({ user: member })

@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest'
 import {
     dayKey, shiftMonth, monthGrid, gridRange, monthLabel, dayLabel, timeLabel, shortTime,
-    taskState, buildEvents, filterEvents, groupByDay
+    taskState, buildEvents, filterEvents, groupByDay, recipientOptions
 } from '../calendarDays.js'
 
 describe('calendar dates (Singapore time, weeks start Monday)', () => {
@@ -87,5 +87,15 @@ describe('calendar events', () => {
         expect(filterEvents(events, 'all')).toHaveLength(2)
         expect(Object.keys(groupByDay(events))).toEqual(['2026-10-28', '2026-10-29'])
         expect(events[1].recipientName).toBe('Household')
+    })
+
+    it('remembers each event\'s family, and lists the people shown for the filter', () => {
+        const events = [
+            ...buildEvents({ familyId: 'f1', familyName: 'Tan family', now, tasks: [task()] }),
+            ...buildEvents({ familyId: 'f2', familyName: 'Lee family', now, tasks: [task({ _id: 't2', recipient: { _id: 'r2', name: 'Ah Ma' } })] })
+        ]
+        expect(events.map((e) => e.familyName)).toEqual(['Tan family', 'Lee family'])
+        expect(events[1].to.params.familyId).toBe('f2')
+        expect(recipientOptions(events)).toEqual([{ id: 'r2', name: 'Ah Ma' }, { id: 'r1', name: 'Grandpa' }])
     })
 })

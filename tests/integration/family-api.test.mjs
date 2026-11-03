@@ -41,8 +41,8 @@ async function request(path, { method = 'GET', user = 'alex', body, authenticate
 beforeEach(async () => {
   translationProvider.reset()
   await resetFixtures()
-  // These cases test ordinary task permissions and claims, not the overdue policy.
-  await Task.findByIdAndUpdate(ids.task, { startAt: new Date(Date.now() + 3600000) })
+  // Keep ordinary task ownership and claim cases in the future at any run time.
+  await Task.updateOne({ _id: ids.task }, { $set: { startAt: new Date(Date.now() + 3600000) } })
   tokens = {}
   for (const [name, email] of Object.entries(accounts)) {
     const login = await request('/auth/login', { method: 'POST', authenticated: false, body: { email, password } })
@@ -134,7 +134,7 @@ describe('Family APIs with Express, authentication and a real isolated MongoDB',
     assert.equal((await request(`${family}/members`)).status, 401)
   })
 
-  it('keeps manual task edits and deletions restricted to the creator, including admins', async () => {
+  it('keeps future task edits and deletions restricted to the creator, including admins', async () => {
     for (const user of ['alex', 'may']) {
       assert.equal((await request(`${family}/tasks/${ids.task}`, { method: 'PATCH', user, body: { title: 'Unauthorized edit' } })).status, 403)
       assert.equal((await request(`${family}/tasks/${ids.task}`, { method: 'DELETE', user })).status, 403)
@@ -192,14 +192,34 @@ describe('Family APIs with Express, authentication and a real isolated MongoDB',
     assert.equal(again.data.cached, true)
     assert.equal(translationProvider.calls.length, 1)
     assert.equal(translationProvider.calls[0].to, 'zh-Hans')
+    // No "from": Azure detects the note's language, since notes aren't always English
+    assert.equal(translationProvider.calls[0].from, null)
+    // English is offered too, e.g. for a note written in Chinese
+    const english = await request(path, { method: 'POST', body: { lang: 'en' } })
+    assert.equal(english.status, 200)
+    assert.equal(translationProvider.calls.at(-1).to, 'en')
+    // Azure detected English: the note keeps its own words, so readers see no "translation"
+    assert.equal(english.data.translation, before.content)
     const saved = await Log.findById(ids.log)
     assert.equal(saved.translations.get('zh'), first.data.translation)
     assert.equal(saved.updatedAt.getTime(), before.updatedAt.getTime())
   })
 
+  it('treats a short note Azure misjudges as English instead of showing a garbled translation', async () => {
+    translationProvider.mode = 'misdetect'
+    const path = `${family}/logs/${ids.log}/translate`
+    const chinese = await request(path, { method: 'POST', body: { lang: 'zh' } })
+    assert.equal(chinese.status, 200)
+    assert.equal(chinese.data.translation, '这是已翻译的护理记录。')
+    // First a guess, then again from English
+    assert.deepEqual(translationProvider.calls.map(call => call.from), [null, 'en'])
+    const english = await request(path, { method: 'POST', body: { lang: 'en' } })
+    assert.equal(english.data.translation, (await Log.findById(ids.log)).content)
+  })
+
   it('rejects unsupported languages and foreign-family notes before contacting the provider', async () => {
     const path = `${family}/logs/${ids.log}/translate`
-    for (const lang of ['constructor', 'en', 123])
+    for (const lang of ['constructor', 'jp', 123])
       assert.equal((await request(path, { method: 'POST', body: { lang } })).status, 400)
     assert.equal((await request(path, { method: 'POST', user: 'outsider', body: { lang: 'zh' } })).status, 403)
     assert.equal((await request(`/families/${ids.otherFamily}/logs/${ids.log}/translate`, { method: 'POST', body: { lang: 'zh' } })).status, 404)

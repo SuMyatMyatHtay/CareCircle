@@ -16,7 +16,7 @@ async function sessions(api, seriesId) {
 }
 const take = page => page.getByRole('button', { name: /I.ll take it/i }).filter({ visible: true })
 
-test('creates a daily series from the form and persists every session', async ({ page, isolatedData }) => {
+test('creates a daily series from the form and persists every session', async ({ page, isolatedData, isMobile }) => {
   await login(page)
   await page.goto('/tasks/new')
   await page.getByLabel('What needs doing?', { exact: true }).fill('E2E repeating therapy')
@@ -33,7 +33,11 @@ test('creates a daily series from the form and persists every session', async ({
     return (await response.json()).tasks.filter(t => t.title === 'E2E repeating therapy').length
   }).toBe(6)
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'Repeating tasks', exact: true })).toBeVisible()
+  if (isMobile) {
+    // Mobile Home shows today's tasks. "See all" opens the full task list.
+    await page.getByRole('button', { name: 'See all', exact: true }).filter({ visible: true }).click()
+    await expect(page.getByRole('heading', { name: 'E2E repeating therapy', exact: true })).toHaveCount(6)
+  } else await expect(page.getByRole('heading', { name: 'Repeating tasks', exact: true })).toBeVisible()
 })
 
 test('default series claim and a one-day handover preserve other assignments', async ({ page, isolatedData }) => {

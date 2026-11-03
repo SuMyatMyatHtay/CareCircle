@@ -98,7 +98,7 @@
   padding: 3px;
 }
 .care-mobile-theme-switch button {
-  min-height: 35px;
+  min-height: 44px;
   min-width: 53px;
   padding: 6px 10px;
   border: 1px solid transparent;
@@ -107,6 +107,9 @@
   color: var(--care-muted);
   font-size: 12px;
   font-weight: 600;
+}
+.care-mobile-appearance-row {
+  flex-wrap: wrap;
 }
 .care-mobile-theme-switch button.selected {
   background: var(--care-panel);
@@ -158,8 +161,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
 }
 .care-mobile-invite-copy {
+  flex: 1 1 170px;
   min-width: 0;
 }
 .care-mobile-invite-copy h3 {
@@ -171,8 +176,8 @@
 }
 .care-mobile-invite-copy p {
   color: var(--care-text);
-  font-size: 25px;
-  letter-spacing: 1.8px;
+  font-size: clamp(20px, 6vw, 25px);
+  letter-spacing: 1px;
   font-weight: 600;
   line-height: 1.1;
   margin: 0;
@@ -184,9 +189,10 @@
   flex-shrink: 0;
   align-items: center;
   gap: 6px;
+  margin-left: auto;
 }
 .care-mobile-invite-actions .care-button {
-  min-height: 39px;
+  min-height: 44px;
   padding: 8px 12px;
   font-size: 12px;
   font-weight: 650;
@@ -194,8 +200,8 @@
 }
 .care-mobile-invite-actions .care-mobile-regenerate {
   color: var(--care-green);
-  width: 38px;
-  min-width: 38px;
+  width: 44px;
+  min-width: 44px;
   padding: 8px;
   border-color: var(--theme-accent-border, #b8d5bc);
   font-size: 20px;
@@ -222,13 +228,27 @@
 .care-mobile-family-members li + li {
   border-top: 1px solid var(--care-border);
 }
+.care-mobile-family-members li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 12px;
+}
+.care-mobile-family-members .care-profile-avatar-link {
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+}
 .care-mobile-member-row {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 11px;
   width: 100%;
   min-height: 57px;
-  padding: 10px 13px;
+  padding: 10px 12px 10px 0;
   border: 0;
   background: none;
   color: var(--care-text);
@@ -298,6 +318,8 @@
   right: 0;
   bottom: 0;
   padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(10px, env(safe-area-inset-left, 0px));
+  padding-right: max(10px, env(safe-area-inset-right, 0px));
   background: var(--care-panel);
   border-top: 1px solid var(--care-border);
 }
@@ -372,17 +394,7 @@
   .care-settings-mobile {
     display: block;
   }
-  .family-settings-surface .sidebar-wrapper,
-  .family-settings-surface .sidebar-overlay,
-  .family-settings-surface .app-topbar,
-  .family-settings-surface .care-hidden-topbar,
-  .family-settings-surface .care-preview-bar {
-    display: none !important;
-  }
-  .family-settings-surface .app-main {
-    padding: 24px 20px calc(90px + env(safe-area-inset-bottom, 0px));
-    scrollbar-gutter: auto;
-  }
+  /* Phones keep the top bar with the left menu (☰); there is no bottom bar any more */
   .family-settings-surface .care-settings-page {
     max-width: none;
     min-height: 100%;
@@ -392,9 +404,6 @@
   }
 }
 @media (max-width: 359px) {
-  .family-settings-surface .app-main {
-    padding: 20px 12px calc(84px + env(safe-area-inset-bottom, 0px));
-  }
   .care-mobile-settings-profile {
     gap: 10px;
   }
@@ -438,7 +447,7 @@
   }
   .care-mobile-member-row {
     gap: 9px;
-    padding: 10px 11px;
+    padding: 10px 11px 10px 0;
   }
   .care-mobile-member-name strong {
     font-size: 13px;

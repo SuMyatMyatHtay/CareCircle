@@ -1,27 +1,37 @@
 <script setup>
-// Owner: Chaithra (E). Matches Figma "CareCircle — Mobile prototype" → "10 · My tasks".
-// Phone layout of My Tasks. MyTasksView loads the data and passes it in.
-// Tapping a task opens its Task detail page (Start the trip / Mark as done / Unclaim live there).
-import { computed } from 'vue'
-import { useRouter } from 'vue-router'
-import PersonAvatar from './PersonAvatar.vue'
+// Owner: Chaithra (E). Phone layout of My Tasks (Figma frame 10).
+// Shows the same things as the laptop layout (MyTasksView): title, family filter,
+// Google Calendar, Add to calendar, Your week, the three tabs, and the same card details.
+// MyTasksView loads the data and does the actions; the cards are the same MyTaskCard as on
+// the laptop (tap to open: progress, View task, Give back, Start the trip, Mark as done).
+import MyTaskCard from './MyTaskCard.vue'
 import GoogleCalendarSync from './GoogleCalendarSync.vue'
-import { formatTime, dayKey, recipientName, TIME_ZONE } from '../utils/formatters.js'
+import WeekStrip from './WeekStrip.vue'
 
-const props = defineProps({
+defineProps({
     tasks: { type: Array, default: () => [] },        // all my tasks (after the family filter)
+    openTasks: { type: Array, default: () => [] },    // not done yet, for Your week
+    families: { type: Array, default: () => [] },     // [{ id, name }] for the family filter
+    familyFilter: { type: String, default: 'all' },
     activeTab: { type: String, default: 'claimed' },
     counts: { type: Object, default: () => ({}) },
     visibleTasks: { type: Array, default: () => [] },
     reminder: { type: Function, required: true },
     isLoading: { type: Boolean, default: false },
     errorMessage: { type: String, default: '' },
-    now: { type: Number, default: () => Date.now() }
+    now: { type: Number, default: () => Date.now() },
+    expandedId: { type: String, default: '' },
+    busyTaskId: { type: String, default: '' },
+    toneFor: { type: Function, default: () => 'green' },
+    notice: { type: String, default: '' },
+    actionError: { type: String, default: '' }
 })
-const emit = defineEmits(['select-tab', 'retry', 'calendar'])
+const emit = defineEmits([
+    'select-tab', 'retry', 'calendar', 'update:familyFilter',
+    'toggle', 'start', 'give-back', 'complete', 'open-trip', 'dismiss'
+])
 
-const router = useRouter()
-
+// Same tab names and empty messages as the laptop layout
 const TABS = [
     { key: 'claimed', label: 'Upcoming' },
     { key: 'in_progress', label: 'In progress' },
@@ -33,63 +43,32 @@ const EMPTY = {
     completed: 'No completed tasks yet.'
 }
 
-// "This week · 3 of 5 done": my tasks starting Monday to Sunday of this week
-const week = computed(() => {
-    const DAY = 24 * 60 * 60 * 1000
-    const weekday = new Date(props.now).toLocaleDateString('en-US', { weekday: 'short', timeZone: TIME_ZONE })
-    const offset = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].indexOf(weekday)
-    const keys = new Set(Array.from({ length: 7 }, (_, i) => dayKey(props.now + (i - offset) * DAY)))
-    const inWeek = props.tasks.filter((t) => keys.has(dayKey(t.startAt)))
-    const done = inWeek.filter((t) => t.status === 'completed').length
-    return { done, total: inWeek.length, percent: inWeek.length ? Math.round((done / inWeek.length) * 100) : 0 }
-})
-
-function datePill(task) {
-    return new Date(task.startAt).toLocaleDateString('en-GB', {
-        weekday: 'short', day: 'numeric', month: 'short', timeZone: TIME_ZONE
-    })
-}
-
-// "Today, 2:00 PM · FairPrice, Junction 8" for due-soon tasks, "9:00 AM · Bethesda, Bedok" otherwise
-function meta(task, flagged) {
-    const time = formatTime(task.startAt).toUpperCase().replace(/(AM|PM)$/, ' $1')
-    const isToday = dayKey(task.startAt) === dayKey(props.now)
-    const when = flagged && isToday ? `Today, ${time}` : time
-    const place = task.location?.name || task.location?.address || ''
-    return [when, place].filter(Boolean).join(' · ')
-}
-
-function open(task) {
-    router.push({ name: 'task-detail', params: { familyId: task.family._id, taskId: task._id } })
-}
 </script>
 
 <template>
     <div class="m-tasks">
-        <div class="title-row">
-            <h1>Tasks</h1>
-            <button type="button" class="cal-btn" aria-label="Add my tasks to calendar" @click="emit('calendar')">
-                <i class="bi bi-calendar-plus" aria-hidden="true"></i>
-            </button>
-        </div>
+        <header class="m-header">
+            <h1>My tasks</h1>
+            <p>Everything you've claimed, across all your families.</p>
+        </header>
 
-        <!-- Needs someone = D's open-tasks list; until it exists it goes to Family home -->
-        <div class="segmented" role="tablist" aria-label="Task lists">
-            <RouterLink to="/home" class="segment" role="tab" aria-selected="false">Needs someone</RouterLink>
-            <span class="segment active" role="tab" aria-selected="true">My tasks</span>
+        <div class="m-actions">
+            <label class="families-pill">
+                <span class="visually-hidden">Show tasks from</span>
+                <select :value="familyFilter" @change="emit('update:familyFilter', $event.target.value)">
+                    <option value="all">All families</option>
+                    <option v-for="family in families" :key="family.id" :value="family.id">{{ family.name }}</option>
+                </select>
+                <span aria-hidden="true">▾</span>
+            </label>
+            <button type="button" class="cal-btn" @click="emit('calendar')">
+                <i class="bi bi-calendar-plus" aria-hidden="true"></i> Add to calendar
+            </button>
         </div>
 
         <GoogleCalendarSync compact />
 
-        <section class="week" aria-label="This week">
-            <div class="week-row">
-                <span>This week</span>
-                <strong>{{ week.done }} of {{ week.total }} done</strong>
-            </div>
-            <div class="bar" role="progressbar" :aria-valuenow="week.percent" aria-valuemin="0" aria-valuemax="100">
-                <span :style="{ width: `${week.percent}%` }"></span>
-            </div>
-        </section>
+        <WeekStrip :tasks="openTasks" :now="now" />
 
         <div class="tabs" role="tablist" aria-label="Task status">
             <button
@@ -102,9 +81,13 @@ function open(task) {
                 :aria-selected="activeTab === tab.key"
                 @click="emit('select-tab', tab.key)"
             >
-                {{ tab.label }} · {{ counts[tab.key] || 0 }}
+                <span>{{ tab.label }}</span>
+                <span class="tab-count">{{ counts[tab.key] || 0 }}</span>
             </button>
         </div>
+
+        <div v-if="notice" class="msg" role="status" @click="emit('dismiss')">{{ notice }}</div>
+        <div v-if="actionError" class="msg is-error" role="alert">{{ actionError }}</div>
 
         <p v-if="isLoading && !tasks.length" class="status" role="status">Loading your tasks...</p>
         <p v-else-if="errorMessage" class="status is-error" role="alert">
@@ -113,29 +96,34 @@ function open(task) {
         </p>
         <p v-else-if="!visibleTasks.length" class="status">{{ EMPTY[activeTab] }}</p>
 
-        <ul v-else class="cards">
-            <li v-for="task in visibleTasks" :key="task._id">
-                <button type="button" class="m-card" :class="{ urgent: reminder(task) }" @click="open(task)">
-                    <span class="card-top">
-                        <span v-if="reminder(task)" class="pill pill-due">{{ reminder(task).label }}</span>
-                        <span v-else class="pill pill-date">{{ datePill(task) }}</span>
-                        <span class="family">{{ task.family?.name }}</span>
-                    </span>
-                    <span class="card-main">
-                        <PersonAvatar :name="recipientName(task)" :size="44" tone="yellow" />
-                        <span class="text">
-                            <strong>{{ task.title }}</strong>
-                            <small>{{ meta(task, reminder(task)) }}</small>
-                        </span>
-                    </span>
-                </button>
-            </li>
-        </ul>
+        <div v-else class="cards">
+            <MyTaskCard
+                v-for="task in visibleTasks"
+                :key="task._id"
+                :task="task"
+                :expanded="expandedId === task._id"
+                :busy="busyTaskId === task._id"
+                :reminder="reminder(task)"
+                :family-tone="toneFor(task)"
+                @toggle="emit('toggle', task)"
+                @start="emit('start', task)"
+                @give-back="emit('give-back', task)"
+                @complete="emit('complete', task)"
+                @open-trip="emit('open-trip', task)"
+            />
+        </div>
+
+        <!-- Same Reminders card as the laptop -->
+        <section class="reminders" aria-labelledby="m-reminders-title">
+            <h2 id="m-reminders-title"><i class="bi bi-bell" aria-hidden="true"></i> Reminders</h2>
+            <p>Tasks due within 24 hours are flagged here. Telegram also reminds you 1 hour before.</p>
+            <RouterLink to="/family/settings" class="reminders-link">Change in Family settings →</RouterLink>
+        </section>
     </div>
 </template>
 
 <style scoped>
-/* Values from Figma "Mobile prototype" → 10 · My tasks (390 × 844) */
+/* Phone version of Figma frame 10 · My tasks: same content as the laptop layout */
 .m-tasks {
     display: flex;
     flex-direction: column;
@@ -144,20 +132,62 @@ function open(task) {
     color: var(--theme-text, #2e2e2e);
 }
 
-.title-row {
+
+.m-header p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--theme-muted, #5b6470);
+}
+
+.m-actions {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* "All families ▾" (same as the laptop) */
+.families-pill {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--theme-neutral, #f3f4f6);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--theme-text, #2e2e2e);
+    min-width: 0;
+    max-width: 100%;
+    min-height: 44px;
+}
+
+.families-pill select {
+    min-width: 0;
+    max-width: 100%;
+    border: none;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    appearance: none;
+    padding-right: 2px;
 }
 
 .cal-btn {
-    width: 40px;
-    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
     border: 1px solid var(--theme-border, #dce3dc);
     border-radius: 12px;
     background: var(--theme-panel, white);
-    font-size: 18px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
     color: var(--theme-green, #2f7a3f);
+    min-height: 44px;
 }
 
 h1 {
@@ -167,90 +197,55 @@ h1 {
     color: var(--theme-text, #2e2e2e);
 }
 
-.segmented {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 4px;
-    padding: 4px;
-    border-radius: 14px;
-    background: var(--theme-neutral, #eef1ee);
-}
 
-.segment {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 44px;
-    border-radius: 10px;
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--theme-muted, #4b5563);
-    text-decoration: none;
-}
 
-.segment.active {
-    background: var(--theme-panel, white);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-    font-weight: 800;
-    color: var(--theme-text, #2e2e2e);
-}
 
-.week {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 14px 16px;
-    border-radius: 18px;
-    background: var(--theme-soft, #e8f5e9);
-}
 
-.week-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 15px;
-    font-weight: 700;
-}
 
-.week-row strong {
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--theme-green, #1f5a2c);
-}
 
-.bar {
-    height: 10px;
-    overflow: hidden;
-    border-radius: 5px;
-    background: var(--theme-panel, white);
-}
 
-.bar span {
-    display: block;
-    height: 100%;
-    border-radius: 5px;
-    background: var(--theme-green, #2f7a3f);
-    transition: width 0.3s ease;
-}
 
 .tabs {
     display: flex;
-    gap: 20px;
+    gap: 6px;
     margin-top: 8px;
     border-bottom: 1px solid var(--theme-border, #e5e7eb);
-    overflow-x: auto;
 }
 
 .tab {
-    padding: 0 0 12px;
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 0;
+    min-height: 44px;
+    padding: 8px 0 12px;
     margin-bottom: -1px;
     border: none;
     border-bottom: 3px solid transparent;
     background: none;
     font-family: inherit;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
     color: var(--theme-muted, #5b6470);
     white-space: nowrap;
+}
+
+.tab-count {
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--theme-neutral, #f3f4f6);
+    font-size: 11px;
+}
+
+@media (max-width: 359px) {
+    .tab { font-size: 13px; }
 }
 
 .tab.active {
@@ -263,82 +258,53 @@ h1 {
     display: flex;
     flex-direction: column;
     gap: 14px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
 }
 
-.m-card {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    width: 100%;
-    padding: 15px;
-    border: 1px solid var(--theme-border, #e5e7eb);
-    border-radius: 18px;
-    background: var(--theme-panel, white);
-    font-family: inherit;
-    text-align: left;
+.msg {
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: var(--theme-soft, #e8f5e9);
+    font-size: 14px;
+    color: var(--theme-green, #1f5a2c);
 }
 
-.m-card.urgent {
-    padding: 14px;
-    border: 2px solid var(--theme-danger-border, #f28b7a);
-}
-
-.card-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-}
-
-.pill {
-    padding: 3px 10px;
-    border-radius: 11px;
-    font-size: 12px;
-    font-weight: 800;
-}
-
-.pill-due {
+.msg.is-error {
     background: var(--theme-danger-soft, #ffe9e4);
-    color: var(--theme-danger, #9f3a2b);
+    color: var(--theme-danger, #a33a26);
 }
 
-.pill-date {
-    background: var(--theme-neutral, #eef1f4);
-    color: var(--theme-text, #374151);
+.reminders {
+    padding: 16px 18px;
+    border: 1px solid var(--theme-warning-border, #ffe6a3);
+    border-radius: 16px;
+    background: var(--theme-warning-soft, #fff8e1);
 }
 
-.family {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--theme-muted, #5b6470);
-}
-
-.card-main {
+.reminders h2 {
     display: flex;
     align-items: center;
-    gap: 12px;
-}
-
-.text {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-}
-
-.text strong {
+    gap: 8px;
+    margin: 0 0 6px;
     font-size: 16px;
-    font-weight: 700;
+    font-weight: 800;
+    color: var(--theme-warning, #7a5a00);
+}
+
+.reminders p {
+    margin: 0 0 8px;
+    font-size: 14px;
     color: var(--theme-text, #2e2e2e);
 }
 
-.text small {
-    font-size: 13px;
-    font-weight: 400;
-    color: var(--theme-muted, #5b6470);
+.reminders-link {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--theme-green, #2f7a3f);
+    text-decoration: none;
 }
+
+
+
 
 .status {
     margin: 0;

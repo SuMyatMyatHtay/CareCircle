@@ -19,7 +19,6 @@ import MobilePreferencesPanel from '../components/MobilePreferencesPanel.vue'
 import MobileInviteCodeCard from '../components/MobileInviteCodeCard.vue'
 import MobileFamilyMembers from '../components/MobileFamilyMembers.vue'
 import MobileLogoutButton from '../components/MobileLogoutButton.vue'
-import MobileSettingsNavigation from '../components/MobileSettingsNavigation.vue'
 import SettingsProfileEditor from '../components/SettingsProfileEditor.vue'
 import MobileSettingsTasksPanel from '../components/MobileSettingsTasksPanel.vue'
 import { resetPreview } from '../../family/data/previewFamily.js'
@@ -55,7 +54,7 @@ const {
   changeProfile,
   run,
 } = useFamilySettings()
-const { appearance, theme, setAppearance } = useAppearance()
+const { appearance, setAppearance } = useAppearance()
 const { loggingOut, logoutError, logOut } = useSettingsAccountActions()
 const mobilePanel = ref(''),
   managedMember = ref(null),
@@ -169,25 +168,6 @@ async function mobileChangeRole() {
   )
     mobilePanel.value = ''
 }
-function navigateMobileSettings(tab) {
-  if (tab === 'tasks' && !isPreview) {
-    router.push({ name: 'my-tasks' })
-    return
-  }
-  if (tab === 'tasks' || tab === 'calendar') {
-    openMobilePanel(tab)
-    return
-  }
-  activeMobileTab.value = tab
-  const target =
-    tab === 'family' ? mobileFamilySection.value : mobileAccountSection.value
-  target?.scrollIntoView({
-    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      ? 'instant'
-      : 'smooth',
-    block: 'start',
-  })
-}
 function requestMobileLogout() {
   if (isPreview) mobilePanel.value = 'logout'
   else logOut()
@@ -284,7 +264,7 @@ function requestMobileLogout() {
         {{ error }}
       </p>
       <MobilePreferencesPanel
-        :appearance="appearance === 'system' ? theme : appearance"
+        :appearance="appearance"
         :language="language"
         :family-name="selectedFamily?.name || 'Your family'"
         :preview="isPreview && Boolean(selectedFamily)"
@@ -335,15 +315,6 @@ function requestMobileLogout() {
         {{ logoutError }}
       </p>
       <MobileLogoutButton :busy="loggingOut" @logout="requestMobileLogout" />
-      <MobileSettingsNavigation
-        :home-path="homePath"
-        :active="
-          ['tasks', 'calendar'].includes(mobilePanel)
-            ? mobilePanel
-            : activeMobileTab
-        "
-        @select="navigateMobileSettings"
-      />
     </div>
     <CareModal
       v-if="mobilePanel"

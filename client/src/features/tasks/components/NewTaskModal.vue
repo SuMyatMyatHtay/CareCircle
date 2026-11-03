@@ -381,4 +381,49 @@ onUnmounted(() => {
     border-color: var(--theme-accent-border, #2F7A3F);
     background: #2F7A3F;
 }
+@media (max-width: 767.98px) {
+    .new-task-dialog {
+        margin: max(8px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px)) max(8px, env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px));
+        height: calc(100dvh - max(8px, env(safe-area-inset-top, 0px)) - max(8px, env(safe-area-inset-bottom, 0px)));
+        min-height: 0;
+    }
+
+    .new-task-header {
+        gap: 10px;
+        padding: 16px;
+        flex-shrink: 0;
+    }
+
+    .header-text h2 {
+        font-size: 18px;
+        overflow-wrap: anywhere;
+    }
+
+    .helper-strip {
+        flex-wrap: wrap;
+        padding: 10px 16px;
+    }
+
+    .new-task-body {
+        padding: 20px 16px;
+    }
+
+    .new-task-footer {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+        flex-shrink: 0;
+    }
+
+    .footer-note {
+        grid-column: 1 / -1;
+    }
+
+    .footer-button {
+        justify-content: center;
+        width: 100%;
+        padding: 0 8px;
+    }
+}
 </style>

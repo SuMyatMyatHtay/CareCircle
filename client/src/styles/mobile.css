@@ -1,0 +1,8 @@
+/* Keep text fields readable and prevent Safari's focus zoom on phones.
+   This intentionally overrides the smaller sizes in individual form components. */
+@media (max-width: 767.98px) {
+  :where(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']), select, textarea) {
+    font-size: 16px !important;
+    min-width: 0;
+  }
+}

@@ -251,6 +251,32 @@ button:disabled {
 @media (max-width: 575px) {
     .card-row {
         flex-wrap: wrap;
+        row-gap: 8px;
+    }
+
+    /* Text takes the rest of the first row; the due flag / status drops below it */
+    .card-row > .text {
+        flex: 1 1 calc(100% - 58px);
+    }
+
+    /* Progress on its own line, then the buttons share the next line evenly */
+    .progress-steps {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
+
+    .progress-box .spacer {
+        display: none;
+    }
+
+    .progress-box > button {
+        flex: 1 1 0;
+        min-width: 0;
+        white-space: nowrap;
+    }
+
+    .progress-box > .details-link {
+        flex: 1 1 100%;
     }
 
     .card-row > .badge,

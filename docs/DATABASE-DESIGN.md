@@ -97,7 +97,7 @@ Fields marked required must be enforced in the Mongoose schema, not only on the 
 | email | String | required, unique, lowercase, trimmed |
 | passwordHash | String | required, bcrypt; never returned by the API (`select: false`) |
 | phone | String | optional |
-| preferredLang | String | default `en`; LibreTranslate language code |
+| preferredLang | String | default `en`; app language code (`en`, `zh`, `ms`, `ta`) used for Azure Translator |
 | telegramUsername | String | optional, for @mentions in group messages |
 
 Indexes: `{ email: 1 }` unique.
@@ -218,7 +218,7 @@ An outbox for Telegram. Other modules never call the Telegram API directly; they
 | --- | --- | --- |
 | family | ObjectId → Family | required |
 | eventType | String enum | see Cross-module events |
-| refType, refId | String, ObjectId | what the event is about, used to build the deep link |
+| refType, refId | String, ObjectId | what the event is about (the task or care recipient) |
 | text | String | the message as sent |
 | status | String enum | `pending` / `sent` / `failed` / `skipped` (no chat linked, or event muted) |
 | error | String | Telegram error, if failed |
@@ -283,7 +283,7 @@ Events are the only way modules talk to each other. A module calls `notify()` an
 | `log.deleted` | Logs | Alex deleted a care note for Grandpa. |
 | `medication.changed` | Logs and care profiles | Grandpa's medication was updated. Check the app. |
 
-Every Telegram message ends with a deep link to the related page, built from `refType` and `refId`. Keep health details out of the Telegram text itself (say "medication was updated", not the drug and dose), since group chats get forwarded.
+Telegram messages are plain text, with no link back to the app. Keep health details out of the Telegram text itself (say "medication was updated", not the drug and dose), since group chats get forwarded.
 
 ## Ownership and week-one checklist
 

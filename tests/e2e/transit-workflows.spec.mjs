@@ -91,7 +91,7 @@ test('"Safely back home" ends the trip and the task shows as done in My Tasks', 
   await expect(page.getByLabel('Your own update', { exact: true })).toHaveCount(0)
 
   await page.goto('/my-tasks')
-  await page.getByRole('tab', { name: /^Done · 1/ }).filter({ visible: true }).click()
+  await page.getByRole('tab', { name: /^Done\s*(·\s*)?1$/ }).filter({ visible: true }).click()
   await expect(page.getByText('Physio at TTSH', { exact: true }).filter({ visible: true })).toBeVisible()
 })
 
@@ -120,4 +120,39 @@ test('a family member who did not claim the task cannot start its trip', async (
   await page.goto(`/transit/${ids.family}/${ids.tripTask}`)
   await expect(page.getByText(/Transit (starts when Alex|not started yet)/).first()).toBeVisible()
   await expect(page.getByRole('button', { name: 'Start the trip', exact: true })).toHaveCount(0)
+})
+
+test('the phone companion can find directions, reveal updates, and end and resume a trip', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'Phone transit action parity')
+  await login(page, 'alex')
+  await openMyTripAndStart(page)
+  await page.setViewportSize({ width: 320, height: 844 })
+  const directions = page.getByRole('link', { name: 'Directions', exact: true })
+  await expect(directions).toHaveAttribute('href', /google\.com\/maps\/dir/)
+  await page.getByText('Find a clinic with OneMap', { exact: true }).click()
+  await expect(page.getByRole('searchbox', { name: 'Search clinics' })).toBeVisible()
+  // Only the external place-search response is doubled; trip changes use the real API.
+  await page.route('**/api/integrations/clinics?**', route => route.fulfill({ json: {
+    clinics: [{ name: 'Tan Tock Seng Hospital', address: '11 Jalan Tan Tock Seng', ...TTSH }], otherPlaces: [],
+  } }))
+  await page.getByRole('searchbox', { name: 'Search clinics' }).fill('TTSH')
+  await page.getByRole('button', { name: 'Search', exact: true }).click()
+  await page.getByRole('button', { name: /Tan Tock Seng Hospital.*11 Jalan/ }).click()
+  await expect(page.locator('.clinic-lookup').getByRole('link', { name: 'Directions', exact: true })).toHaveAttribute('href', /destination=/)
+  await page.getByRole('button', { name: 'More updates', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Going for lunch', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Heading home', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Fewer updates', exact: true }).click()
+  page.once('dialog', dialog => dialog.dismiss())
+  await page.getByRole('button', { name: 'End the trip', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'End the trip', exact: true })).toBeVisible()
+  page.once('dialog', dialog => dialog.accept())
+  await page.getByRole('button', { name: 'End the trip', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Resume the trip', exact: true })).toBeVisible()
+  await page.reload()
+  await page.getByRole('button', { name: 'Resume the trip', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'End the trip', exact: true })).toBeVisible()
+  await page.goto('/my-tasks')
+  await page.getByRole('tab', { name: /^In progress/ }).click()
+  await expect(page.getByText('Physio at TTSH', { exact: true })).toBeVisible()
 })

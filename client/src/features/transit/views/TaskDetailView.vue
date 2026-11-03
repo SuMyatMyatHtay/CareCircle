@@ -181,7 +181,9 @@ function openTrip() {
 function startTrip() {
     run(async () => {
         await startTask(props.familyId, props.taskId)
-        openTrip()
+        // Only trips have a Transit page; other tasks just show "In progress" here
+        if (task.value?.needsTransit) openTrip()
+        else await load()
     })
 }
 
@@ -205,7 +207,10 @@ watch(() => [props.familyId, props.taskId], () => { editingRecurring.value = fal
     <!-- Phones: Figma "Mobile prototype" → 09 · Task detail -->
     <div v-if="isMobile">
         <p v-if="isLoading && !task" class="status" role="status">Loading task...</p>
-        <p v-else-if="loadError" class="status is-error" role="alert">{{ loadError }}</p>
+        <div v-else-if="loadError" class="status is-error" role="alert">
+            <span>{{ loadError }}</span>
+            <button type="button" class="btn-secondary" @click="load">Try again</button>
+        </div>
         <TaskDetailMobile
             v-else-if="task"
             :task="task"
@@ -330,7 +335,7 @@ watch(() => [props.familyId, props.taskId], () => { editingRecurring.value = fal
                     </template>
                     <template #end>
                         <button v-if="canUnclaim" type="button" class="btn-secondary" :disabled="isBusy" @click="giveBack">
-                            Give back task
+                            Give back
                         </button>
                     </template>
                 </TaskTransitActions>

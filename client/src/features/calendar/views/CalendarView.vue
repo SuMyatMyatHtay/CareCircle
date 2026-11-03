@@ -1,29 +1,27 @@
 <script setup>
 // Owner: SeungHak (F)
-// Family Calendar: every task in the family (whoever claimed it) and every follow-up
-// appointment written in a consultation note, on one month grid.
+// Family Calendar: every task (whoever claimed it) and every follow-up appointment written
+// in a consultation note, on one month grid. Like My tasks it shows all your families,
+// or one of them.
 // Click a day to see its list; each item opens the task, or the note's care log.
 // Double-click a day, or "+ Add task" in its list, to post a task on that day (like Apple Calendar).
-// Google Calendar sync (E, Chaithra) sits beside it for people who want it on their phone.
+// Google Calendar sync (E, Chaithra) sits by the title for people who want it on their phone.
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { useFamilyWorkspace } from '../../family/composables/useFamilyWorkspace.js'
-import { useFamilyTasks } from '../../../composables/useFamilyTasks.js'
-import { queryKeys } from '../../../services/queryClient.js'
+import { getFamilyTasks, getTaskErrorMessage } from '../../tasks/services/tasksApi.js'
 import { getLogs } from '../../logs/services/logsApi.js'
-import { displayName } from '../../recipients/recipientLabels.js'
 import FamilyEmptyState from '../../family/components/FamilyEmptyState.vue'
 import NewTaskModal from '../../tasks/components/NewTaskModal.vue'
 import GoogleCalendarSync from '../../my-tasks/components/GoogleCalendarSync.vue'
 import {
     dayKey, monthOf, shiftMonth, monthGrid, gridRange, monthLabel, dayLabel, shortTime,
-    buildEvents, filterEvents, groupByDay, WEEKDAYS, STATE_LABELS
+    buildEvents, filterEvents, groupByDay, recipientOptions, WEEKDAYS, STATE_LABELS
 } from '../calendarDays.js'
 
 const MAX_CHIPS = 3
 
-const { selectedFamily, selectedFamilyId, recipients, isLoading, errorMessage, loadFamilies } = useFamilyWorkspace()
-const { tasks, isLoading: tasksLoading, errorMessage: tasksError, refetch } = useFamilyTasks()
+const { families, selectedFamily, isLoading, errorMessage, loadFamilies } = useFamilyWorkspace()
 
 // ---- Which month and day ----
 const now = ref(Date.now())
@@ -40,29 +38,48 @@ const goToday = () => showMonth(monthOf(today.value))
 
 const days = computed(() => monthGrid(month.value))
 
-// ---- Follow-up appointments from consultation notes (only for the shown weeks) ----
-const appointmentsQuery = useQuery({
-    queryKey: computed(() => [...queryKeys.logs(selectedFamilyId.value), 'appointments', month.value]),
+// ---- Which families: all of them (like My tasks), or one ----
+const familyScope = ref('all')
+const shownFamilies = computed(() =>
+    familyScope.value === 'all' ? families.value : families.value.filter((f) => f.id === familyScope.value)
+)
+const manyFamilies = computed(() => shownFamilies.value.length > 1)
+
+// ---- Tasks and follow-up appointments for the shown weeks, from each family ----
+const calendarQuery = useQuery({
+    queryKey: computed(() => ['calendar', shownFamilies.value.map((f) => f.id).join(','), month.value]),
     queryFn: () => {
         const { from, to } = gridRange(month.value)
-        return getLogs(selectedFamilyId.value, { appointmentFrom: from.toISOString(), appointmentTo: to.toISOString(), limit: 50 })
+        const range = { from: from.toISOString(), to: to.toISOString() }
+        return Promise.all(shownFamilies.value.map(async (family) => ({
+            family,
+            tasks: await getFamilyTasks(family.id, range),
+            // A missing note list shouldn't hide the tasks
+            notes: await getLogs(family.id, { appointmentFrom: range.from, appointmentTo: range.to, limit: 50 }).catch(() => [])
+        })))
     },
-    enabled: computed(() => Boolean(selectedFamilyId.value))
+    enabled: computed(() => shownFamilies.value.length > 0)
 })
+const isLoadingEvents = computed(() => calendarQuery.isLoading.value)
+const loadError = computed(() =>
+    calendarQuery.error.value && !calendarQuery.data.value ? getTaskErrorMessage(calendarQuery.error.value) : ''
+)
+const refetch = () => calendarQuery.refetch()
 
 // ---- Events ----
-const recipientFilter = ref('all')
-watch(selectedFamilyId, () => { recipientFilter.value = 'all' })
+const allEvents = computed(() =>
+    (calendarQuery.data.value ?? [])
+        .flatMap(({ family, tasks, notes }) => buildEvents({
+            tasks, appointmentNotes: notes, familyId: family.id, familyName: family.name, now: now.value
+        }))
+        .sort((a, b) => a.at - b.at)
+)
+const people = computed(() => recipientOptions(allEvents.value))
 
-const events = computed(() => filterEvents(
-    buildEvents({
-        tasks: tasks.value,
-        appointmentNotes: appointmentsQuery.data.value ?? [],
-        familyId: selectedFamilyId.value,
-        now: now.value
-    }),
-    recipientFilter.value
-))
+const recipientFilter = ref('all')
+watch(familyScope, () => { recipientFilter.value = 'all' })
+
+const events = computed(() => filterEvents(allEvents.value, recipientFilter.value))
 const byDay = computed(() => groupByDay(events.value))
 const dayEvents = computed(() => byDay.value[selectedDay.value] ?? [])
 const monthCount = computed(() => events.value.filter((event) => monthOf(event.day) === month.value).length)
@@ -94,13 +111,14 @@ function onCreated(task) {
     const key = dayKey(task.startAt)
     month.value = monthOf(key)
     selectedDay.value = key
+    refetch()
 }
 
 // ---- Keep it current ----
 let clock
 const onAssistantUpdate = () => refetch()
 onMounted(() => {
-    // Other pages may have cached the task list a while ago; others in the family may have added tasks since
+    // Others in the family may have changed tasks since this month was last loaded
     refetch()
     clock = setInterval(() => { now.value = Date.now() }, 60 * 1000)
     window.addEventListener('carecircle:task-updated', onAssistantUpdate)
@@ -110,7 +128,7 @@ onUnmounted(() => {
     window.removeEventListener('carecircle:task-updated', onAssistantUpdate)
 })
 
-const familyName = computed(() => selectedFamily.value?.name || 'Your family')
+const eyebrow = computed(() => (manyFamilies.value ? 'All your families' : shownFamilies.value[0]?.name || 'Your family'))
 const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appointment']
 </script>
 
@@ -118,10 +136,12 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
     <div class="calendar-page">
         <header class="calendar-header">
             <div>
-                <div class="calendar-eyebrow">{{ familyName }}</div>
+                <div class="calendar-eyebrow">{{ eyebrow }}</div>
                 <h1>Calendar</h1>
                 <p>Every family task and follow-up appointment, in one place.</p>
             </div>
+            <!-- Up here, not below the day's list, so it's never scrolled out of sight on a phone -->
+            <GoogleCalendarSync v-if="selectedFamily" class="calendar-google" compact />
         </header>
 
         <FamilyEmptyState
@@ -146,20 +166,27 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
                     </button>
                 </div>
 
-                <label class="recipient-filter">
-                    <span>Show</span>
-                    <select v-model="recipientFilter" data-testid="calendar-filter">
-                        <option value="all">Everyone</option>
-                        <option v-for="recipient in recipients" :key="recipient._id" :value="recipient._id">
-                            {{ displayName(recipient) }}
-                        </option>
-                        <option value="household">Household tasks</option>
-                    </select>
-                </label>
+                <div class="calendar-filters">
+                    <label v-if="families.length > 1" class="recipient-filter">
+                        <span>Family</span>
+                        <select v-model="familyScope" data-testid="calendar-family">
+                            <option value="all">All families</option>
+                            <option v-for="family in families" :key="family.id" :value="family.id">{{ family.name }}</option>
+                        </select>
+                    </label>
+                    <label class="recipient-filter">
+                        <span>Show</span>
+                        <select v-model="recipientFilter" data-testid="calendar-filter">
+                            <option value="all">Everyone</option>
+                            <option v-for="person in people" :key="person.id" :value="person.id">{{ person.name }}</option>
+                            <option value="household">Household tasks</option>
+                        </select>
+                    </label>
+                </div>
             </div>
 
-            <div v-if="tasksError" class="calendar-error" role="alert">
-                {{ tasksError }}
+            <div v-if="loadError" class="calendar-error" role="alert">
+                {{ loadError }}
                 <button type="button" @click="refetch()">Try again</button>
             </div>
 
@@ -169,14 +196,15 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
                         <span v-for="weekday in WEEKDAYS" :key="weekday">{{ weekday }}</span>
                     </div>
 
-                    <div class="month-grid" :class="{ 'is-loading': tasksLoading }">
+                    <div class="month-grid" :class="{ 'is-loading': isLoadingEvents }">
                         <button
-                            v-for="day in days"
+                            v-for="(day, index) in days"
                             :key="day.key"
                             type="button"
                             class="day-cell"
                             :class="{
                                 'is-outside': !day.inMonth,
+                                'is-weekend': index % 7 >= 5,
                                 'is-today': day.key === today,
                                 'is-selected': day.key === selectedDay
                             }"
@@ -237,7 +265,7 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
                             </button>
                         </header>
 
-                        <p v-if="tasksLoading" class="agenda-empty" role="status">Loading the family's plans…</p>
+                        <p v-if="isLoadingEvents" class="agenda-empty" role="status">Loading the family's plans…</p>
 
                         <ol v-else-if="dayEvents.length" class="agenda-list">
                             <li v-for="event in dayEvents" :key="event.id">
@@ -256,6 +284,7 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
                                             {{ event.title }}
                                         </strong>
                                         <small>{{ [event.recipientName, event.place].filter(Boolean).join(' · ') }}</small>
+                                        <small v-if="manyFamilies" class="family-tag">{{ event.familyName }}</small>
                                         <span class="state-badge">{{ stateText(event) }}</span>
                                     </span>
                                     <i v-if="event.to" class="bi bi-chevron-right agenda-arrow" aria-hidden="true"></i>
@@ -267,12 +296,8 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
                             Nothing planned{{ recipientFilter === 'all' ? '' : ' for this person' }}.
                         </p>
 
-                        <p v-if="appointmentsQuery.isError.value" class="agenda-note">
-                            Follow-up appointments couldn't be loaded. Tasks are still shown.
-                        </p>
                     </section>
 
-                    <GoogleCalendarSync compact />
                 </aside>
             </div>
 
@@ -302,6 +327,10 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
     align-items: center;
     flex-wrap: wrap;
     gap: 16px;
+}
+
+.calendar-google {
+    flex: 0 0 auto;
 }
 
 .calendar-header h1 {
@@ -386,6 +415,21 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
     color: var(--theme-text, #30332f);
 }
 
+.calendar-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+}
+
+.family-tag {
+    justify-self: start;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: var(--theme-soft, #eaf5eb);
+    color: var(--theme-green, #2d7d43) !important;
+    font-weight: 700;
+}
+
 .calendar-error {
     display: flex;
     align-items: center;
@@ -428,7 +472,13 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
     min-width: 0;
 }
 
-/* ---- Month grid ---- */
+/* ---- Month grid: square cells divided by thin lines, like Apple Calendar ---- */
+.month-card {
+    padding: 0;
+    overflow: hidden;
+    border-radius: 0;
+}
+
 .weekday-row,
 .month-grid {
     display: grid;
@@ -436,16 +486,19 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
 }
 
 .weekday-row {
-    margin-bottom: 6px;
+    border-bottom: 1px solid var(--theme-border, #dfe3e8);
     color: var(--theme-muted, #717b8e);
     font-size: 12px;
     font-weight: 700;
-    text-align: center;
     text-transform: uppercase;
 }
 
+.weekday-row span {
+    padding: 10px 10px 8px;
+    text-align: right;
+}
+
 .month-grid {
-    gap: 4px;
     transition: opacity 0.2s;
 }
 
@@ -458,42 +511,65 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
     flex-direction: column;
     gap: 3px;
     min-width: 0;
-    min-height: 104px;
-    padding: 6px;
-    border: 1px solid transparent;
-    border-radius: 10px;
-    background: var(--theme-soft, #f6f8f6);
+    min-height: 112px;
+    padding: 6px 6px 8px;
+    border: none;
+    border-right: 1px solid var(--theme-border, #e6e9ed);
+    border-bottom: 1px solid var(--theme-border, #e6e9ed);
+    border-radius: 0;
+    background: var(--theme-panel, #fff);
     color: inherit;
     text-align: left;
 }
 
+.day-cell:nth-child(7n) {
+    border-right: none;
+}
+
+.day-cell:nth-last-child(-n + 7) {
+    border-bottom: none;
+}
+
+.day-cell.is-weekend {
+    /* A neutral tint of the panel, so it stays subtle in light and dark mode */
+    background: color-mix(in srgb, var(--theme-text, #30332f) 3%, var(--theme-panel, #fff));
+}
+
 .day-cell:hover {
-    border-color: var(--theme-border, #dfe3e8);
+    background: color-mix(in srgb, var(--theme-text, #30332f) 6%, var(--theme-panel, #fff));
 }
 
 .day-cell.is-outside {
-    background: transparent;
     color: var(--theme-muted, #9aa1ad);
 }
 
-.day-cell.is-selected {
-    border-color: var(--theme-green, #2d7d43);
-    box-shadow: 0 0 0 1px var(--theme-green, #2d7d43);
+.day-cell.is-outside .day-chips {
+    opacity: 0.6;
 }
 
+/* The date sits top right; today is a filled circle, the selected day an outlined one */
 .day-number {
+    display: inline-grid;
+    place-items: center;
+    align-self: flex-end;
+    min-width: 26px;
+    height: 26px;
+    padding: 0 4px;
+    border-radius: 999px;
     font-size: 13px;
     font-weight: 700;
 }
 
+.day-cell.is-selected .day-number {
+    box-shadow: inset 0 0 0 1.5px var(--theme-green, #2d7d43);
+    color: var(--theme-green, #2d7d43);
+}
+
 .day-cell.is-today .day-number {
-    display: inline-grid;
-    place-items: center;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
     background: var(--theme-green, #2d7d43);
-    color: #fff;
+    box-shadow: none;
+    /* The panel colour reads on the green in both modes (white in light, dark in dark) */
+    color: var(--theme-panel, #fff);
 }
 
 .day-chips {
@@ -509,7 +585,7 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
     min-width: 0;
     padding: 2px 5px;
     border-left: 3px solid currentColor;
-    border-radius: 5px;
+    border-radius: 3px;
     font-size: 11px;
     line-height: 1.35;
 }
@@ -541,8 +617,8 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
 /* ---- Colours, one per state ---- */
 .state-open { --state: var(--theme-warning, #93650a); --state-soft: var(--theme-warning-soft, #fff3d6); }
 .state-missed { --state: var(--theme-danger, #c0564b); --state-soft: var(--theme-danger-soft, #fde8e4); }
-.state-claimed { --state: var(--theme-green, #2d7d43); --state-soft: var(--theme-accent-soft, #e3f2e6); }
-.state-in_progress { --state: #2f6fb3; --state-soft: #e5effa; }
+.state-claimed { --state: var(--theme-green, #2d7d43); --state-soft: var(--theme-soft, #e3f2e6); }
+.state-in_progress { --state: var(--theme-blue, #2f6fb3); --state-soft: var(--theme-blue-soft, #e5effa); }
 .state-completed { --state: var(--theme-muted, #7b8391); --state-soft: var(--theme-neutral, #eef0f2); }
 .state-appointment { --state: var(--theme-purple, #6a4fa3); --state-soft: var(--theme-purple-soft, #eee8fa); }
 
@@ -569,7 +645,8 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
     display: flex;
     flex-wrap: wrap;
     gap: 6px 16px;
-    margin: 14px 0 0;
+    margin: 0;
+    padding: 8px 16px 14px;
     padding: 0;
     list-style: none;
     color: var(--theme-muted, #717b8e);
@@ -616,7 +693,9 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
 }
 
 .calendar-hint {
-    margin: 10px 0 0;
+    margin: 0;
+    padding: 10px 16px 0;
+    border-top: 1px solid var(--theme-border, #dfe3e8);
     color: var(--theme-muted, #717b8e);
     font-size: 12px;
 }
@@ -693,16 +772,10 @@ a.agenda-item:hover {
     color: var(--theme-muted, #9aa1ad);
 }
 
-.agenda-empty,
-.agenda-note {
+.agenda-empty {
     margin: 0;
     color: var(--theme-muted, #717b8e);
     font-size: 14px;
-}
-
-.agenda-note {
-    margin-top: 10px;
-    font-size: 12px;
 }
 
 .calendar-page button:focus-visible,
@@ -722,7 +795,7 @@ a.agenda-item:hover {
 }
 
 /* Phones: small cells with dots, the day's list below */
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
     .calendar-header h1 {
         font-size: 26px;
     }
@@ -733,7 +806,44 @@ a.agenda-item:hover {
 
     .month-nav h2 {
         min-width: 0;
-        font-size: 17px;
+        margin: 0;
+        font-size: 16px;
+        white-space: nowrap;
+    }
+
+    .month-nav {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr) 44px auto;
+        gap: 4px;
+        width: 100%;
+    }
+
+    .icon-button {
+        width: 44px;
+        height: 44px;
+    }
+
+    .today-button {
+        min-height: 44px;
+        margin-left: 0;
+        padding: 7px 10px;
+    }
+
+    .calendar-side {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .agenda-head {
+        flex-wrap: wrap;
+    }
+
+    .add-task-button {
+        min-height: 44px;
+    }
+
+    .calendar-filters {
+        flex-direction: column;
+        width: 100%;
     }
 
     .recipient-filter,
@@ -742,14 +852,32 @@ a.agenda-item:hover {
         max-width: none;
     }
 
+    .recipient-filter {
+        display: grid;
+        grid-template-columns: 48px minmax(0, 1fr);
+    }
+
     .calendar-card {
         padding: 12px;
     }
 
+    .month-card {
+        padding: 0;
+    }
+
+    .weekday-row span {
+        padding: 8px 0 6px;
+        text-align: center;
+    }
+
     .day-cell {
         align-items: center;
-        min-height: 48px;
+        min-height: 52px;
         padding: 4px 2px;
+    }
+
+    .day-number {
+        align-self: center;
     }
 
     .day-chips {
@@ -763,6 +891,11 @@ a.agenda-item:hover {
     /* No double-click on phones: "+ Add task" in the day's list does it */
     .calendar-hint {
         display: none;
+    }
+
+    .legend {
+        padding-top: 12px;
+        border-top: 1px solid var(--theme-border, #dfe3e8);
     }
 
     .dot {
