@@ -293,9 +293,7 @@ function requestMobileLogout() {
         </header>
         <MobileInviteCodeCard
           :code="code"
-          :family-name="selectedFamily.name"
           :is-admin="isAdmin"
-          :preview="isPreview"
           :busy="busy"
           @regenerate="modal = 'regenerate'"
         />

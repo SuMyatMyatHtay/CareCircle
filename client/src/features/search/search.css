@@ -523,6 +523,11 @@ label.search-filter-group .search-filter-label {
 .search-card > .search-skeleton {
   padding: 14px 18px;
 }
+/* Messages in the card (too short, no matches, error) keep their padding;
+   .search-card above resets it to 0 for the result list */
+.search-card.search-state {
+  padding: 16px 18px;
+}
 
 /* ---------- Phone screen (Figma 21) ---------- */
 /* Match the app's phone gutters, including landscape safe areas. */
