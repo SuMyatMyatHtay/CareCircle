@@ -140,7 +140,6 @@ onUnmounted(() => {
           aria-label="Open my profile"
         >
           <CareAvatar :person="user" size="small" />
-          <span class="d-none d-sm-inline">My Profile</span>
         </RouterLink>
       </header>
 

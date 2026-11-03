@@ -226,11 +226,13 @@ async function copyInviteCode(inviteCode) {
                 <i class="bi bi-gear" aria-hidden="true"></i>
                 Family settings
             </RouterLink>
-            <!-- The name row is the link to My profile, highlighted like a nav item when you're there -->
+            <!-- The name row is the link to My profile, highlighted like a nav item when you're there.
+                 Hidden on phones, where the top bar's avatar already links there (not in the preview,
+                 which has no top bar link). -->
             <RouterLink
                 :to="preview ? settingsPath : '/profile'"
                 class="profile-row text-decoration-none"
-                :class="{ active: isProfilePage }"
+                :class="{ active: isProfilePage, 'has-topbar-link': !preview }"
                 :aria-current="isProfilePage ? 'page' : undefined"
                 @click="emit('navigate')"
                 >

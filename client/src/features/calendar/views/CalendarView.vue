@@ -169,14 +169,14 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
                 <div class="calendar-filters">
                     <label v-if="families.length > 1" class="recipient-filter">
                         <span>Family</span>
-                        <select v-model="familyScope" data-testid="calendar-family">
+                        <select class="form-select" v-model="familyScope" data-testid="calendar-family">
                             <option value="all">All families</option>
                             <option v-for="family in families" :key="family.id" :value="family.id">{{ family.name }}</option>
                         </select>
                     </label>
                     <label class="recipient-filter">
                         <span>Show</span>
-                        <select v-model="recipientFilter" data-testid="calendar-filter">
+                        <select class="form-select" v-model="recipientFilter" data-testid="calendar-filter">
                             <option value="all">Everyone</option>
                             <option v-for="person in people" :key="person.id" :value="person.id">{{ person.name }}</option>
                             <option value="household">Household tasks</option>
@@ -408,10 +408,12 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
 
 .recipient-filter select {
     max-width: 220px;
-    padding: 8px 12px;
+    /* Room on the right for Bootstrap's arrow (form-select), so it isn't pressed to the edge */
+    padding: 8px 40px 8px 12px;
     border: 1px solid var(--theme-border, #dfe3e8);
     border-radius: 12px;
-    background: var(--theme-panel, #fff);
+    background-color: var(--theme-panel, #fff);
+    background-position: right 14px center;
     color: var(--theme-text, #30332f);
 }
 
@@ -647,7 +649,6 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
     gap: 6px 16px;
     margin: 0;
     padding: 8px 16px 14px;
-    padding: 0;
     list-style: none;
     color: var(--theme-muted, #717b8e);
     font-size: 12px;
