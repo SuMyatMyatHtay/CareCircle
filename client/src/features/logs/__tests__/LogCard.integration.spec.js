@@ -27,9 +27,27 @@ describe('Care log translation across the card and API adapter', () => {
     expect(post).toHaveBeenCalledWith('/families/family-one/logs/note-one/translate', { lang: 'zh' },
       { headers: { Authorization: 'Bearer translation-test-only' } })
     await button(wrapper, 'Showing 中文').trigger('click')
+    await button(wrapper, 'Hide translation').trigger('click')
+    expect(wrapper.text()).not.toContain('继续护理计划。')
     await chooseChinese(wrapper)
     expect(wrapper.text()).toContain('继续护理计划。')
     expect(post).toHaveBeenCalledTimes(1)
+  })
+
+  it('opens the language list again from a translated note, so another language can be chosen', async () => {
+    const post = vi.spyOn(http, 'post')
+      .mockResolvedValueOnce({ data: { lang: 'zh', translation: '继续护理计划。', cached: false } })
+      .mockResolvedValueOnce({ data: { lang: 'ms', translation: 'Teruskan pelan penjagaan.', cached: false } })
+    const wrapper = render()
+    await chooseChinese(wrapper)
+    await button(wrapper, 'Showing 中文').trigger('click')
+    expect(wrapper.get('[data-testid="log-translate-zh"]').attributes('aria-current')).toBe('true')
+    await wrapper.get('[data-testid="log-translate-ms"]').trigger('click')
+    await flushPromises()
+    expect(post).toHaveBeenLastCalledWith('/families/family-one/logs/note-one/translate', { lang: 'ms' }, expect.any(Object))
+    expect(wrapper.text()).toContain('Teruskan pelan penjagaan.')
+    expect(wrapper.text()).not.toContain('继续护理计划。')
+    expect(wrapper.find('[role="menu"]').exists()).toBe(false)
   })
 
   it('does not attach a late translation of an old note to its edited content', async () => {

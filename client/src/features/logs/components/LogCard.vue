@@ -83,13 +83,17 @@ const languageOptions = computed(() =>
         .map((code) => ({ code, label: languageLabel(code), cached: Boolean(translations.value[code]) }))
 )
 
+// Always opens the language list, so a translated note can switch to another language too
 function onTranslateButton() {
     translateError.value = ''
-    if (shownLanguage.value) {
-        shownLanguage.value = ''
-        return
-    }
     menuOpen.value = !menuOpen.value
+}
+
+function showOriginal() {
+    translationVersion++
+    menuOpen.value = false
+    translateError.value = ''
+    shownLanguage.value = ''
 }
 
 // The server stores the note's own words when it is already in that language
@@ -100,6 +104,7 @@ async function chooseLanguage(code, { auto = false } = {}) {
     const current = ++translationVersion
     if (!auto) menuOpen.value = false
     translateError.value = ''
+    if (code === shownLanguage.value) return
 
     const show = () => {
         if (!isOriginal(code)) shownLanguage.value = code
@@ -129,7 +134,7 @@ async function chooseLanguage(code, { auto = false } = {}) {
 
 const translateLabel = computed(() => {
     if (translatingTo.value) return 'Translating...'
-    return shownLanguage.value ? `Showing ${languageLabel(shownLanguage.value)}. Show the original` : 'Translate'
+    return shownLanguage.value ? `Showing ${languageLabel(shownLanguage.value)}. Change language` : 'Translate'
 })
 
 function closeMenuOnFocusOut(event) {
@@ -157,8 +162,7 @@ function closeMenuOnFocusOut(event) {
                         type="button"
                         class="translate-toggle"
                         :class="{ 'is-on': shownLanguage }"
-                        :aria-expanded="shownLanguage ? undefined : menuOpen"
-                        :aria-pressed="shownLanguage ? true : undefined"
+                        :aria-expanded="menuOpen"
                         :disabled="Boolean(translatingTo)"
                         :aria-label="compact ? translateLabel : undefined"
                         :title="compact ? translateLabel : undefined"
@@ -181,11 +185,17 @@ function closeMenuOnFocusOut(event) {
                             <button
                                 type="button"
                                 role="menuitem"
+                                :aria-current="option.code === shownLanguage ? 'true' : undefined"
                                 :data-testid="`log-translate-${option.code}`"
                                 @click="chooseLanguage(option.code)"
                             >
                                 <span :lang="option.code">{{ option.label }}</span>
-                                <!-- <i v-if="option.cached" class="bi bi-check2" aria-label="saved"></i> -->
+                                <i v-if="option.code === shownLanguage" class="bi bi-check2" aria-hidden="true"></i>
+                            </button>
+                        </li>
+                        <li v-if="shownLanguage" role="none" class="menu-divider">
+                            <button type="button" role="menuitem" data-testid="log-translate-original" @click="showOriginal">
+                                Hide translation
                             </button>
                         </li>
                     </ul>
@@ -360,6 +370,16 @@ function closeMenuOnFocusOut(event) {
 
 .language-menu .bi-check2 {
     color: var(--theme-green, #3B7A4F);
+}
+
+.language-menu .menu-divider {
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid var(--theme-border, #E4ECE5);
+}
+
+.language-menu .menu-divider button {
+    color: var(--theme-muted, #7B8391);
 }
 
 .translate-error {
