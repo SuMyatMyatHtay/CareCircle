@@ -8,7 +8,6 @@
 // - "End transit" stops the trip without completing the task.
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import ClinicLookup from '../components/ClinicLookup.vue'
 import OneMapTiles from '../components/OneMapTiles.vue'
 import TransitMobile from '../components/TransitMobile.vue'
 import { useIsMobile } from '../../my-tasks/utils/useIsMobile.js'
@@ -345,7 +344,6 @@ onUnmounted(stopPolling)
         >
             <template #place-tools>
                 <a v-if="directionsUrl(destination)" :href="directionsUrl(destination)" target="_blank" rel="noopener" class="btn-secondary">Directions</a>
-                <ClinicLookup />
             </template>
             <template #notes>
                 <VisitNotesCard
@@ -454,8 +452,6 @@ onUnmounted(stopPolling)
                         </span>
                         <p>{{ telegramPreview }}</p>
                     </section>
-
-                    <ClinicLookup />
                 </div>
 
                 <!-- Journey updates -->

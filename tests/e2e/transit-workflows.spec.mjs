@@ -130,23 +130,15 @@ test('a family member who did not claim the task cannot start its trip', async (
   await expect(page.getByRole('button', { name: 'Start the trip', exact: true })).toHaveCount(0)
 })
 
-test('the phone companion can find directions, reveal updates, and end and resume a trip', async ({ page, isMobile }) => {
+test('the phone companion can open directions, reveal updates, and end and resume a trip', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'Phone transit action parity')
   await login(page, 'alex')
   await openMyTripAndStart(page)
   await page.setViewportSize({ width: 320, height: 844 })
   const directions = page.getByRole('link', { name: 'Directions', exact: true })
   await expect(directions).toHaveAttribute('href', /google\.com\/maps\/dir/)
-  await page.getByText('Find a clinic with OneMap', { exact: true }).click()
-  await expect(page.getByRole('searchbox', { name: 'Search clinics' })).toBeVisible()
-  // Only the external place-search response is doubled; trip changes use the real API.
-  await page.route('**/api/integrations/clinics?**', route => route.fulfill({ json: {
-    clinics: [{ name: 'Tan Tock Seng Hospital', address: '11 Jalan Tan Tock Seng', ...TTSH }], otherPlaces: [],
-  } }))
-  await page.getByRole('searchbox', { name: 'Search clinics' }).fill('TTSH')
-  await page.getByRole('button', { name: 'Search', exact: true }).click()
-  await page.getByRole('button', { name: /Tan Tock Seng Hospital.*11 Jalan/ }).click()
-  await expect(page.locator('.clinic-lookup').getByRole('link', { name: 'Directions', exact: true })).toHaveAttribute('href', /destination=/)
+  // The "Find a clinic with OneMap" search was removed from the trip page (web and phone)
+  await expect(page.getByText('Find a clinic with OneMap')).toHaveCount(0)
   await page.getByRole('button', { name: 'More updates', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Going for lunch', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Heading home', exact: true })).toBeVisible()

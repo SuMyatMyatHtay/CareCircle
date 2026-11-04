@@ -201,9 +201,8 @@ function safelyHome() {
                 </button>
                 <form class="own" @submit.prevent="postCustom">
                     <input v-model="customText" type="text" maxlength="80" placeholder="Or type your own update" aria-label="Your own update" />
-                    <button type="submit" class="send" :disabled="isPosting || !customText.trim()" aria-label="Post update">
-                        <i class="bi bi-arrow-right" aria-hidden="true"></i>
-                    </button>
+                    <!-- Same green "Post" button as the laptop page -->
+                    <button type="submit" class="send" :disabled="isPosting || !customText.trim()" aria-label="Post update">Post</button>
                 </form>
                 <p v-if="locationNote" class="location-note">{{ locationNote }}</p>
             </section>
@@ -242,7 +241,6 @@ function safelyHome() {
 .trip-end, .more-updates { min-height: 44px; border: 1px solid var(--theme-border, #dce3dc); border-radius: 10px; padding: 8px 12px; background: var(--theme-panel, #fff); color: var(--theme-green, #2f7a3f); font-size: 14px; font-weight: 700; }
 .more-updates { margin-top: 10px; }
 .place-tools { display: grid; justify-items: start; gap: 12px; margin-top: 16px; }
-.place-tools :deep(.clinic-lookup) { width: 100%; }
 .msg { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .dismiss { flex-shrink: 0; min-width: 44px; min-height: 44px; border: 0; background: none; color: inherit; font-size: 22px; }
 .visit-notes {
@@ -549,13 +547,19 @@ h2 {
 }
 
 .send {
-    width: 48px;
-    height: 48px;
-    border: none;
+    flex-shrink: 0;
+    min-height: 48px;
+    padding: 0 18px;
+    border: 1px solid var(--theme-accent-border, #2f7a3f);
     border-radius: 14px;
-    background: var(--theme-text, #2e2e2e);
+    background: var(--theme-green, #2f7a3f);
     color: white;
-    font-size: 20px;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.send:disabled {
+    opacity: 0.6;
 }
 
 .hint {

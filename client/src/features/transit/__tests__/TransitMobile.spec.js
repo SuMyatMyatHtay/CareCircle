@@ -58,6 +58,7 @@ describe('TestSuite: TransitMobile (phone Transit mode)', () => {
     it('Test5: posts a typed update and clears the box; a blank one cannot be sent', async () => {
         const wrapper = render({ session: activeSession(), isCompanion: true })
         const send = wrapper.get('button[aria-label="Post update"]')
+        expect(send.text()).toBe('Post') // same green "Post" button as the laptop page
         expect(send.element.disabled).toBe(true)
 
         await wrapper.get('input[aria-label="Your own update"]').setValue('  Waiting at pharmacy  ')
