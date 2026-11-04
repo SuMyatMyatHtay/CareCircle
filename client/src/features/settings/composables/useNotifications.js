@@ -148,8 +148,29 @@ export function useTelegramSettings(source) {
     }
   }
 
+  // After "Add to Telegram group" the linking happens in Telegram, so look again when the
+  // reader comes back to this tab. Quiet: the card doesn't flash "Checking…".
+  async function recheck() {
+    const familyId = resolve(source)
+    if (!familyId || loading.value || linked.value) return
+    const current = version
+    try {
+      const data = await getNotifySettings(familyId)
+      if (current !== version || !data.telegram.linked) return
+      linked.value = true
+      linkedAt.value = data.telegram.linkedAt || ''
+      linkedByName.value = data.telegram.linkedBy?.name || ''
+      feedback.value = 'Telegram group linked.'
+    } catch {
+      // The next return to the tab tries again
+    }
+  }
+  const recheckWhenVisible = () => { if (document.visibilityState === 'visible') recheck() }
+  onMounted(() => document.addEventListener('visibilitychange', recheckWhenVisible))
+  onUnmounted(() => document.removeEventListener('visibilitychange', recheckWhenVisible))
+
   watch(() => resolve(source), load, { immediate: true })
-  return { loading, saving, testing, error, feedback, linked, linkedAt, linkedByName, botUsername, groups, toggle, sendTest, unlink, toggleReminder, reminders, asFlags}
+  return { loading, saving, testing, error, feedback, linked, linkedAt, linkedByName, botUsername, groups, toggle, sendTest, unlink, toggleReminder, reminders, asFlags, recheck }
 }
 
 // ---------------------------------------------------------------- "Recent updates" feed

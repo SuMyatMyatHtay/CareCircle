@@ -125,6 +125,18 @@ describe('Telegram group, webhook and reminders', () => {
     assert.equal(await chatIdOf(), undefined)
   })
 
+  it('links the group the bot was added to through the "Add to Telegram group" button', async () => {
+    // Telegram sends "/start@Bot CODE" in the chosen group
+    await webhook({ chat: group('-777'), from: { username: 'nobody' }, text: '/start@CareCircleBot AABBCCDDEE' })
+    assert.equal(await chatIdOf(), '-777')
+    assert.match(telegramCalls.at(-1).text, /^Linked to Tan family/)
+
+    // A plain /start still only explains, and links nothing
+    await webhook({ chat: group('-888'), text: '/start' })
+    assert.equal(await chatIdOf(), '-777')
+    assert.match(telegramCalls.at(-1).text, /Add to Telegram group/)
+  })
+
   it('runs scheduled reminders only for the cron service', async () => {
     const run = (authorization) => request('/cron/reminders', { method: 'POST', authenticated: false,
       headers: authorization ? { Authorization: authorization } : {} })
