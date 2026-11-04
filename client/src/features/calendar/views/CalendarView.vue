@@ -730,6 +730,8 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
 
 .agenda-list {
     display: grid;
+    /* Stack from the top. Otherwise a short list stretches to fill the panel, spacing items apart */
+    align-content: start;
     gap: 8px;
     margin: 0;
     padding: 0;
