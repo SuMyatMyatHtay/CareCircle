@@ -320,8 +320,8 @@ watch(() => [props.familyId, props.taskId], () => { editingRecurring.value = fal
                 <TaskTransitActions :task="task" :family-id="familyId" @changed="load" @error="(m) => (actionError = m)">
                     <template #middle>
                         <span v-if="status === 'open' && overdue">Overdue · Claiming closed</span>
-                        <button v-else-if="status === 'open'" type="button" class="btn-secondary" :disabled="isBusy" @click="claim">
-                            I'll take it
+                        <button v-else-if="status === 'open'" type="button" class="btn-claim" :disabled="isBusy" @click="claim">
+                            <i class="bi bi-hand-thumbs-up" aria-hidden="true"></i> I'll take it
                         </button>
                         <button
                             v-if="isClaimer && ['claimed', 'in_progress'].includes(status)"
@@ -589,6 +589,33 @@ h1 {
 
 .btn-secondary.danger {
     color: var(--theme-danger, #9a3a2a);
+}
+
+/* The main action on an open task: the same coral as "I'll take it" everywhere else */
+.btn-claim {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 12px 24px;
+    border: 1px solid var(--care-coral, #ffb4a8);
+    border-radius: 8px;
+    background: var(--care-coral, #ffb4a8);
+    color: #553326;
+    font-size: 16px;
+    line-height: 20px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.btn-claim:hover:not(:disabled) {
+    border-color: #f7a091;
+    background: #f7a091;
+}
+
+.btn-claim:focus-visible {
+    outline: 2px solid var(--care-green, #2d7d43);
+    outline-offset: 2px;
 }
 
 button:disabled {
