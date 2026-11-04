@@ -154,15 +154,16 @@ describe('Family APIs with Express, authentication and a real isolated MongoDB',
     assert.equal((await request(`${family}/members`)).status, 401)
   })
 
-  it('keeps future task edits and deletions restricted to the creator, including admins', async () => {
+  it('lets only the creator edit a future task, and only admins or the creator delete it', async () => {
     for (const user of ['alex', 'may']) {
       assert.equal((await request(`${family}/tasks/${ids.task}`, { method: 'PATCH', user, body: { title: 'Unauthorized edit' } })).status, 403)
-      assert.equal((await request(`${family}/tasks/${ids.task}`, { method: 'DELETE', user })).status, 403)
     }
+    assert.equal((await request(`${family}/tasks/${ids.task}`, { method: 'DELETE', user: 'may' })).status, 403)
     assert.equal((await Task.findById(ids.task)).title, 'Collect medicine')
     assert.equal((await request(`${family}/tasks/${ids.task}`, { method: 'PATCH', user: 'jasmine', body: { title: 'Creator edit' } })).status, 200)
     assert.equal((await Task.findById(ids.task)).title, 'Creator edit')
-    const removed = await request(`${family}/tasks/${ids.task}`, { method: 'DELETE', user: 'jasmine' })
+    // Alex is an admin but Jasmine created this task.
+    const removed = await request(`${family}/tasks/${ids.task}`, { method: 'DELETE', user: 'alex' })
     assert.equal(removed.status, 200)
     assert.equal(removed.data.taskId, ids.task)
     assert.equal(await Task.findById(ids.task), null)
