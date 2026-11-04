@@ -5,6 +5,7 @@
 import { test as base, expect } from './fixtures.mjs'
 import { accounts, password } from '../../server/test/support/fixtures.js'
 import { resetTransitFixtures, transitIds as ids, TTSH } from '../../server/test/support/transit-fixtures.js'
+import { startTripWithDateConfirmation } from '../support/start-trip.mjs'
 
 const test = base.extend({
   tripData: [async ({ isolatedData, context }, use) => {
@@ -35,8 +36,15 @@ async function openMyTripAndStart(page) {
   const start = page.getByRole('button', { name: 'Start the trip', exact: true })
   // Laptop: the first card is already open. Phone: tapping it opens the task's page.
   if (!(await start.isVisible())) await card.click()
-  await start.click()
-  await expect(page).toHaveURL(new RegExp(`/transit/${ids.family}/${ids.tripTask}$`))
+  const confirmStart = async dialog => {
+    expect(dialog.message()).toMatch(/^This trip is scheduled for/)
+    await dialog.accept()
+  }
+  page.on('dialog', confirmStart)
+  try {
+    await start.click()
+    await expect(page).toHaveURL(new RegExp(`/transit/${ids.family}/${ids.tripTask}$`))
+  } finally { page.off('dialog', confirmStart) }
   // Laptop badge says "● Live", the phone header says "Live"
   await expect(page.getByText(/^(● )?Live$/).filter({ visible: true }).first()).toBeVisible()
 }
@@ -100,7 +108,7 @@ test('another family member sees the live trip on Family Home and can only follo
   const loginAlex = await request.post(`${tripData.apiURL}/auth/login`, { data: { email: accounts.alex, password } })
   const auth = { Authorization: `Bearer ${(await loginAlex.json()).token}` }
   const task = `${tripData.apiURL}/families/${ids.family}/tasks/${ids.tripTask}`
-  expect((await request.post(`${task}/start`, { headers: auth })).ok()).toBe(true)
+  await startTripWithDateConfirmation(data => request.post(`${task}/start`, { headers: auth, data }))
   expect((await request.post(`${task}/transit/milestones`, { headers: auth, data: { type: 'departed' } })).ok()).toBe(true)
 
   await login(page, 'jasmine')
@@ -183,7 +191,7 @@ test('the family follows the live location, and their map keeps its zoom as the 
   const auth = { Authorization: `Bearer ${(await loginAlex.json()).token}` }
   const task = `${tripData.apiURL}/families/${ids.family}/tasks/${ids.tripTask}`
   const shareLocation = (lat) => request.patch(`${task}/transit/location`, { headers: auth, data: { lat, lng: TTSH.lng } })
-  expect((await request.post(`${task}/start`, { headers: auth })).ok()).toBe(true)
+  await startTripWithDateConfirmation(data => request.post(`${task}/start`, { headers: auth, data }))
   expect((await shareLocation(1.3300)).ok()).toBe(true) // about 1 km north of TTSH
 
   await login(page, 'jasmine')

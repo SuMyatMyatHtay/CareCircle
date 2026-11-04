@@ -2,7 +2,6 @@ import { test, expect, ids, login, authenticatedApi } from './fixtures.mjs'
 
 async function openOverdue(page, isMobile) {
   await page.goto('/home')
-  if (isMobile) await page.getByRole('button', { name: 'See all', exact: true }).filter({ visible: true }).click()
   await page.getByRole('button', { name: 'Overdue', exact: true }).filter({ visible: true }).click()
 }
 
@@ -20,22 +19,18 @@ test('enforces deletion permission and deletes only the selected overdue task af
 
   await login(page, 'may')
   await openOverdue(page, isMobile)
-  await expect(page.getByRole('button', { name: /Delete selected/ }).filter({ visible: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Delete selected/ }).filter({ visible: true })).toBeDisabled()
+  await expect(page.getByRole('checkbox', { name: 'Select Overdue selected for deletion', exact: true })).toHaveCount(0)
   const memberApi = await authenticatedApi(page, isolatedData.apiURL, 'may')
   const denied = await memberApi(`${root}/tasks/overdue`, { method: 'DELETE', data: { taskIds: [taskIds[0]] } })
-  expect(denied.status()).toBe(403)
+  expect(denied.status()).toBe(200)
+  expect((await denied.json()).deletedCount).toBe(0)
+  expect((await api(`${root}/tasks/${taskIds[0]}`)).status()).toBe(200)
   await page.goto('/settings')
   await page.getByRole('button', { name: /Log out/ }).click()
   await expect(page).toHaveURL(/\/login$/)
 
   await login(page)
-  await page.goto('/settings')
-  const permission = page.getByRole('radio', { name: /All family members/ }).filter({ visible: true })
-  await permission.check()
-  await expect(page.getByText('Task permissions saved.', { exact: true }).filter({ visible: true })).toBeVisible()
-  await page.getByRole('button', { name: /Log out/ }).click()
-  await expect(page).toHaveURL(/\/login$/)
-  await login(page, 'may')
   await openOverdue(page, isMobile)
   const remove = page.getByRole('button', { name: 'Delete selected', exact: true }).filter({ visible: true })
   await expect(remove).toBeDisabled()
@@ -59,8 +54,8 @@ test('enforces deletion permission and deletes only the selected overdue task af
   await expect(page.getByRole('checkbox', { name: 'Select Overdue preserved for deletion', exact: true }).filter({ visible: true })).toBeVisible()
   await openOverdue(page, isMobile)
   await expect(page.getByRole('checkbox', { name: 'Select Overdue selected for deletion', exact: true })).toHaveCount(0)
-  // Alex's setup token was revoked by logout; read with the current member.
-  const currentApi = await authenticatedApi(page, isolatedData.apiURL, 'may')
+  // Read with a fresh admin token after the earlier logout.
+  const currentApi = await authenticatedApi(page, isolatedData.apiURL)
   const remainingResponse = await currentApi(`${root}/tasks`)
   expect(remainingResponse.status()).toBe(200)
   const remaining = await remainingResponse.json()

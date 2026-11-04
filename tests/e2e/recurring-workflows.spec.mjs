@@ -33,11 +33,12 @@ test('creates a daily series from the form and persists every session', async ({
     return (await response.json()).tasks.filter(t => t.title === 'E2E repeating therapy').length
   }).toBe(6)
   await page.reload()
-  if (isMobile) {
-    // Mobile Home shows today's tasks. "See all" opens the full task list.
-    await page.getByRole('button', { name: 'See all', exact: true }).filter({ visible: true }).click()
-    await expect(page.getByRole('heading', { name: 'E2E repeating therapy', exact: true })).toHaveCount(6)
-  } else await expect(page.getByRole('heading', { name: 'Repeating tasks', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Needs someone', exact: true }).filter({ visible: true }).click()
+  const board = page.getByRole('region', { name: isMobile ? 'Family tasks' : 'Family task list', exact: true })
+  const row = board.getByRole('article').filter({ hasText: 'E2E repeating therapy' })
+  await expect(row).toHaveCount(1)
+  await expect(row).toContainText('6 upcoming sessions')
+  await expect(page.getByRole('heading', { name: 'Repeating tasks', exact: true })).toBeVisible()
 })
 
 test('default series claim and a one-day handover preserve other assignments', async ({ page, isolatedData }) => {
@@ -90,8 +91,7 @@ async function overdueWeeklySeries(page, apiURL) {
   return { api, task }
 }
 async function overdueBoard(page, isMobile) {
-  if (isMobile) await page.getByRole('navigation', { name: 'Mobile home navigation' }).getByRole('button', { name: 'Tasks', exact: true }).click()
-  await page.getByRole('button', { name: 'Overdue', exact: true }).click()
+  await page.getByRole('button', { name: 'Overdue', exact: true }).filter({ visible: true }).click()
 }
 test('stops an overdue weekly series from the repeating-task panel, keeps history and resumes only when requested', async ({ page, isMobile, isolatedData }) => {
   const { api, task } = await overdueWeeklySeries(page, isolatedData.apiURL)
@@ -133,10 +133,12 @@ test('future sessions stay grouped without a three-dot menu after deleting the m
   const { api, task } = await overdueWeeklySeries(page, isolatedData.apiURL)
   expect((await api(`${path}/${task._id}`, { method: 'DELETE' })).status()).toBe(200)
   await login(page)
-  if (isMobile) await page.getByRole('navigation', { name: 'Mobile home navigation' }).getByRole('button', { name: 'Tasks', exact: true }).click()
-  await page.getByRole('button', { name: 'Needs someone', exact: true }).click()
-  await expect(page.getByRole('button', { name: `Options for ${task.title}`, exact: true })).toHaveCount(0)
-  const rows = page.locator('article').filter({ hasText: task.title }).filter({ visible: true })
+  await page.getByRole('button', { name: 'Needs someone', exact: true }).filter({ visible: true }).click()
+  // Home also highlights the next session in its upcoming-task summary.
+  // Check grouping within the family list rather than counting both sections.
+  const board = page.getByRole('region', { name: isMobile ? 'Family tasks' : 'Family task list', exact: true })
+  await expect(board.getByRole('button', { name: `Options for ${task.title}`, exact: true })).toHaveCount(0)
+  const rows = board.getByRole('article').filter({ hasText: task.title })
   await expect(rows).toHaveCount(1)
   await expect(rows).toContainText('Next session:')
 })

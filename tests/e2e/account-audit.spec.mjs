@@ -19,7 +19,7 @@ test('new account registers and creates a family as its admin', async ({ page, i
   const families = (await response.json()).families
   expect(families).toHaveLength(1)
   expect(families[0].members[0].role).toBe('admin')
-  expect(families[0].overdueTaskDeletion).toBe('admin')
+  expect(families[0].recipientDeletion).toBe('admin')
 })
 
 test('profile edits persist and authenticated feature pages render without browser exceptions', async ({ page }) => {

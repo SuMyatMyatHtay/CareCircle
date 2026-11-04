@@ -10,14 +10,13 @@ async function seedOverdue(page, apiURL) {
   }
   return { api, tasks }
 }
-async function openOverdue(page, isMobile) {
-  if (isMobile) await page.getByRole('navigation', { name: 'Mobile home navigation' }).getByRole('button', { name: 'Tasks', exact: true }).click()
-  await page.getByRole('button', { name: 'Overdue', exact: true }).click()
+async function openOverdue(page) {
+  await page.getByRole('button', { name: 'Overdue', exact: true }).filter({ visible: true }).click()
 }
-test('admin selects overdue tasks outside their cards and gets one deletion summary', async ({ page, isMobile, isolatedData }) => {
+test('admin selects overdue tasks outside their cards and gets one deletion summary', async ({ page, isolatedData }) => {
   const { api, tasks } = await seedOverdue(page, isolatedData.apiURL)
   await login(page)
-  await openOverdue(page, isMobile)
+  await openOverdue(page)
   await page.getByRole('checkbox', { name: 'Select Audit overdue one for deletion', exact: true }).check()
   await page.getByRole('checkbox', { name: 'Select Audit overdue two for deletion', exact: true }).check()
   const checkbox = page.getByRole('checkbox', { name: 'Select Audit overdue one for deletion', exact: true })
@@ -29,18 +28,26 @@ test('admin selects overdue tasks outside their cards and gets one deletion summ
   const notes = (await (await api(`${family}/notifications`)).json()).notifications
   expect(notes.filter(note => note.eventType === 'task.deleted').map(note => note.text)).toEqual(['Alex deleted 2 overdue tasks.'])
 })
-test('member deletion controls follow the saved permission and server rejects disallowed deletion', async ({ page, isMobile, isolatedData }) => {
+test('member deletion controls follow the saved permission and server rejects disallowed deletion', async ({ page, isolatedData }) => {
   const { api, tasks } = await seedOverdue(page, isolatedData.apiURL)
   await login(page, 'may')
-  await openOverdue(page, isMobile)
+  await openOverdue(page)
   await expect(page.getByRole('checkbox', { name: /Select Audit overdue/ })).toHaveCount(0)
   await expect(page.getByRole('button', { name: /Delete selected/ })).toBeDisabled()
   const memberApi = await authenticatedApi(page, isolatedData.apiURL, 'may')
-  expect((await memberApi(`${family}/tasks/overdue`, { method: 'DELETE', data: { taskIds: [tasks[0]._id] } })).status()).toBe(200)
+  async function expectDeletionPrevented() {
+    const response = await memberApi(`${family}/tasks/overdue`, { method: 'DELETE', data: { taskIds: [tasks[0]._id] } })
+    expect(response.status()).toBe(200)
+    expect((await response.json()).deletedCount).toBe(0)
+    expect((await api(`${family}/tasks/${tasks[0]._id}`)).status()).toBe(200)
+  }
+  await expectDeletionPrevented()
   expect((await api(`${family}/recipient-permissions`, { method: 'PATCH', data: { recipientDeletion: 'member' } })).status()).toBe(200)
   await page.reload()
-  await openOverdue(page, isMobile)
+  await openOverdue(page)
   await expect(page.getByRole('checkbox', { name: 'Select Audit overdue one for deletion', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Delete selected/ })).toBeDisabled()
+  await expectDeletionPrevented()
 })
 test('task permission settings persist for admin and are disabled for members', async ({ page, isolatedData }) => {
   await login(page)
