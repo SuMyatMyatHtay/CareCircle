@@ -28,6 +28,8 @@ export const queryClient = new QueryClient({
 // Query keys. Everything for a family sits under ['families', familyId], so
 // invalidating that prefix refreshes all of one family's data at once.
 export const queryKeys = {
+    // Across all the user's families, so it sits outside ['families', familyId]
+    myTasks: () => ['me', 'tasks'],
     family: (familyId) => ['families', familyId],
     tasks: (familyId) => ['families', familyId, 'tasks'],
     recipients: (familyId) => ['families', familyId, 'recipients'],
