@@ -52,14 +52,19 @@
 
 /* Just the avatar, in a 44px circle */
 .app-profile-button {
+  width: 44px;
+  height: 44px;
+  color: var(--theme-green, #398A51);
+  border: 1px solid var(--theme-accent-border, #B5DDC0);
+}
+
+/* .btn.app-profile-button because this file loads before Bootstrap, so .btn's display and
+   padding would otherwise win and push the avatar off-centre */
+.btn.app-profile-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
   padding: 0;
-  color: var(--theme-green, #398A51);
-  border: 1px solid var(--theme-accent-border, #B5DDC0);
 }
 
 .app-profile-button:hover {
