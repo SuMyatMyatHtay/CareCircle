@@ -1,4 +1,5 @@
 import { test, expect, ids, login, authenticatedApi } from './fixtures.mjs'
+import { startTripWithDateConfirmation } from '../support/start-trip.mjs'
 
 test('invalid login, successful login, logout and protected-page redirect', async ({ page }) => {
   await page.goto('/login')
@@ -77,7 +78,7 @@ test('creates, edits and archives a recipient through the real application', asy
   await page.reload()
   await expect(page.getByText('Bring the walking frame', { exact: true })).toBeVisible()
   page.once('dialog', dialog => dialog.accept())
-  await page.getByRole('button', { name: 'Archive recipient', exact: true }).click()
+  await page.locator('.hub-header').getByRole('button', { name: 'Remove recipient', exact: true }).click()
   await expect(page).toHaveURL(/\/home$/)
   await page.reload()
   await expect(page.getByText('E2E Care Recipient', { exact: true })).toHaveCount(0)
@@ -92,16 +93,14 @@ test('creates and claims a family task, then isolates the selected family', asyn
   await page.getByLabel('Starts', { exact: true }).fill('23:30')
   await page.getByRole('button', { name: 'Post task', exact: true }).click()
   await expect(page).toHaveURL(/\/home$/)
-  // Phones: no bottom bar; "See all" on Home opens the family's task list
-  if (isMobile) await page.getByRole('button', { name: 'See all', exact: true }).filter({ visible: true }).click()
   await page.getByRole('button', { name: 'Needs someone', exact: true }).filter({ visible: true }).click()
-  const task = page.getByRole('article').filter({ has: page.getByRole('heading', { name: 'E2E grocery pickup', exact: true }) })
+  // The upcoming summary also shows this task; claim it from the family list.
+  const board = page.getByRole('region', { name: isMobile ? 'Family tasks' : 'Family task list', exact: true })
+  const task = board.getByRole('article').filter({ has: page.getByRole('heading', { name: 'E2E grocery pickup', exact: true }) })
   await task.getByRole('button', { name: 'I’ll take it', exact: true }).click()
   await page.getByRole('button', { name: 'Claimed', exact: true }).filter({ visible: true }).click()
   await expect(task).toContainText('Claimed')
   await page.reload()
-  // Phones: no bottom bar; "See all" on Home opens the family's task list
-  if (isMobile) await page.getByRole('button', { name: 'See all', exact: true }).filter({ visible: true }).click()
   await page.getByRole('button', { name: 'Claimed', exact: true }).filter({ visible: true }).click()
   await expect(task).toContainText('Claimed')
   await expect(task).toContainText('Alex Tan')
@@ -184,7 +183,7 @@ test('collapses multiple live trips, expands them and clears them when switching
     const id = (await created.json()).task._id
     taskIds.push(id)
     expect((await api(`${root}/tasks/${id}/claim`, { method: 'POST' })).status()).toBe(200)
-    expect((await api(`${root}/tasks/${id}/start`, { method: 'POST' })).status()).toBe(200)
+    await startTripWithDateConfirmation(data => api(`${root}/tasks/${id}/start`, { method: 'POST', data }))
     expect((await api(`${root}/tasks/${id}/transit/milestones`, { method: 'POST', data: { type: 'arrived' } })).status()).toBe(201)
   }
   await login(page)
