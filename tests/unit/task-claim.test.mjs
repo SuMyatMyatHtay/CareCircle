@@ -35,12 +35,43 @@ beforeEach(t => {
     return session
   })
 })
-async function invoke(handler, userId = member, family = familyId) {
+async function invoke(handler, userId = member, family = familyId, body = {}) {
   let status = 200, data
   const res = { status(value) { status = value; return this }, json(value) { data = value; return this } }
-  await handler({ family: { _id: family }, params: { taskId }, user: { userId }, memberRole: 'member' }, res, error => { throw error })
+  await handler({ family: { _id: family }, params: { taskId }, user: { userId }, memberRole: 'member', body }, res, error => { throw error })
   return { status, data }
 }
+
+test('starting a trip scheduled on another day requires confirmation before any changes', async () => {
+  Object.assign(stored, { status: 'claimed', claimedBy: member, needsTransit: true, startAt: new Date(Date.now() + 3 * 86400000) })
+  const before = stored.startAt
+  const result = await invoke(startTask)
+  assert.equal(result.status, 409)
+  assert.equal(result.data.startDateChange.scheduledStartAt, before.toISOString())
+  assert.equal(stored.status, 'claimed')
+  assert.equal(stored.startAt, before)
+  assert.equal(transit.length, 0)
+})
+
+test('confirmed different-day trip moves only its session to now and preserves duration', async () => {
+  const startAt = new Date(Date.now() - 3 * 86400000)
+  Object.assign(stored, { status: 'claimed', claimedBy: member, needsTransit: true, startAt, endAt: new Date(+startAt + 3600000), recurringSeries: 'series', recurrenceDetached: false })
+  const result = await invoke(startTask, member, familyId, { confirmedScheduledStartAt: startAt.toISOString() })
+  assert.equal(result.status, 200)
+  assert.equal(stored.status, 'in_progress')
+  assert.ok(Math.abs(+stored.startAt - Date.now()) < 2000)
+  assert.equal(+stored.endAt - +stored.startAt, 3600000)
+  assert.equal(stored.recurrenceDetached, true)
+  assert.equal(transit.length, 1)
+})
+
+test('confirmation for an old scheduled date cannot silently move a changed trip', async () => {
+  Object.assign(stored, { status: 'claimed', claimedBy: member, needsTransit: true, startAt: new Date(Date.now() + 3 * 86400000) })
+  const result = await invoke(startTask, member, familyId, { confirmedScheduledStartAt: new Date(0).toISOString() })
+  assert.equal(result.status, 409)
+  assert.equal(stored.status, 'claimed')
+  assert.equal(transit.length, 0)
+})
 test('member claims a real task then starts transit as its companion', async () => {
   const claimed = await invoke(claimTask)
   assert.equal(claimed.status, 200)

@@ -1,5 +1,9 @@
 # CareCircle API contract
 
+## Whole-family deletion
+
+`DELETE /api/families/:familyId` requires a current family admin and `{ "confirmed": true, "familyName": "Exact family name" }`. The write rechecks the admin role. One MongoDB transaction deletes the family, tasks, recurring series, recipients, trips, care logs, notifications and assistant proposals. Accounts and other families are retained. Returns `{ "deleted": true, "familyId": "..." }`. Missing confirmation returns 400; insufficient permission returns 403; standalone MongoDB returns 503 because transaction support is required. Google Calendar reconciliation is requested in the background for former members. Chat explains the action but directs admins to Settings for explicit confirmation.
+
 All endpoints, by package. **Implemented** means the endpoint is merged and tested; **Planned** means it is agreed but not built. If you change an endpoint, update this file in the same PR. Owners are listed in [OWNERSHIP.md](OWNERSHIP.md).
 
 | Pkg | Owner | Base path | Status |

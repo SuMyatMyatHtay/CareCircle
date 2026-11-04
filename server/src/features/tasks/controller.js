@@ -33,6 +33,7 @@ function handleError(error, res, next) {
     if (error.status) {
         const body = { error: error.message }
         if (error.errors) body.errors = error.errors
+        if (error.startDateChange) body.startDateChange = error.startDateChange
         return res.status(error.status).json(body)
     }
 
@@ -227,7 +228,8 @@ const ACTIONS = {
     }
 }
 
-async function changeStatus(actionName, { familyId, taskId, userId, memberRole, expectedUpdatedAt, scope }) {
+async function changeStatus(actionName, context) {
+    const { familyId, taskId, userId, memberRole, expectedUpdatedAt, scope, confirmedScheduledStartAt } = context
     const action = ACTIONS[actionName]
     const task = await findTaskInFamily(familyId, taskId)
     if (expectedUpdatedAt && +new Date(task.updatedAt) !== +new Date(expectedUpdatedAt)) {
@@ -250,7 +252,24 @@ async function changeStatus(actionName, { familyId, taskId, userId, memberRole, 
     }
 
     // Two people claiming at once: only the first update matches, the other gets null
-    const updated = await Task.updateTaskStatus(task, action.set(task, userId))
+    const changes = action.set(task, userId)
+    if (actionName === 'start' && task.needsTransit) {
+        const now = new Date()
+        const singaporeDay = value => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Singapore' }).format(new Date(value))
+        if (singaporeDay(task.startAt) !== singaporeDay(now)) {
+            if (confirmedScheduledStartAt !== new Date(task.startAt).toISOString()) {
+                throw Object.assign(httpError(409, 'This trip is scheduled for a different day. Confirm moving this session to now before starting.'), {
+                    startDateChange: { scheduledStartAt: new Date(task.startAt).toISOString(), proposedStartAt: now.toISOString(), expectedUpdatedAt: task.updatedAt },
+                })
+            }
+            context.startRollback = { startAt: task.startAt, endAt: task.endAt ?? null,
+                ...(task.recurringSeries ? { recurrenceDetached: task.recurrenceDetached, recurrenceEdited: task.recurrenceEdited } : {}) }
+            changes.startAt = now
+            if (task.endAt) changes.endAt = new Date(+now + Math.max(0, +new Date(task.endAt) - +new Date(task.startAt)))
+            if (task.recurringSeries) { changes.recurrenceDetached = true; changes.recurrenceEdited = true }
+        }
+    }
+    const updated = await Task.updateTaskStatus(task, changes)
 
     if (!updated) {
         const latest = await Task.getTaskById(task._id)
@@ -282,7 +301,7 @@ export async function performFamilyTaskAction(actionName, context) {
     if (actionName === 'start') {
         try { transitSession = await Task.startTransitSession(task) }
         catch (error) {
-            await Task.updateTaskStatus(task, { status: TASK_STATUS.CLAIMED })
+            await Task.updateTaskStatus(task, { status: TASK_STATUS.CLAIMED, ...context.startRollback })
             throw error
         }
     }
@@ -300,7 +319,9 @@ function statusHandler(actionName) {
                 taskId: req.params.taskId,
                 userId: req.user.userId,
                 memberRole: req.memberRole,
-                scope: req.body?.scope
+                scope: req.body?.scope,
+                confirmedScheduledStartAt: req.body?.confirmedScheduledStartAt,
+                expectedUpdatedAt: req.body?.expectedUpdatedAt,
             }
 
             return res.json(await performFamilyTaskAction(actionName, context))

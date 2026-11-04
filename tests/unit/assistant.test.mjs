@@ -428,6 +428,9 @@ test('an incomplete model edit asks a follow-up instead of failing intermittentl
 test('assistant claims only after confirmation and starts/completes the assigned task', async () => {
   Object.assign(tasks.get(taskId), { startAt: new Date(Date.now() + 86400000), needsTransit: true, claimedBy: null })
   for (const [action, expected] of [['claim', 'claimed'], ['start', 'in_progress'], ['complete', 'completed']]) {
+    // Different-day trips use the dedicated reschedule confirmation; this case
+    // exercises ordinary same-day lifecycle proposals.
+    if (action === 'start') tasks.get(taskId).startAt = new Date()
     reply = { intent: action, taskId, message: 'Review action', suggestions: [] }
     const proposed = await chat()
     assert.equal(proposed.status, 200)

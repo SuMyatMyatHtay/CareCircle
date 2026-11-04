@@ -267,7 +267,7 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
 
                         <p v-if="isLoadingEvents" class="agenda-empty" role="status">Loading the family's plans…</p>
 
-                        <ol v-else-if="dayEvents.length" class="agenda-list">
+                        <ol v-else-if="dayEvents.length" class="agenda-list" tabindex="0" :aria-label="`Tasks and events for ${dayLabel(selectedDay)}`">
                             <li v-for="event in dayEvents" :key="event.id">
                                 <component
                                     :is="event.to ? 'RouterLink' : 'div'"
@@ -470,6 +470,25 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
     display: grid;
     gap: 16px;
     min-width: 0;
+}
+
+.agenda {
+    display: flex;
+    flex-direction: column;
+    max-height: clamp(280px, calc(100dvh - 200px), 760px);
+    overflow: hidden;
+}
+
+.agenda-head {
+    flex-shrink: 0;
+}
+
+.agenda .agenda-list {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: stable;
+    padding-right: 6px;
 }
 
 /* ---- Month grid: square cells divided by thin lines, like Apple Calendar ---- */
