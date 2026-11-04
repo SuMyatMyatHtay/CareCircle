@@ -216,7 +216,8 @@ export async function listTransitSessions(req, res, next) {
         const transitSessions = await populateSession(
             TransitSession.find(filter).sort({ startedAt: -1 })
         )
-        return res.json({ transitSessions })
+        // A trip whose task was removed can never be opened or ended, so don't list it
+        return res.json({ transitSessions: transitSessions.filter((session) => session.task) })
     } catch (error) {
         return handleError(error, res, next)
     }

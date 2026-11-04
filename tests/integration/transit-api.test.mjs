@@ -208,6 +208,14 @@ describe('Transit APIs with Express, authentication and a real isolated MongoDB'
     assert.deepEqual(other.data.transitSessions, [])
   })
 
+  it('leaves a live trip off the banner once its task no longer exists', async () => {
+    await startTrip()
+    await Task.deleteOne({ _id: ids.tripTask }) // e.g. removed directly from the database
+    const live = await request(`/families/${ids.family}/transit?status=active`, { user: 'may' })
+    assert.equal(live.status, 200)
+    assert.deepEqual(live.data.transitSessions, [])
+  })
+
   it('My Tasks: only the claimer\'s tasks come back for claimedBy=me', async () => {
     const mine = await request(`/families/${ids.family}/tasks?claimedBy=${ids.alex}`)
     assert.equal(mine.status, 200)
