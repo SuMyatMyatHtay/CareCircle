@@ -174,6 +174,12 @@ async function remove() {
     }
 }
 
+// Opened from a link there's no page to go back to
+function goBack() {
+    if (router.options.history.state.back) router.back()
+    else router.push('/my-tasks')
+}
+
 function openTrip() {
     router.push({ name: 'transit', params: { familyId: props.familyId, taskId: props.taskId } })
 }
@@ -222,7 +228,7 @@ watch(() => [props.familyId, props.taskId], () => { editingRecurring.value = fal
             :is-busy="isBusy"
             :notice="notice"
             :action-error="actionError"
-            @back="router.back()"
+            @back="goBack"
             @start="startTrip"
             @open-trip="openTrip"
             @complete="markDone"

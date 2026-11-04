@@ -202,6 +202,13 @@ async function run(action) {
     }
 }
 
+// Leaves no trip page behind the task page, or the task page's own back button would return here
+function backToTask() {
+    const taskPage = router.resolve({ name: 'task-detail', params: { familyId: props.familyId, taskId: props.taskId } })
+    if (router.options.history.state.back === taskPage.fullPath) router.back()
+    else router.replace(taskPage)
+}
+
 function post(milestone, { confirmed = false } = {}) {
     if (milestone.type === 'home' && !confirmed &&
         !window.confirm('Is everyone safely back home? This ends the trip and marks the task as done.')) return
@@ -315,7 +322,7 @@ onUnmounted(stopPolling)
             :live-time="liveBubbleTime"
             :live-note="liveBubbleNote"
             :can-resume="canResume"
-            @back="router.push({ name: 'task-detail', params: { familyId, taskId } })"
+            @back="backToTask"
             @post="(m) => post(m, { confirmed: true })"
             @remove="removeStep"
             @start="startTrip"
@@ -367,7 +374,7 @@ onUnmounted(stopPolling)
                 <button v-if="isActive && isCompanion" type="button" class="btn-secondary" :disabled="isPosting" @click="endTrip">
                     {{ WORDS.endTrip }}
                 </button>
-                <button v-else type="button" class="btn-secondary" @click="router.push({ name: 'task-detail', params: { familyId, taskId } })">
+                <button v-else type="button" class="btn-secondary" @click="backToTask">
                     Back to task
                 </button>
             </header>

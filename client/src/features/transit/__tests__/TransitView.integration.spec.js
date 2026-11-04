@@ -5,7 +5,7 @@
 // The map is a stub: OneMap pictures are outside this test.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import { createRouter, createMemoryHistory } from 'vue-router'
+import { createRouter, createMemoryHistory, createWebHistory } from 'vue-router'
 
 vi.mock('../services/transitApi.js', () => ({
     getTask: vi.fn(),
@@ -154,6 +154,50 @@ describe('TestSuite: TransitView + TransitMobile working together', () => {
         expect(wrapper.text()).toContain('Grandpa is safely back home. The task is done.')
         expect(wrapper.text()).toContain('Ended')
         expect(button(wrapper, 'Grandpa is safely back home')).toBeFalsy()
+    })
+
+    describe('Back from a finished trip', () => {
+        const historyEvent = () => new Promise((resolve) => window.addEventListener('popstate', resolve, { once: true }))
+
+        async function openWithHistory(...earlierPages) {
+            sessionStorage.setItem('user', JSON.stringify({ id: JASMINE }))
+            const page = { template: '<p>Other page</p>' }
+            const router = createRouter({
+                history: createWebHistory(),
+                routes: [
+                    { path: '/my-tasks', component: page },
+                    { path: '/transit/:familyId/:taskId', name: 'transit', component: TransitView, props: true },
+                    { path: '/tasks/:familyId/:taskId', name: 'task-detail', component: page }
+                ]
+            })
+            for (const path of earlierPages) await router.push(path)
+            await router.push('/transit/fam1/task1')
+            const wrapper = mount({ template: '<RouterView />' }, {
+                attachTo: document.body,
+                global: { plugins: [router], stubs: { OneMapTiles: true, VisitNotesCard: true } }
+            })
+            await flushPromises()
+            return { router, wrapper }
+        }
+        const pressBack = (wrapper) => wrapper.get('button[aria-label="Back"]').trigger('click')
+
+        it('returns to the task page it came from, with no trip page left behind it', async () => {
+            const { router, wrapper } = await openWithHistory('/my-tasks', '/tasks/fam1/task1')
+            const left = historyEvent()
+            await pressBack(wrapper)
+            await left
+            await flushPromises()
+            expect(router.currentRoute.value.path).toBe('/tasks/fam1/task1')
+            expect(router.options.history.state.back).toBe('/my-tasks')
+        })
+
+        it('swaps in the task page when the trip was opened from somewhere else', async () => {
+            const { router, wrapper } = await openWithHistory('/my-tasks')
+            await pressBack(wrapper)
+            await flushPromises()
+            expect(router.currentRoute.value.path).toBe('/tasks/fam1/task1')
+            expect(router.options.history.state.back).toBe('/my-tasks')
+        })
     })
 
     it('Test5: another family member only follows along', async () => {
