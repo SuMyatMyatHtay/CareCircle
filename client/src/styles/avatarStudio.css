@@ -1,4 +1,4 @@
-.avatar-studio{max-width:1450px;margin:0 auto;color:var(--theme-text, #342f2b);font-family:'Nunito',system-ui,sans-serif}
+.avatar-studio{max-width:1450px;color:var(--theme-text, #342f2b);font-family:'Nunito',system-ui,sans-serif}
 .avatar-studio h1{font-size:clamp(28px,3vw,38px)}
 .avatar-eyebrow{color:var(--theme-green, #589b72);font-size:12px;font-weight:900;letter-spacing:1px}
 .avatar-card{background:var(--theme-panel, #fff);border:1px solid var(--theme-border, #f0eae7);border-radius:27px;box-shadow:0 12px 30px rgba(93,132,106,.07)}

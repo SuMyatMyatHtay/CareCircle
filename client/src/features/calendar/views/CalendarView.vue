@@ -315,7 +315,6 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
 <style scoped>
 .calendar-page {
     max-width: 1440px;
-    margin: auto;
     padding: 12px 0 36px;
     color: var(--theme-text, #30332f);
 }

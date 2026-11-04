@@ -294,7 +294,6 @@
   }
   /* Phones keep the top bar with the left menu (☰); there is no bottom bar any more */
   .family-home-surface .care-home-page {
-    max-width: none;
     min-height: 100%;
   }
 }

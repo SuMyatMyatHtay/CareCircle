@@ -34,7 +34,7 @@ watch(() => route.params.userId, loadProfile, { immediate: true })
 </script>
 
 <template>
-  <div class="profile-page container-fluid">
+  <div class="profile-page">
     <RouterLink to="/settings" class="profile-back btn mb-3" aria-label="Back to family members" title="Back to family members"><i class="bi bi-arrow-left" aria-hidden="true"></i></RouterLink>
     <p v-if="loading" role="status">Loading profile...</p>
     <div v-else-if="error" class="alert alert-danger" role="alert">
