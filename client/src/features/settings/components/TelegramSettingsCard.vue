@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import SectionCard from '../../../components/common/SectionCard.vue'
 import NotificationToggle from './NotificationToggle.vue'
 import { useFamilyWorkspace } from '../../family/composables/useFamilyWorkspace.js'
@@ -79,7 +79,17 @@ const addToGroupUrl = computed(() =>
     ? `https://t.me/${botUsername.value}?startgroup=${encodeURIComponent(props.inviteCode)}`
     : '',
 )
- 
+const copied = ref(false)
+async function copyCommand() {
+  try {
+    await navigator.clipboard.writeText(`/link ${props.inviteCode}`)
+    copied.value = true
+    setTimeout(() => { copied.value = false }, 2000)
+  } catch {
+    // No clipboard access: the command is still on screen to type
+  }
+}
+
 function confirmUnlink() {
   if (window.confirm('Stop sending CareCircle updates to this Telegram group?')) telegram.unlink()
 }
@@ -111,11 +121,19 @@ function onReminderChange(key, value) {
         <i class="bi bi-telegram" aria-hidden="true"></i> Add to Telegram group
       </a>
       <p v-if="addToGroupUrl" class="care-muted care-tiny">
-        Telegram opens. Pick your family group and it links by itself, then come back here.
+        On a phone: pick your family group and it links by itself, then come back here.
       </p>
+      <!-- Telegram Desktop ignores the group picked from the button, so computers add the bot by hand -->
       <p class="care-muted care-tiny">
-        {{ addToGroupUrl ? 'Or add' : 'To link a new group: add' }} @{{ botUsername }} yourself, then send /link {{ inviteCode }}
+        {{ addToGroupUrl ? 'On a computer, or if it opens a chat with the bot: add' : 'To link a new group: add' }}
+        @{{ botUsername }} to the group, then send:
       </p>
+      <div v-if="inviteCode" class="care-telegram-command">
+        <code>/link {{ inviteCode }}</code>
+        <button type="button" class="care-text-button" data-testid="telegram-copy-link" @click="copyCommand">
+          {{ copied ? 'Copied' : 'Copy' }}
+        </button>
+      </div>
     </div>
     <p v-if="preview" class="care-preview-disclaimer">
       Sample preferences are saved on this device. No Telegram messages are
@@ -161,6 +179,20 @@ function onReminderChange(key, value) {
   justify-items: start;
   gap: 0.35rem;
   margin: 0.75rem 0 0.5rem;
+}
+
+.care-telegram-command {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--theme-border, #dfe3e8);
+  border-radius: 10px;
+}
+
+.care-telegram-command code {
+  color: inherit;
+  font-size: 0.9rem;
 }
 
 .care-telegram-add {

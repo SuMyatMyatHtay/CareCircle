@@ -137,6 +137,30 @@ describe('Telegram group, webhook and reminders', () => {
     assert.match(telegramCalls.at(-1).text, /Add to Telegram group/)
   })
 
+  it('guides apps that open a private chat instead, and greets a group it is added to by hand', async () => {
+    process.env.TELEGRAM_BOT_USERNAME = 'CareCircleTestBot'
+    try {
+      // Telegram Desktop opens the bot's private chat with the code
+      await webhook({ chat: { id: 4242, type: 'private' }, text: '/start AABBCCDDEE' })
+      assert.equal(await chatIdOf(), undefined)
+      assert.match(telegramCalls.at(-1).text, /@CareCircleTestBot/)
+      assert.match(telegramCalls.at(-1).text, /\/link AABBCCDDEE$/)
+
+      // Added to a group by hand: it asks for /link, and links nothing yet
+      await webhook({ chat: group('-999'), new_chat_members: [{ id: 1, is_bot: true, username: 'CareCircleTestBot' }] })
+      assert.equal(telegramCalls.at(-1).chatId, '-999')
+      assert.match(telegramCalls.at(-1).text, /send \/link/)
+      assert.equal(await chatIdOf(), undefined)
+
+      // Someone else joining the group gets no message
+      const before = telegramCalls.length
+      await webhook({ chat: group('-999'), new_chat_members: [{ id: 2, is_bot: false, username: 'grandma' }] })
+      assert.equal(telegramCalls.length, before)
+    } finally {
+      delete process.env.TELEGRAM_BOT_USERNAME
+    }
+  })
+
   it('runs scheduled reminders only for the cron service', async () => {
     const run = (authorization) => request('/cron/reminders', { method: 'POST', authenticated: false,
       headers: authorization ? { Authorization: authorization } : {} })
