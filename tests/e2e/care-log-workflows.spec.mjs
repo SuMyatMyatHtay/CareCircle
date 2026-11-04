@@ -258,8 +258,10 @@ test('notes open already translated into the reader\'s preferred language', asyn
   await expect(note).toContainText('Sample note in the isolated test database.')
   await expect(note.getByTestId('log-translate')).toContainText('中文')
 
-  // The reader can hide it
+  // The button opens the language list again; the reader can hide the translation from it
   await note.getByTestId('log-translate').click()
+  await expect(note.getByTestId('log-translate-ms')).toBeVisible()
+  await note.getByTestId('log-translate-original').click()
   await expect(note.locator('.translation')).toHaveCount(0)
 
   // "Latest notes" on the recipient Overview is in Chinese too, with the original a click away
