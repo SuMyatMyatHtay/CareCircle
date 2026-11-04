@@ -1,6 +1,8 @@
 // POST /api/integrations/telegram/webhook (what happens when someone types in the family group).
 // Webhook commands:
 //   /link <inviteCode>   run in the family's group: connects the group to the family
+//   /start <inviteCode>  the same, sent by Telegram itself when the bot is added through
+//                        the "Add to Telegram" button (t.me/<bot>?startgroup=<inviteCode>)
 //   /unlink              run in a linked group: disconnects it
 //   /start, /help        short instructions
 import { timingSafeEqual } from 'node:crypto'
@@ -66,9 +68,8 @@ function isValidWebhookSecret(req) {
 // ---------------------------------------------------------------- Webhook
 const HELP = [
   'Hi! I send CareCircle updates to your family group.',
-  '1. Open Family settings in CareCircle and copy your invite code.',
-  '2. Add me to your family group.',
-  '3. In the group, send: /link YOURCODE',
+  'In CareCircle, open Family settings and tap "Add to Telegram group", then pick your group.',
+  'Or add me to the group yourself and send: /link YOURCODE',
 ].join('\n')
  
 async function reply(chatId, text) {
@@ -131,6 +132,8 @@ async function handleUpdate(update) {
   const command = first.toLowerCase().replace(/@.*$/, '') // "/link@CareCircleBot" -> "/link"
   if (command === '/link') return linkGroup(message.chat, message.from, rest[0])
   if (command === '/unlink') return unlinkGroup(message.chat)
+  // The "Add to Telegram group" button: Telegram sends "/start@Bot CODE" in the chosen group
+  if (command === '/start' && rest[0]) return linkGroup(message.chat, message.from, rest[0])
   if (command === '/start' || command === '/help') return reply(message.chat.id, HELP)
 }
  

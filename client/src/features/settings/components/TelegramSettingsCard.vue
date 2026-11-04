@@ -29,7 +29,7 @@ const familyId = computed(() => (props.preview ? '' : workspace.selectedFamilyId
 const live = computed(() => Boolean(familyId.value))
 const isAdmin = computed(() => workspace.isAdmin.value)
 const telegram = useTelegramSettings(() => familyId.value)
-const { loading, saving, testing, error, feedback, linked, linkedAt, linkedByName, groups } = telegram
+const { loading, saving, testing, error, feedback, linked, linkedAt, linkedByName, botUsername, groups } = telegram
  
 const isOn = (key) => (live.value ? Boolean(groups.value[key]) : Boolean(props.preferences[key]))
 // Nothing is sent without a linked group, so its switches stay locked until then
@@ -73,6 +73,12 @@ const summary = computed(() => {
   return 'No Telegram group is linked yet.'
 })
 const showHowToLink = computed(() => props.preview || (live.value && !loading.value && !linked.value))
+// Opens Telegram to pick a group; Telegram adds the bot and sends it the invite code
+const addToGroupUrl = computed(() =>
+  live.value && props.inviteCode
+    ? `https://t.me/${botUsername.value}?startgroup=${encodeURIComponent(props.inviteCode)}`
+    : '',
+)
  
 function confirmUnlink() {
   if (window.confirm('Stop sending CareCircle updates to this Telegram group?')) telegram.unlink()
@@ -93,9 +99,24 @@ function onReminderChange(key, value) {
       </span>
     </template>
     <p class="care-muted care-small">{{ summary }}</p>
-    <p v-if="showHowToLink" class="care-muted care-tiny">
-      To link a new group: add @CareCircleBot, then send /link {{ inviteCode }}
-    </p>
+    <div v-if="showHowToLink" class="care-telegram-link">
+      <a
+        v-if="addToGroupUrl"
+        :href="addToGroupUrl"
+        target="_blank"
+        rel="noopener"
+        class="care-button care-telegram-add"
+        data-testid="telegram-add-to-group"
+      >
+        <i class="bi bi-telegram" aria-hidden="true"></i> Add to Telegram group
+      </a>
+      <p v-if="addToGroupUrl" class="care-muted care-tiny">
+        Telegram opens. Pick your family group and it links by itself, then come back here.
+      </p>
+      <p class="care-muted care-tiny">
+        {{ addToGroupUrl ? 'Or add' : 'To link a new group: add' }} @{{ botUsername }} yourself, then send /link {{ inviteCode }}
+      </p>
+    </div>
     <p v-if="preview" class="care-preview-disclaimer">
       Sample preferences are saved on this device. No Telegram messages are
       sent.
@@ -135,6 +156,20 @@ function onReminderChange(key, value) {
 </template>
 
 <style scoped>
+.care-telegram-link {
+  display: grid;
+  justify-items: start;
+  gap: 0.35rem;
+  margin: 0.75rem 0 0.5rem;
+}
+
+.care-telegram-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+}
+
 .care-telegram-actions {
   display: flex;
   flex-wrap: wrap;

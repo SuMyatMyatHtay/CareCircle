@@ -121,6 +121,23 @@ describe('Telegram card, switches and settings adapter', () => {
     expect(save).not.toHaveBeenCalled()
   })
 
+  it('offers a one-tap "Add to Telegram group" link and notices the link when the reader comes back', async () => {
+    settings.telegram = { linked: false }
+    settings.botUsername = 'CareCircleTestBot'
+    const wrapper = await render()
+    expect(wrapper.get('[data-testid="telegram-add-to-group"]').attributes('href'))
+      .toBe('https://t.me/CareCircleTestBot?startgroup=AABBCCDDEE')
+
+    // Linked in Telegram meanwhile; returning to the tab picks it up
+    settings = { ...settings, telegram: { linked: true, linkedAt: '2026-11-04T00:00:00Z', linkedBy: null } }
+    document.dispatchEvent(new Event('visibilitychange'))
+    await flushPromises()
+    expect(wrapper.find('[data-testid="telegram-add-to-group"]').exists()).toBe(false)
+    expect(wrapper.get('[role="status"]').text()).toBe('Telegram group linked.')
+    expect(switchFor(wrapper, POSTED).element.disabled).toBe(false)
+    wrapper.unmount()
+  })
+
   it('does not let an old family response replace the newly selected family settings', async () => {
     const old = deferred()
     http.get.mockReturnValueOnce(old.promise).mockResolvedValue({ data: {
