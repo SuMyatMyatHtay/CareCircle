@@ -32,7 +32,7 @@ const resolve = (source) => (typeof source === 'function' ? source() : source?.v
 export function useTelegramSettings(source) {
   const loading = ref(false), saving = ref(false), testing = ref(false)
   const error = ref(''), feedback = ref('')
-  const linked = ref(false), linkedAt = ref(''), linkedByName = ref(''), botUsername = ref('CareCircleBot')
+  const linked = ref(false), linkedAt = ref(''), linkedByName = ref(''), botUsername = ref('CareCircleAppBot') // until the server says (TELEGRAM_BOT_USERNAME)
   const groups = ref(groupsFromEvents(ALL_EVENTS))
   const reminders = ref({ beforeTask: false,  unclaimedTask: false, dailySummary: false})
   const asFlags = (r) => ({ beforeTask: Boolean(r?.beforeTask), unclaimedTask: Boolean(r?.unclaimedTask), dailySummary: Boolean(r?.dailySummary) })
