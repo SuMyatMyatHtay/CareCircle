@@ -32,7 +32,7 @@ test.describe('Account registration and family onboarding', () => {
   test('registers, creates a family, and lets another caregiver join with member permissions', async ({ page, isMobile }) => {
     await page.goto('/signup')
     await fillSignup(page, 'new-caregiver@carecircle.test')
-    await page.getByLabel('Language', { exact: true }).selectOption('zh')
+    await page.getByLabel('Preferred Language', { exact: true }).selectOption('zh')
     await page.getByRole('button', { name: 'Create account', exact: false }).click()
     await expect(page).toHaveURL(/\/home$/)
     await expect(page.getByRole('heading', { name: 'Your circle starts here', exact: true }).filter({ visible: true })).toBeVisible()

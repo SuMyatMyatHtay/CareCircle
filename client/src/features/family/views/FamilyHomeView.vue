@@ -7,6 +7,7 @@ import FamilyEmptyState from '../components/FamilyEmptyState.vue'
 import TransitBanner from '../components/TransitBanner.vue'
 import RecipientOverview from '../components/RecipientOverview.vue'
 import DeleteOverdueTasks from '../../tasks/components/DeleteOverdueTasks.vue'
+import RecurringSeriesPanel from '../../tasks/components/RecurringSeriesPanel.vue'
 import TodayTasks from '../components/TodayTasks.vue'
 import UrgentUpcomingTasks from '../components/UrgentUpcomingTasks.vue'
 import RecentUpdates from '../components/RecentUpdates.vue'
@@ -309,6 +310,7 @@ watch(selectedFamilyId, () => {
           </TodayTasks>
           <RecentUpdates :updates="activity" :preview="isPreview" />
         </div>
+        <RecurringSeriesPanel v-if="!isPreview" :tasks="allTasks" />
       </template>
     </div>
     <div class="care-home-mobile">
@@ -378,6 +380,7 @@ watch(selectedFamilyId, () => {
         <!-- Phones use the left menu (☰) only, so Recent updates sits on the page
              instead of behind a bottom-bar "Activity" tab -->
         <RecentUpdates class="care-mobile-recent" description="See what your family has claimed, completed or changed." :updates="activity" :preview="isPreview" />
+        <RecurringSeriesPanel v-if="!isPreview" :tasks="allTasks" />
       </template>
     </div>
     <CareModal
@@ -504,6 +507,11 @@ watch(selectedFamilyId, () => {
 </template>
 
 <style>
+.care-home-page .recurring-series-panel {
+  margin-top: 24px;
+  margin-bottom: 32px;
+}
+
 /* E (Chaithra): "+N more on a trip" under the live transit banner */
 .care-more-trips {
   display: inline-flex;
