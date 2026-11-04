@@ -204,7 +204,9 @@ taskSchema.statics.recipientInFamily = async function (recipientId, familyId) {
 // Starting again is a new journey, so the old steps and location are cleared.
 taskSchema.statics.startTransitSession = async function (task) {
     const TransitSession = transitModel()
-    if (!TransitSession || !task.needsTransit) return null
+    // Every started task gets a trip, so whoever is doing it can post updates and the
+    // family can follow along. needsTransit only changes the wording ("Start the trip").
+    if (!TransitSession) return null
 
     return TransitSession.findOneAndUpdate(
         { task: task._id },

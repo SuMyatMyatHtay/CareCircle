@@ -277,12 +277,20 @@ async function roadBetween(a, b) {
 }
 
 // How a new position is added to the trail (and saved as lastLocation):
-//  - an impossible jump (over 2 km at more than 120 km/h, e.g. a phone that had no GPS fix,
-//    or switching devices) starts the trail again from here instead of drawing a straight
-//    line across Singapore
-//  - a gap of over 150 m (e.g. the page was closed for a while) is filled in along the roads
+//  - an impossible jump (over 300 m at more than 180 km/h, a GPS glitch) is ignored,
+//    unless the page was closed for a while, then the trail carries on from the new spot
+//  - a move under 8 m (GPS wobble) only moves the live dot
+//  - a gap of over 120 m is filled in along the roads (unless that route loops round a block)
 //  - otherwise the point is simply added
 // Returns the whole MongoDB update, including the new lastLocation.
+const ROAD_GAP_M = 120 // gaps longer than this are filled in along the roads
+
+function lineLength(points) {
+    let total = 0
+    for (let i = 1; i < points.length; i++) total += metres(points[i - 1], points[i])
+    return total
+}
+
 async function trailUpdate(path, point) {
     const last = path?.length ? path[path.length - 1] : null
     const add = (points) => ({
@@ -293,9 +301,21 @@ async function trailUpdate(path, point) {
 
     const gap = metres(last, point)
     const seconds = Math.max(1, (point.at - new Date(last.at)) / 1000)
-    if (gap > 2000 && gap / seconds > 33) return { $set: { lastLocation: point, path: [point] } }
+    // Faster than 180 km/h over more than 300 m is a GPS glitch (a phone that lost its fix
+    // for a moment). Ignore it, so the avatar doesn't jump away and back. After a long
+    // pause (page closed for 2+ minutes) the person really may be somewhere new: carry on
+    // from there (the map doesn't draw a line across a gap that big).
+    if (gap > 300 && gap / seconds > 50) {
+        if (seconds < 120) return null
+        return add([point])
+    }
+    // GPS wobble while standing still: move the dot, don't scribble on the trail
+    if (gap < 8) return { $set: { lastLocation: point } }
 
-    const between = gap > 150 ? await roadBetween(last, point) : []
+    let between = gap > ROAD_GAP_M ? await roadBetween(last, point) : []
+    // A road route much longer than the gap is a detour round the block (e.g. GPS put
+    // the person on the other side of the road): a short straight join looks better
+    if (between.length && lineLength([last, ...between, point]) > 3 * gap && gap < 500) between = []
     return add([...between, point])
 }
 
@@ -326,9 +346,13 @@ export async function updateLocation(req, res, next) {
         // The point also goes on the trail (oldest points drop off after PATH_LIMIT),
         // following the roads from the previous point (see trailUpdate).
         const point = { lat, lng, at: new Date() }
+        if (session.status !== TRANSIT_STATUS.ACTIVE) throw httpError(409, 'This trip has already ended')
+        const change = await trailUpdate(session.path, point)
+        // A GPS glitch: keep the last good spot
+        if (!change) return res.json({ lastLocation: session.lastLocation, ignored: true })
         const updated = await TransitSession.findOneAndUpdate(
             { _id: session._id, status: TRANSIT_STATUS.ACTIVE },
-            await trailUpdate(session.path, point),
+            change,
             { new: true }
         )
         if (!updated) throw httpError(409, 'This trip has already ended')
@@ -342,11 +366,26 @@ export async function updateLocation(req, res, next) {
 // POST /api/families/:familyId/tasks/:taskId/transit/resume   (companion only)
 // Undo an accidental "End transit": the same trip carries on with its steps so far.
 // Only while the task is still in progress (a completed or cancelled task can't resume).
+// A task that was started without a trip (older tasks) gets one here, so the person
+// doing it can still post updates and share their location.
 export async function resumeTransit(req, res, next) {
     try {
         const taskId = getTaskId(req)
         const session = await TransitSession.findOne({ task: taskId, family: req.family._id })
-        if (!session) throw httpError(404, 'Transit session not found')
+        if (!session) {
+            const Task = mongoose.models.Task
+            const task = Task ? await Task.findOne({ _id: taskId, family: req.family._id }) : null
+            if (!task) throw httpError(404, 'Task not found')
+            if (String(task.claimedBy) !== req.user.userId) {
+                throw httpError(403, 'Only the person doing this task can start its trip')
+            }
+            if (task.status !== 'in_progress') {
+                throw httpError(409, 'Only a task that is in progress can continue as a trip')
+            }
+            const created = await Task.startTransitSession(task)
+            const transitSession = await populateSession(TransitSession.findById(created._id))
+            return res.status(201).json({ transitSession })
+        }
 
         if (session.companion.toString() !== req.user.userId) {
             throw httpError(403, 'Only the person on this trip can resume it')

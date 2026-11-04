@@ -2,7 +2,7 @@
 // Matches Figma "Mobile prototype" → "09 · Task detail" (D · Task Management + E).
 // Phone layout of the Task detail page. TaskDetailView loads the task and runs the actions.
 // E parts here: Start the trip / Open the trip, live trip status, Open in Maps, Add to calendar.
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import PersonAvatar from '../../my-tasks/components/PersonAvatar.vue'
 import { getTransitSession } from '../services/transitApi.js'
 import { formatTime, recipientName, TIME_ZONE } from '../../my-tasks/utils/formatters.js'
@@ -89,14 +89,19 @@ const mainButton = computed(() => {
             ? { label: WORDS.startTrip, event: 'start', icon: 'bi-arrow-right' }
             : { label: WORDS.startTask, event: 'start', icon: 'bi-play-fill' }
     }
-    if (props.task.needsTransit && session.value) {
+    if (session.value) {
         return { label: isLive.value ? WORDS.openTrip : WORDS.viewTrip, event: 'open-trip', icon: 'bi-geo-alt' }
+    }
+    // In progress with no trip yet (started before every task had one): the person
+    // doing it can still open the trip page and carry on from there
+    if (props.isClaimer && status.value === 'in_progress') {
+        return { label: WORDS.continueTrip, event: 'open-trip', icon: 'bi-geo-alt' }
     }
     return null
 })
 
 async function loadSession() {
-    if (!props.task.needsTransit) {
+    if (!['in_progress', 'completed'].includes(props.task.status)) {
         session.value = null
         return
     }
@@ -107,6 +112,12 @@ async function loadSession() {
     }
 }
 watch(() => [props.task._id, props.task.status], loadSession, { immediate: true })
+// While the task is in progress, check for new trip updates every 15 s, so the family
+// sees "Arrived at …" here without reloading (stops when you leave the page)
+const sessionTimer = setInterval(() => {
+    if (props.task?.status === 'in_progress' && document.visibilityState === 'visible') loadSession()
+}, 15 * 1000)
+onUnmounted(() => clearInterval(sessionTimer))
 </script>
 
 <template>

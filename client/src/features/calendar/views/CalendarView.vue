@@ -267,7 +267,7 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
 
                         <p v-if="isLoadingEvents" class="agenda-empty" role="status">Loading the family's plans…</p>
 
-                        <ol v-else-if="dayEvents.length" class="agenda-list">
+                        <ol v-else-if="dayEvents.length" class="agenda-list" tabindex="0" :aria-label="`Tasks and events for ${dayLabel(selectedDay)}`">
                             <li v-for="event in dayEvents" :key="event.id">
                                 <component
                                     :is="event.to ? 'RouterLink' : 'div'"
@@ -471,6 +471,25 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
     display: grid;
     gap: 16px;
     min-width: 0;
+}
+
+.agenda {
+    display: flex;
+    flex-direction: column;
+    max-height: clamp(280px, calc(100dvh - 200px), 760px);
+    overflow: hidden;
+}
+
+.agenda-head {
+    flex-shrink: 0;
+}
+
+.agenda .agenda-list {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: stable;
+    padding-right: 6px;
 }
 
 /* ---- Month grid: square cells divided by thin lines, like Apple Calendar ---- */
@@ -782,6 +801,31 @@ a.agenda-item:hover {
 .calendar-page a:focus-visible {
     outline: 2px solid var(--theme-green, #2d7d43);
     outline-offset: 2px;
+}
+
+/* Side by side: the day's list is as tall as the month and scrolls on its own,
+   so a busy day doesn't stretch the page and carry the month away with it */
+@media (min-width: 1100.02px) {
+    .calendar-side {
+        position: relative;
+        align-self: stretch;
+    }
+
+    .calendar-side .agenda {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .agenda-list {
+        flex: 1;
+        min-height: 0;
+        margin-right: -8px;
+        padding-right: 8px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
 }
 
 @media (max-width: 1100px) {

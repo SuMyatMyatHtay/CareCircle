@@ -174,6 +174,49 @@ describe('Transit APIs with Express, authentication and a real isolated MongoDB'
     assert.deepEqual(trip.path.map(p => [p.lat, p.lng]), [[TTSH.lat, TTSH.lng], [NEAR_TTSH.lat, NEAR_TTSH.lng]])
   })
 
+  it('GPS wobble of a few metres moves the live spot but does not add to the trail', async () => {
+    await startTrip()
+    await request(`${transit}/location`, { method: 'PATCH', body: TTSH })
+    const wobble = { lat: TTSH.lat + 0.00003, lng: TTSH.lng } // about 3 m
+    assert.equal((await request(`${transit}/location`, { method: 'PATCH', body: wobble })).status, 200)
+    const trip = (await request(transit, { user: 'jasmine' })).data.transitSession
+    assert.equal(trip.lastLocation.lat, wobble.lat)
+    assert.equal(trip.path.length, 1)
+  })
+
+  it('a GPS glitch far away is ignored, so the live spot does not jump away and back', async () => {
+    await startTrip()
+    await request(`${transit}/location`, { method: 'PATCH', body: TTSH })
+    const changi = { lat: 1.3644, lng: 103.9915 } // 16 km away, a second later
+    const glitch = await request(`${transit}/location`, { method: 'PATCH', body: changi })
+    assert.equal(glitch.status, 200)
+    const trip = (await request(transit, { user: 'jasmine' })).data.transitSession
+    assert.equal(trip.lastLocation.lat, TTSH.lat)
+    assert.equal(trip.path.length, 1)
+  })
+
+  it('every started task gets a trip, even without "needs transport"', async () => {
+    await Task.updateOne({ _id: ids.tripTask }, { $set: { needsTransit: false } })
+    const started = await startTrip()
+    assert.equal(started.status, 200)
+    assert.equal(started.data.task.status, 'in_progress')
+    assert.equal(started.data.transitSession.status, 'active')
+    assert.equal((await post({ type: 'arrived' })).status, 201)
+  })
+
+  it('a task already in progress without a trip can continue as one, by the person doing it', async () => {
+    await Task.updateOne({ _id: ids.tripTask }, { $set: { status: 'in_progress', needsTransit: false } })
+    assert.equal((await request(transit)).status, 404)
+    assert.equal((await request(`${transit}/resume`, { method: 'POST', user: 'jasmine' })).status, 403)
+    const continued = await request(`${transit}/resume`, { method: 'POST' })
+    assert.equal(continued.status, 201)
+    assert.equal(continued.data.transitSession.status, 'active')
+    assert.equal(continued.data.transitSession.companion.name, 'Alex Tan')
+    assert.equal((await post({ type: 'arrived' })).status, 201)
+    const followed = await request(transit, { user: 'jasmine' })
+    assert.equal(followed.data.transitSession.milestones.at(-1).label, 'Arrived at clinic')
+  })
+
   it('rejects impossible coordinates and stops sharing once the trip ends', async () => {
     await startTrip()
     const bad = await request(`${transit}/location`, { method: 'PATCH', body: { lat: 200, lng: 'east' } })

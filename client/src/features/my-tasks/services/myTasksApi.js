@@ -40,7 +40,18 @@ async function taskAction(familyId, taskId, action, body = null) {
 }
 
 // D's endpoints. Each returns { task } ("start" also returns transitSession)
-export const startTask = (familyId, taskId) => taskAction(familyId, taskId, 'start')
+export async function startTask(familyId, taskId) {
+    try { return await taskAction(familyId, taskId, 'start') }
+    catch (error) {
+        const change = error.response?.data?.startDateChange
+        if (error.response?.status !== 409 || !change) throw error
+        const format = value => new Date(value).toLocaleString('en-SG', { timeZone: 'Asia/Singapore', dateStyle: 'medium', timeStyle: 'short' })
+        if (!window.confirm(`This trip is scheduled for ${format(change.scheduledStartAt)}. Start now and move this session to the current date and time (${format(change.proposedStartAt)}, Singapore time)? The end time will shift by the same amount. Other recurring dates will stay unchanged.`)) {
+            throw new Error('Trip start cancelled. The scheduled date and time were kept.')
+        }
+        return taskAction(familyId, taskId, 'start', { confirmedScheduledStartAt: change.scheduledStartAt, expectedUpdatedAt: change.expectedUpdatedAt })
+    }
+}
 export const unclaimTask = (familyId, taskId) => taskAction(familyId, taskId, 'unclaim')
 export const completeTask = (familyId, taskId) => taskAction(familyId, taskId, 'complete')
 export const claimTask = async (familyId, taskId, options = {}) => {

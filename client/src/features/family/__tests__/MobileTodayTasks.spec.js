@@ -6,6 +6,24 @@ const openTask = { _id: 'task-one', title: 'Collect medicine', startAt: new Date
 const claimButton = wrapper => wrapper.findAll('button').find(button => button.text() === 'I’ll take it')
 
 describe('Mobile today task list with its real child cards', () => {
+  it('does not reserve a checkbox column for overdue tasks the user cannot delete', () => {
+    const wrapper = mount(MobileTodayTasks, { props: { selectable: true, tasks: [{ ...openTask, startAt: new Date(0).toISOString(), deletionAllowed: false }] } })
+    expect(wrapper.get('.mobile-task-selection-row').classes()).not.toContain('has-selection')
+    expect(wrapper.find('input[type=checkbox]').exists()).toBe(false)
+    expect(wrapper.get('article').text()).toContain('Collect medicine')
+    wrapper.unmount()
+  })
+  it('reserves a checkbox column only for eligible overdue rows in a mixed list', () => {
+    const wrapper = mount(MobileTodayTasks, { props: { selectable: true, tasks: [
+      { ...openTask, _id: 'allowed', startAt: new Date(0).toISOString(), deletionAllowed: true },
+      { ...openTask, _id: 'blocked', startAt: new Date(0).toISOString(), deletionAllowed: false },
+      { ...openTask, _id: 'future', deletionAllowed: true },
+    ] } })
+    const rows = wrapper.findAll('.mobile-task-selection-row')
+    expect(rows.map(row => row.classes().includes('has-selection'))).toEqual([true, false, false])
+    expect(wrapper.findAll('input[type=checkbox]')).toHaveLength(1)
+    wrapper.unmount()
+  })
   it('closes claiming automatically when the scheduled start time arrives', async () => {
     vi.useFakeTimers()
     const startAt = new Date(Date.now() + 1000).toISOString()

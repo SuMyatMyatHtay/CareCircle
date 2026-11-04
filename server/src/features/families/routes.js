@@ -5,6 +5,7 @@ import { Router } from 'express'
 import { requireAuth } from '../../middleware/requireAuth.js'
 import { requireFamilyMember, requireFamilyAdmin } from '../../middleware/requireFamilyMember.js'
 import { createFamily, getMyFamilies, joinFamily } from './controller.js'
+import { deleteFamily } from './delete.controller.js'
 import { listMembers, updateMember, deleteMember, regenerateInviteCode, updateRecipientPermissions } from './settings.controller.js'
 
 const router = Router()
@@ -20,6 +21,7 @@ const admin = [requireAuth, requireFamilyMember, requireFamilyAdmin]
 router.get('/mine', getMyFamilies)      // Get the logged-in user's families
 router.post('/', createFamily)          // Create a new family
 router.post('/join', joinFamily)
+router.delete('/:familyId', admin, deleteFamily)
 
 
 // ---- B (SangYoon): settings and members ----

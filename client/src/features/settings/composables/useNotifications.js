@@ -32,7 +32,7 @@ const resolve = (source) => (typeof source === 'function' ? source() : source?.v
 export function useTelegramSettings(source) {
   const loading = ref(false), saving = ref(false), testing = ref(false)
   const error = ref(''), feedback = ref('')
-  const linked = ref(false), linkedAt = ref(''), linkedByName = ref(''), botUsername = ref('CareCircleBot')
+  const linked = ref(false), linkedAt = ref(''), linkedByName = ref(''), botUsername = ref('CareCircleAppBot') // until the server says (TELEGRAM_BOT_USERNAME)
   const groups = ref(groupsFromEvents(ALL_EVENTS))
   const reminders = ref({ beforeTask: false,  unclaimedTask: false, dailySummary: false})
   const asFlags = (r) => ({ beforeTask: Boolean(r?.beforeTask), unclaimedTask: Boolean(r?.unclaimedTask), dailySummary: Boolean(r?.dailySummary) })
@@ -148,8 +148,29 @@ export function useTelegramSettings(source) {
     }
   }
 
+  // After "Add to Telegram group" the linking happens in Telegram, so look again when the
+  // reader comes back to this tab. Quiet: the card doesn't flash "Checking…".
+  async function recheck() {
+    const familyId = resolve(source)
+    if (!familyId || loading.value || linked.value) return
+    const current = version
+    try {
+      const data = await getNotifySettings(familyId)
+      if (current !== version || !data.telegram.linked) return
+      linked.value = true
+      linkedAt.value = data.telegram.linkedAt || ''
+      linkedByName.value = data.telegram.linkedBy?.name || ''
+      feedback.value = 'Telegram group linked.'
+    } catch {
+      // The next return to the tab tries again
+    }
+  }
+  const recheckWhenVisible = () => { if (document.visibilityState === 'visible') recheck() }
+  onMounted(() => document.addEventListener('visibilitychange', recheckWhenVisible))
+  onUnmounted(() => document.removeEventListener('visibilitychange', recheckWhenVisible))
+
   watch(() => resolve(source), load, { immediate: true })
-  return { loading, saving, testing, error, feedback, linked, linkedAt, linkedByName, botUsername, groups, toggle, sendTest, unlink, toggleReminder, reminders, asFlags}
+  return { loading, saving, testing, error, feedback, linked, linkedAt, linkedByName, botUsername, groups, toggle, sendTest, unlink, toggleReminder, reminders, asFlags, recheck }
 }
 
 // ---------------------------------------------------------------- "Recent updates" feed
