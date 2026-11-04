@@ -784,6 +784,31 @@ a.agenda-item:hover {
     outline-offset: 2px;
 }
 
+/* Side by side: the day's list is as tall as the month and scrolls on its own,
+   so a busy day doesn't stretch the page and carry the month away with it */
+@media (min-width: 1100.02px) {
+    .calendar-side {
+        position: relative;
+        align-self: stretch;
+    }
+
+    .calendar-side .agenda {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .agenda-list {
+        flex: 1;
+        min-height: 0;
+        margin-right: -8px;
+        padding-right: 8px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+}
+
 @media (max-width: 1100px) {
     .calendar-layout {
         grid-template-columns: 1fr;

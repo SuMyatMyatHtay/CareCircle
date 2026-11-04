@@ -124,3 +124,27 @@ test('shows every family\'s tasks, like My tasks, and can narrow to one family',
   await items.click()
   await expect(page).toHaveURL(new RegExp(`/families/${ids.otherFamily}/tasks/`))
 })
+
+test('a busy day scrolls inside its own list, so the month stays in place', async ({ page, isMobile, isolatedData }) => {
+  test.skip(isMobile, 'Phones show the list under the month, with the page scrolling')
+  await login(page)
+  const api = await authenticatedApi(page, isolatedData.apiURL)
+  const { day, at } = tomorrow()
+  for (let hour = 8; hour < 20; hour++) {
+    expect((await api(`/families/${ids.family}/tasks`, { method: 'POST', data: { title: `Errand at ${hour}`, category: 'errand', startAt: at(hour) } })).status()).toBe(201)
+  }
+
+  const agenda = await openDay(page, day)
+  await expect(agenda.locator('.agenda-item')).toHaveCount(12)
+  const sizes = await page.evaluate(() => {
+    const list = document.querySelector('[data-testid="calendar-agenda"] .agenda-list')
+    const month = document.querySelector('.month-card').getBoundingClientRect()
+    const side = document.querySelector('[data-testid="calendar-agenda"]').getBoundingClientRect()
+    return { scrolls: list.scrollHeight > list.clientHeight, sideBottom: side.bottom, monthBottom: month.bottom }
+  })
+  // The list is no taller than the month, and scrolls for the rest
+  expect(sizes.scrolls).toBe(true)
+  expect(Math.round(sizes.sideBottom)).toBeLessThanOrEqual(Math.round(sizes.monthBottom))
+  await agenda.locator('.agenda-item').last().scrollIntoViewIfNeeded()
+  await expect(agenda.locator('.agenda-item').last()).toBeInViewport()
+})
