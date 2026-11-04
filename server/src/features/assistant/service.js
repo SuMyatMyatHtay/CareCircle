@@ -199,7 +199,7 @@ export async function chat({ body, familyId, familyName, userId, memberRole, gen
   const memberIds = family?.members.map(member => member.userId) || []
   const members = await User.find({ _id: { $in: memberIds } }).select('name').lean()
   const context = { family: family.name || familyName, userId, role: currentMember.role,
-    permissions: { taskDeletion: 'admin_or_creator', recipientDeletion: family.recipientDeletion || 'admin',
+    permissions: { canDeleteFamily: currentMember.role === 'admin', taskDeletion: 'admin_or_creator', recipientDeletion: family.recipientDeletion || 'admin',
       canRemoveRecipients: canRemoveRecipient(family, userId) },
     selectedTask: selectedTask ? { ...taskSummary(selectedTask, recipients), canDelete: canDeleteFamilyTask(selectedTask, family, userId) } : null,
     members: members.map(member => ({ id: id(member), name: member.name })),
