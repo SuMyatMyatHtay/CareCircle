@@ -6,6 +6,9 @@ const userSchema = new mongoose.Schema({
   profilePicture: { type: String, default: '' },
   phone: { type: String, default: '' },
   preferredLang: { type: String, default: 'en' },
+  // Light/dark theme, saved with the account so it follows the user to every device.
+  // null = never chosen: the client then keeps (and uploads) the browser's own choice.
+  appearance: { type: String, enum: ['light', 'dark', 'system', null], default: null },
   telegramUsername: { type: String, trim: true, default: '' },
   isCaretaker: { type: Boolean, default: false },
   tokenVersion: { type: Number, default: 0 },

@@ -129,6 +129,26 @@ describe('Family APIs with Express, authentication and a real isolated MongoDB',
     assert.equal((await request('/auth/me')).data.user.preferredLang, 'zh')
   })
 
+  it('saves the theme with the account so it follows the user to other devices', async () => {
+    assert.equal((await request('/auth/me')).data.user.appearance, null)
+    for (const appearance of ['blue', '', null, 42]) {
+      assert.equal((await request('/auth/me/appearance', { method: 'PATCH', body: { appearance } })).status, 400)
+    }
+    assert.equal((await request('/auth/me/appearance', { method: 'PATCH', authenticated: false, body: { appearance: 'dark' } })).status, 401)
+    const saved = await request('/auth/me/appearance', { method: 'PATCH', body: { appearance: 'dark' } })
+    assert.equal(saved.status, 200)
+    assert.equal(saved.data.user.appearance, 'dark')
+    assert.equal((await User.findById(ids.alex)).appearance, 'dark')
+    // A fresh sign-in (another device) gets it back, and a profile save keeps it
+    const login = await request('/auth/login', { method: 'POST', authenticated: false, body: { email: accounts.alex, password } })
+    assert.equal(login.data.user.appearance, 'dark')
+    const current = (await request('/auth/me')).data.user
+    assert.equal((await request('/auth/me', { method: 'PATCH', body: { ...current, name: 'Alex T' } })).status, 200)
+    assert.equal((await request('/auth/me')).data.user.appearance, 'dark')
+    // Only the signed-in user's own account changes
+    assert.equal((await User.findById(ids.jasmine)).appearance, null)
+  })
+
   it('revokes a logged-out token before it can read the family again', async () => {
     assert.equal((await request('/auth/logout', { method: 'POST' })).status, 200)
     assert.equal((await request(`${family}/members`)).status, 401)

@@ -156,3 +156,50 @@ test('the phone companion can find directions, reveal updates, and end and resum
   await page.getByRole('tab', { name: /^In progress/ }).click()
   await expect(page.getByText('Physio at TTSH', { exact: true })).toBeVisible()
 })
+
+test('a task started without "needs transport" can still continue as a trip with updates', async ({ page }) => {
+  const { default: Task } = await import('../../server/src/features/tasks/TaskModel.js')
+  await Task.updateOne({ _id: ids.tripTask }, { $set: { status: 'in_progress', needsTransit: false } })
+  await login(page, 'alex')
+  await page.goto(`/families/${ids.family}/tasks/${ids.tripTask}`)
+  await page.getByRole('button', { name: 'Continue the trip' }).filter({ visible: true }).click()
+  await expect(page).toHaveURL(new RegExp(`/transit/${ids.family}/${ids.tripTask}$`))
+  await page.getByRole('button', { name: 'Start the trip', exact: true }).filter({ visible: true }).click()
+  await page.getByRole('button', { name: 'Departed home', exact: true }).click()
+  await expect(timeline(page).first()).toHaveText('Departed home')
+
+  // The family sees the update on the task page too
+  await page.goto(`/families/${ids.family}/tasks/${ids.tripTask}`)
+  await expect(page.getByText('Departed home').filter({ visible: true }).first()).toBeVisible()
+})
+
+test('the family follows the live location, and their map keeps its zoom as the person moves', async ({ page, request, tripData, context }) => {
+  test.setTimeout(90000)
+  // Map pictures load (blank), so the zoom can be read from their addresses (.../z/x/y.png)
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64')
+  await context.route('https://www.onemap.gov.sg/**', route => route.fulfill({ body: png, contentType: 'image/png' }))
+
+  const loginAlex = await request.post(`${tripData.apiURL}/auth/login`, { data: { email: accounts.alex, password } })
+  const auth = { Authorization: `Bearer ${(await loginAlex.json()).token}` }
+  const task = `${tripData.apiURL}/families/${ids.family}/tasks/${ids.tripTask}`
+  const shareLocation = (lat) => request.patch(`${task}/transit/location`, { headers: auth, data: { lat, lng: TTSH.lng } })
+  expect((await request.post(`${task}/start`, { headers: auth })).ok()).toBe(true)
+  expect((await shareLocation(1.3300)).ok()).toBe(true) // about 1 km north of TTSH
+
+  await login(page, 'jasmine')
+  await page.goto(`/transit/${ids.family}/${ids.tripTask}`)
+  const map = page.locator('.onemap').filter({ visible: true })
+  await expect(map.locator('.person-pin')).toBeVisible()
+  const zoom = async () => (await map.locator('.tiles img').first().getAttribute('src')).split('/').at(-3)
+  const first = await zoom()
+
+  // Alex walks towards TTSH; Jasmine's page picks it up on its next refresh (every 10 s)
+  for (const lat of [1.3290, 1.3280, 1.3270]) {
+    await new Promise(resolve => setTimeout(resolve, 1500))
+    expect((await shareLocation(lat)).ok()).toBe(true)
+  }
+  await page.waitForTimeout(12000)
+  expect(await zoom()).toBe(first)
+  await expect(map.locator('.person-pin')).toBeVisible()
+  await expect(page.getByLabel('Your own update', { exact: true })).toHaveCount(0) // following, not posting
+})

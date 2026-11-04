@@ -98,6 +98,7 @@ Fields marked required must be enforced in the Mongoose schema, not only on the 
 | passwordHash | String | required, bcrypt; never returned by the API (`select: false`) |
 | phone | String | optional |
 | preferredLang | String | default `en`; app language code (`en`, `zh`, `ms`, `ta`) used for Azure Translator |
+| appearance | String | `light`, `dark`, `system` or `null` (never chosen); the account's theme, so it follows the user to every device |
 | telegramUsername | String | optional, for @mentions in group messages |
 
 Indexes: `{ email: 1 }` unique.

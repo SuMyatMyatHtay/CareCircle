@@ -9,8 +9,8 @@ import './auth-design.css'
     <div class="cc-auth-frame">
       <aside class="cc-auth-hero" aria-label="About CareCircle">
         <RouterLink class="cc-auth-brand" to="/login" aria-label="CareCircle login">
-          <span class="cc-auth-mark" aria-hidden="true">♡</span>
-          <span>Care<span class="cc-brand-accent">Circle</span><small>Care together, closer always</small></span>
+          <BrandLogo class="cc-auth-logo" />
+          <span><span class="cc-auth-wordmark">CareCircle</span><small>Care together, closer always</small></span>
         </RouterLink>
         <div class="cc-hero-body">
           <div class="cc-hero-copy">
@@ -34,7 +34,7 @@ import './auth-design.css'
       <section class="cc-auth-main" aria-label="Account access">
         <div class="cc-auth-mobile-brand">
           <RouterLink class="cc-auth-brand" to="/login"
-            ><span class="cc-auth-mark">♡</span><span>Care<span class="cc-brand-accent">Circle</span></span></RouterLink
+            ><BrandLogo class="cc-auth-logo" /><span class="cc-auth-wordmark">CareCircle</span></RouterLink
           >
         </div>
         <div class="cc-auth-form">

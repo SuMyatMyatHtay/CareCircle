@@ -18,7 +18,8 @@ const props = defineProps({
     isPosting: { type: Boolean, default: false },
     actionError: { type: String, default: '' },
     notice: { type: String, default: '' },
-    liveSpot: { type: Object, default: null },    // { lat, lng, at } while the trip is live
+    liveSpot: { type: Object, default: null },
+    routeAhead: { type: Array, default: () => [] }, // road from the person to the place (green line)    // { lat, lng, at } while the trip is live
     locationNote: { type: String, default: '' },  // companion only: "Sharing your location…"
     liveCaption: { type: String, default: '' },   // "Live · updated 1:42 PM" or "Location paused · …"
     canResume: { type: Boolean, default: false }, // companion, after an accidental End transit
@@ -144,6 +145,7 @@ function safelyHome() {
                     :live-lng="liveSpot?.lng ?? null"
                     :live-label="companionFirst"
                     :trail="trail"
+                    :route="routeAhead"
                     :live-time="liveTime"
                     :live-note="liveNote"
                     :label="liveSpot ? (liveCaption || `Live · updated ${time(liveSpot.at)}`) : trail.length > 1 ? 'Route travelled' : (task.location?.name || 'Destination')"

@@ -138,30 +138,14 @@
 
 }
 
-.cc-auth-mark {
-
-  width: 36px;
-
-  height: 36px;
-
-  border: 2px solid var(--theme-accent-border, #60b68a);
-
-  border-radius: 50%;
-
-  display: grid;
-
-  place-items: center;
-
-  color: var(--theme-danger, #f29999);
-
-  font-size: 32px;
-
-  font-weight: 450;
-
-  line-height: 1;
-
-  flex: none;
-
+.cc-auth-brand .cc-auth-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+}
+/* The whole name in the logo's green (Concept 6) */
+.cc-auth-wordmark {
+  color: var(--theme-green, #3a7a50);
 }
 
 .cc-brand-accent {

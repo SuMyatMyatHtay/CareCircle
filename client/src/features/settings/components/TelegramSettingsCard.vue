@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import SectionCard from '../../../components/common/SectionCard.vue'
 import NotificationToggle from './NotificationToggle.vue'
 import { useFamilyWorkspace } from '../../family/composables/useFamilyWorkspace.js'
@@ -13,11 +13,11 @@ const props = defineProps({
 const emit = defineEmits(['change'])
 const workspace = useFamilyWorkspace()
 const events = [
-  { key: 'taskPosted', label: 'A task is posted' },
+  { key: 'taskPosted', label: 'A task is posted, edited or removed' },
   { key: 'taskClaimed', label: 'Someone claims or gives back a task' },
   { key: 'transitMilestone', label: 'A transit milestone is marked' },
-  { key: 'careNote', label: 'A note or medication change is added' },
-  { key: 'taskCompleted', label: 'A task is completed' },
+  { key: 'careNote', label: 'A care note is added, edited or deleted, or medication changes' },
+  { key: 'taskCompleted', label: 'A task is started, completed or cancelled' },
 ]
 const reminders = [
   { key: 'beforeTask', label: 'Remind me 1 hour before a task I’ve claimed' },
@@ -29,10 +29,19 @@ const familyId = computed(() => (props.preview ? '' : workspace.selectedFamilyId
 const live = computed(() => Boolean(familyId.value))
 const isAdmin = computed(() => workspace.isAdmin.value)
 const telegram = useTelegramSettings(() => familyId.value)
-const { loading, saving, testing, error, feedback, linked, linkedAt, linkedByName, groups } = telegram
+const { loading, saving, testing, error, feedback, linked, linkedAt, linkedByName, botUsername, groups } = telegram
  
 const isOn = (key) => (live.value ? Boolean(groups.value[key]) : Boolean(props.preferences[key]))
-const canEdit = computed(() => (live.value ? isAdmin.value && !loading.value && !saving.value : props.preview))
+// Nothing is sent without a linked group, so its switches stay locked until then
+const canEdit = computed(() =>
+  live.value ? isAdmin.value && linked.value && !loading.value && !saving.value : props.preview,
+)
+const lockReason = computed(() => {
+  if (!live.value || loading.value) return ''
+  if (!linked.value) return 'Link a Telegram group first to choose what gets sent.'
+  if (!isAdmin.value) return 'Only family admins can change Telegram settings.'
+  return ''
+})
  
 function onChange(key, value) {
   if (live.value) telegram.toggle(key, value)
@@ -64,7 +73,23 @@ const summary = computed(() => {
   return 'No Telegram group is linked yet.'
 })
 const showHowToLink = computed(() => props.preview || (live.value && !loading.value && !linked.value))
- 
+// Opens Telegram to pick a group; Telegram adds the bot and sends it the invite code
+const addToGroupUrl = computed(() =>
+  live.value && props.inviteCode
+    ? `https://t.me/${botUsername.value}?startgroup=${encodeURIComponent(props.inviteCode)}`
+    : '',
+)
+const copied = ref(false)
+async function copyCommand() {
+  try {
+    await navigator.clipboard.writeText(`/link ${props.inviteCode}`)
+    copied.value = true
+    setTimeout(() => { copied.value = false }, 2000)
+  } catch {
+    // No clipboard access: the command is still on screen to type
+  }
+}
+
 function confirmUnlink() {
   if (window.confirm('Stop sending CareCircle updates to this Telegram group?')) telegram.unlink()
 }
@@ -84,14 +109,38 @@ function onReminderChange(key, value) {
       </span>
     </template>
     <p class="care-muted care-small">{{ summary }}</p>
-    <p v-if="showHowToLink" class="care-muted care-tiny">
-      To link a new group: add @CareCircleBot, then send /link {{ inviteCode }}
-    </p>
+    <div v-if="showHowToLink" class="care-telegram-link">
+      <a
+        v-if="addToGroupUrl"
+        :href="addToGroupUrl"
+        target="_blank"
+        rel="noopener"
+        class="care-button care-telegram-add"
+        data-testid="telegram-add-to-group"
+      >
+        <i class="bi bi-telegram" aria-hidden="true"></i> Add to Telegram group
+      </a>
+      <p v-if="addToGroupUrl" class="care-muted care-tiny">
+        On a phone: pick your family group and it links by itself, then come back here.
+      </p>
+      <!-- Telegram Desktop ignores the group picked from the button, so computers add the bot by hand -->
+      <p class="care-muted care-tiny">
+        {{ addToGroupUrl ? 'On a computer, or if it opens a chat with the bot: add' : 'To link a new group: add' }}
+        @{{ botUsername }} to the group, then send:
+      </p>
+      <div v-if="inviteCode" class="care-telegram-command">
+        <code>/link {{ inviteCode }}</code>
+        <button type="button" class="care-text-button" data-testid="telegram-copy-link" @click="copyCommand">
+          {{ copied ? 'Copied' : 'Copy' }}
+        </button>
+      </div>
+    </div>
     <p v-if="preview" class="care-preview-disclaimer">
       Sample preferences are saved on this device. No Telegram messages are
       sent.
     </p>
     <h3 class="care-settings-label">SEND TO TELEGRAM WHEN…</h3>
+    <p v-if="lockReason" class="care-muted care-tiny" data-testid="telegram-lock-reason">{{ lockReason }}</p>
     <NotificationToggle
       v-for="option in events"
       :key="option.key"
@@ -125,6 +174,34 @@ function onReminderChange(key, value) {
 </template>
 
 <style scoped>
+.care-telegram-link {
+  display: grid;
+  justify-items: start;
+  gap: 0.35rem;
+  margin: 0.75rem 0 0.5rem;
+}
+
+.care-telegram-command {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--theme-border, #dfe3e8);
+  border-radius: 10px;
+}
+
+.care-telegram-command code {
+  color: inherit;
+  font-size: 0.9rem;
+}
+
+.care-telegram-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+}
+
 .care-telegram-actions {
   display: flex;
   flex-wrap: wrap;

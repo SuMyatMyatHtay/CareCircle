@@ -1,6 +1,8 @@
 // POST /api/integrations/telegram/webhook (what happens when someone types in the family group).
 // Webhook commands:
 //   /link <inviteCode>   run in the family's group: connects the group to the family
+//   /start <inviteCode>  the same, sent by Telegram itself when the bot is added through
+//                        the "Add to Telegram" button (t.me/<bot>?startgroup=<inviteCode>)
 //   /unlink              run in a linked group: disconnects it
 //   /start, /help        short instructions
 import { timingSafeEqual } from 'node:crypto'
@@ -66,9 +68,8 @@ function isValidWebhookSecret(req) {
 // ---------------------------------------------------------------- Webhook
 const HELP = [
   'Hi! I send CareCircle updates to your family group.',
-  '1. Open Family settings in CareCircle and copy your invite code.',
-  '2. Add me to your family group.',
-  '3. In the group, send: /link YOURCODE',
+  'In CareCircle, open Family settings and tap "Add to Telegram group", then pick your group.',
+  'Or add me to the group yourself and send: /link YOURCODE',
 ].join('\n')
  
 async function reply(chatId, text) {
@@ -90,9 +91,21 @@ async function findLinker(family, username) {
   }).select('_id')
 }
  
+// Steps for adding the bot by hand, for Telegram apps where the "Add to Telegram group"
+// button only opens this private chat (Telegram Desktop, for example)
+function addByHandSteps(code) {
+  const bot = process.env.TELEGRAM_BOT_USERNAME ? `@${process.env.TELEGRAM_BOT_USERNAME}` : 'me'
+  return [
+    'To connect your family group:',
+    `1. Open the group, tap its name, then Add members and choose ${bot}.`,
+    '2. Send this message in the group:',
+    `/link ${code || 'YOURCODE'}`,
+  ].join('\n')
+}
+
 async function linkGroup(chat, from, code) {
   if (!GROUP_TYPES.includes(chat.type)) {
-    return reply(chat.id, 'Please add me to your family group, then send /link YOURCODE there.')
+    return reply(chat.id, addByHandSteps(String(code || '').trim().toUpperCase()))
   }
   const inviteCode = String(code || '').trim().toUpperCase()
   if (!inviteCode) {
@@ -120,17 +133,26 @@ async function unlinkGroup(chat) {
     : 'This group is not linked to a family.')
 }
  
+const isThisBot = (member) => Boolean(member?.is_bot && process.env.TELEGRAM_BOT_USERNAME &&
+  member.username?.toLowerCase() === process.env.TELEGRAM_BOT_USERNAME.toLowerCase())
+
 async function handleUpdate(update) {
   const message = update?.message
   if (!message?.chat) return
   // The group became a supergroup: Telegram posts this in the old group and the new one
   if (message.migrate_to_chat_id) return moveGroup(message.chat.id, message.migrate_to_chat_id)
   if (message.migrate_from_chat_id) return moveGroup(message.migrate_from_chat_id, message.chat.id)
+  // Added to a group by hand: say what to send, since the group isn't linked yet
+  if (message.new_chat_members?.some(isThisBot)) {
+    return reply(message.chat.id, 'Hi! To get CareCircle updates here, send /link followed by your invite code (Family settings in CareCircle).')
+  }
   if (!message.text) return
   const [first, ...rest] = message.text.trim().split(/\s+/)
   const command = first.toLowerCase().replace(/@.*$/, '') // "/link@CareCircleBot" -> "/link"
   if (command === '/link') return linkGroup(message.chat, message.from, rest[0])
   if (command === '/unlink') return unlinkGroup(message.chat)
+  // The "Add to Telegram group" button: Telegram sends "/start@Bot CODE" in the chosen group
+  if (command === '/start' && rest[0]) return linkGroup(message.chat, message.from, rest[0])
   if (command === '/start' || command === '/help') return reply(message.chat.id, HELP)
 }
  

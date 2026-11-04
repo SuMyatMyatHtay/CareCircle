@@ -1,12 +1,58 @@
+// Light/dark theme. The account is the source of truth (User.appearance on the server),
+// so the choice follows the user to every device. localStorage keeps a copy, so
+// index.html can apply the theme before Vue loads and there is no light flash.
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { updateMyAppearance } from '../../auth/services/authApi.js'
+
+const KEY = 'carecircle:appearance'
+const CHOICES = ['light', 'dark', 'system']
 
 const choice = ref(readChoice())
 function readChoice() {
   try {
-    const value = localStorage.getItem('carecircle:appearance')
-    return ['light', 'dark', 'system'].includes(value) ? value : 'light'
+    const value = localStorage.getItem(KEY)
+    return CHOICES.includes(value) ? value : 'light'
   } catch {
     return 'light'
+  }
+}
+function hasSavedChoice() {
+  try {
+    return CHOICES.includes(localStorage.getItem(KEY))
+  } catch {
+    return false
+  }
+}
+function saveOnDevice(value) {
+  try {
+    localStorage.setItem(KEY, value)
+  } catch {
+    /* Keep the in-memory preference. */
+  }
+}
+function saveToAccount(value) {
+  let signedIn = false
+  try {
+    signedIn = Boolean(sessionStorage.getItem('token'))
+  } catch {
+    /* No session storage: nothing to save to. */
+  }
+  // If this fails the choice stays on this device; the next change tries again.
+  if (signedIn) updateMyAppearance(value).catch(() => {})
+}
+
+// Called with the signed-in user from /auth/me. Runs once per account per page load,
+// so a reply that was already on its way can't undo a change made just now.
+let syncedUserId = null
+export function applyAccountAppearance(user) {
+  if (!user?.id || user.id === syncedUserId) return
+  syncedUserId = user.id
+  if (CHOICES.includes(user.appearance)) {
+    choice.value = user.appearance
+    saveOnDevice(user.appearance)
+  } else if (hasSavedChoice()) {
+    // Never chosen on the account yet: keep what this browser already uses
+    saveToAccount(choice.value)
   }
 }
 export function useAppearance() {
@@ -25,13 +71,10 @@ export function useAppearance() {
   onMounted(() => media.addEventListener('change', syncDevice))
   onUnmounted(() => media.removeEventListener('change', syncDevice))
   function setAppearance(value) {
-    if (!['light', 'dark', 'system'].includes(value)) return
+    if (!CHOICES.includes(value)) return
     choice.value = value
-    try {
-      localStorage.setItem('carecircle:appearance', value)
-    } catch {
-      /* Keep the in-memory preference. */
-    }
+    saveOnDevice(value)
+    saveToAccount(value)
   }
   return { appearance: choice, theme, setAppearance }
 }
@@ -45,7 +88,7 @@ export function useAppAppearance() {
     document.documentElement.dataset.bsTheme = theme
   }, { immediate: true, flush: 'sync' })
   function syncStorage(event) {
-    if (event.key === 'carecircle:appearance' || event.key === null)
+    if (event.key === KEY || event.key === null)
       choice.value = readChoice()
   }
   onMounted(() => window.addEventListener('storage', syncStorage))

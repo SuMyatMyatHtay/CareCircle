@@ -169,14 +169,14 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
                 <div class="calendar-filters">
                     <label v-if="families.length > 1" class="recipient-filter">
                         <span>Family</span>
-                        <select v-model="familyScope" data-testid="calendar-family">
+                        <select class="form-select" v-model="familyScope" data-testid="calendar-family">
                             <option value="all">All families</option>
                             <option v-for="family in families" :key="family.id" :value="family.id">{{ family.name }}</option>
                         </select>
                     </label>
                     <label class="recipient-filter">
                         <span>Show</span>
-                        <select v-model="recipientFilter" data-testid="calendar-filter">
+                        <select class="form-select" v-model="recipientFilter" data-testid="calendar-filter">
                             <option value="all">Everyone</option>
                             <option v-for="person in people" :key="person.id" :value="person.id">{{ person.name }}</option>
                             <option value="household">Household tasks</option>
@@ -408,10 +408,12 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
 
 .recipient-filter select {
     max-width: 220px;
-    padding: 8px 12px;
+    /* Room on the right for Bootstrap's arrow (form-select), so it isn't pressed to the edge */
+    padding: 8px 40px 8px 12px;
     border: 1px solid var(--theme-border, #dfe3e8);
     border-radius: 12px;
-    background: var(--theme-panel, #fff);
+    background-color: var(--theme-panel, #fff);
+    background-position: right 14px center;
     color: var(--theme-text, #30332f);
 }
 
@@ -666,7 +668,6 @@ const legend = ['open', 'missed', 'claimed', 'in_progress', 'completed', 'appoin
     gap: 6px 16px;
     margin: 0;
     padding: 8px 16px 14px;
-    padding: 0;
     list-style: none;
     color: var(--theme-muted, #717b8e);
     font-size: 12px;
@@ -801,6 +802,31 @@ a.agenda-item:hover {
 .calendar-page a:focus-visible {
     outline: 2px solid var(--theme-green, #2d7d43);
     outline-offset: 2px;
+}
+
+/* Side by side: the day's list is as tall as the month and scrolls on its own,
+   so a busy day doesn't stretch the page and carry the month away with it */
+@media (min-width: 1100.02px) {
+    .calendar-side {
+        position: relative;
+        align-self: stretch;
+    }
+
+    .calendar-side .agenda {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .agenda-list {
+        flex: 1;
+        min-height: 0;
+        margin-right: -8px;
+        padding-right: 8px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
 }
 
 @media (max-width: 1100px) {

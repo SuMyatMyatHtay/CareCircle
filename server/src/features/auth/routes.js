@@ -3,6 +3,7 @@ import { login, logout, getCurrentUser, updateProfile } from './controller.js'
 import { register } from './register.controller.js'
 import { updatePet } from './pet.controller.js'
 import { updateAvatar } from './avatar.controller.js'
+import { updateAppearance } from './appearance.controller.js'
 import { requireAuth } from '../../middleware/requireAuth.js'
 import { getPublicProfile } from './public-profile.controller.js'
 import { passwordResetHandlers, resetRateLimit } from './password-reset.js'
@@ -20,4 +21,5 @@ router.post('/logout', requireAuth, logout)
 router.patch('/me', requireAuth, updateProfile)
 router.patch('/me/pet', requireAuth, updatePet)
 router.patch('/me/avatar', requireAuth, updateAvatar)
+router.patch('/me/appearance', requireAuth, updateAppearance) // { appearance: 'light' | 'dark' | 'system' }
 export default router
