@@ -2,8 +2,9 @@
 // Owner: Chaithra (E). Matches Figma frame "10 · My tasks" (CareCircle Wireframe).
 // Every task I've claimed, across all my families: Upcoming / In progress / Completed,
 // step-by-step progress, and a "due soon" flag for tasks starting within 24 hours.
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import MyTaskCard from '../components/MyTaskCard.vue'
 import WeekStrip from '../components/WeekStrip.vue'
 import MyTasksMobile from '../components/MyTasksMobile.vue'
@@ -12,6 +13,7 @@ import { getMyTasks, startTask, unclaimTask, completeTask, getErrorMessage } fro
 import AddToCalendar from '../../transit/components/AddToCalendar.vue'
 import GoogleCalendarSync from '../components/GoogleCalendarSync.vue'
 import { useTabIndicator } from '../../../composables/useTabIndicator.js'
+import { queryKeys } from '../../../services/queryClient.js'
 
 const router = useRouter()
 const isMobile = useIsMobile()
@@ -24,12 +26,26 @@ const TABS = [
 const DUE_SOON_MS = 24 * 60 * 60 * 1000
 const FAMILY_TONES = ['green', 'purple', 'blue', 'orange']
 
-const tasks = ref([])
+// The cached list shows straight away, and every visit still fetches the latest in the
+// background (staleTime 0): someone may have changed or cancelled a task you're relying on.
+// TanStack Query also refetches when you come back to the browser tab.
+const queryClient = useQueryClient()
+const tasksQuery = useQuery({
+    queryKey: queryKeys.myTasks(),
+    queryFn: () => getMyTasks({ status: 'claimed,in_progress,completed' }),
+    staleTime: 0
+})
+const tasks = computed(() => tasksQuery.data.value ?? [])
+const isLoading = computed(() => tasksQuery.isLoading.value)
+// A failed background refresh keeps the list on screen; only show the error if there's nothing to show
+const errorMessage = computed(() =>
+    tasksQuery.error.value && !tasksQuery.data.value ? getErrorMessage(tasksQuery.error.value) : ''
+)
+const loadTasks = () => tasksQuery.refetch()
+
 const activeTab = ref('claimed')
 const familyFilter = ref('all')
 const expandedId = ref('')
-const isLoading = ref(false)
-const errorMessage = ref('')
 const actionError = ref('')
 const notice = ref('')
 const busyTaskId = ref('')
@@ -94,25 +110,20 @@ function toggle(task) {
 // "Add to calendar" pop-up with the upcoming tasks (Google / Apple / Outlook on each)
 const calendarOpen = ref(false)
 
-async function loadTasks() {
-    isLoading.value = true
-    errorMessage.value = ''
-    try {
-        tasks.value = await getMyTasks({ status: 'claimed,in_progress,completed' })
-        if (!visibleTasks.value.some((t) => t._id === expandedId.value)) {
-            expandedId.value = visibleTasks.value[0]?._id || ''
-        }
-    } catch (error) {
-        errorMessage.value = getErrorMessage(error)
-    } finally {
-        isLoading.value = false
-    }
-}
+// Open the first task once. After that a refresh leaves your choice alone, unless the
+// open task has left this tab.
+let openedFirstTask = false
+watch(tasks, () => {
+    if (!tasksQuery.data.value) return
+    const openTaskLeft = expandedId.value && !visibleTasks.value.some((t) => t._id === expandedId.value)
+    if (!openedFirstTask || openTaskLeft) expandedId.value = visibleTasks.value[0]?._id || ''
+    openedFirstTask = true
+}, { immediate: true })
 
 // D's replies have family as a plain id, so keep the one we already have (with its name)
 function replaceTask(original, updated) {
     const merged = { ...original, ...updated, family: original.family }
-    tasks.value = tasks.value.map((t) => (t._id === original._id ? merged : t))
+    queryClient.setQueryData(queryKeys.myTasks(), (rows) => rows?.map((t) => (t._id === original._id ? merged : t)))
     return merged
 }
 
@@ -136,11 +147,12 @@ async function runAction(task, action) {
         } else if (action === 'give-back') {
             await unclaimTask(task.family._id, task._id)
             // No longer mine, so it leaves My Tasks
-            tasks.value = tasks.value.filter((t) => t._id !== task._id)
+            queryClient.setQueryData(queryKeys.myTasks(), (rows) => rows?.filter((t) => t._id !== task._id))
         } else if (action === 'complete') {
             const { task: updated } = await completeTask(task.family._id, task._id)
-            replaceTask(task, updated)
+            const merged = replaceTask(task, updated)
             selectTab('completed')
+            expandedId.value = merged._id
         }
     } catch (error) {
         actionError.value = getErrorMessage(error)
@@ -151,21 +163,15 @@ async function runAction(task, action) {
     }
 }
 
-// Keep "Due in 3 hours" accurate, and refresh when coming back to the browser tab
+// Keep "Due in 3 hours" accurate, and refresh when a task changes elsewhere on the page
 let clock = null
-function onVisible() {
-    if (document.visibilityState === 'visible') loadTasks()
-}
 onMounted(() => {
-    loadTasks()
     window.addEventListener('carecircle:task-updated', loadTasks)
     clock = setInterval(() => { now.value = Date.now() }, 60 * 1000)
-    document.addEventListener('visibilitychange', onVisible)
 })
 onUnmounted(() => {
     window.removeEventListener('carecircle:task-updated', loadTasks)
     clearInterval(clock)
-    document.removeEventListener('visibilitychange', onVisible)
 })
 </script>
 
