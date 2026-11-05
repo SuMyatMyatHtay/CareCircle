@@ -72,6 +72,10 @@ The first DB test downloads a MongoDB binary to its normal machine cache. The
 first browser installation downloads Chromium. Later runs reuse these binaries.
 E2E tests reserve port 5180 for a test-only Vite server; the API and MongoDB use
 free loopback ports. An existing server on 5180 is not reused or stopped.
+The E2E server disables HMR/file watching and isolates its dependency cache from
+the development server. This prevents a source edit from remounting a page and
+clearing transient feedback halfway through a test. Restart tests to use source
+edits; this setting does not change the normal development server.
 
 ## What each layer verifies
 

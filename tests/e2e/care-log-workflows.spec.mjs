@@ -248,9 +248,26 @@ test('notes open already translated into the reader\'s preferred language', asyn
 
   // Switch the preferred language to Chinese in Settings
   await page.goto('/settings')
-  if (isMobile) await page.getByLabel('Notes language', { exact: true }).selectOption('zh')
-  else await page.getByRole('button', { name: '中文', exact: true }).click()
-  await expect(page.getByText('Your language preference has been saved.', { exact: true }).filter({ visible: true })).toBeVisible()
+  const navigations = []
+  const onNavigation = request => {
+    if (request.isNavigationRequest() && request.frame() === page.mainFrame()) navigations.push(request.url())
+  }
+  page.on('request', onNavigation)
+  try {
+    const saving = page.waitForResponse(response =>
+      response.url().endsWith('/auth/me') && response.request().method() === 'PATCH')
+    if (isMobile) await page.getByLabel('Notes language', { exact: true }).selectOption('zh')
+    else await page.getByRole('button', { name: '中文', exact: true }).click()
+    const saved = await saving
+    expect(saved.status()).toBe(200)
+    expect((await saved.json()).user.preferredLang).toBe('zh')
+    await expect(page.getByText('Your language preference has been saved.', { exact: true }).filter({ visible: true })).toBeVisible()
+    // A successful save must not be followed by a document reload/remount that
+    // clears the feedback, as happened when the E2E server delivered HMR updates.
+    expect(navigations).toEqual([])
+  } finally {
+    page.off('request', onNavigation)
+  }
 
   // Every note now opens in Chinese, with the original still above it
   await page.goto(logPage)

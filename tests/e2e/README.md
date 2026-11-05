@@ -9,6 +9,14 @@ Run `npm run test:e2e` from the repository root. Playwright starts the real Vue
 app and Express API, with a fresh local MongoDB process and test-only accounts.
 It never runs `server/seed.js`, loads the server's `.env`, or uses a shared DB.
 
+The E2E Vite server disables HMR and file watching and uses a separate dependency
+cache under `.test-runtime/vite-cache/`. Source edits must not remount a page or
+erase save feedback during a browser workflow. Restart the test run to pick up
+edits; normal `npm run dev` still supports hot updates. A support regression test
+exercises Vite's real change handler on a temporary app and verifies that it does
+not send a browser update/reload. The preferred-language workflow also checks the
+real save response, visible feedback and absence of document navigation.
+
 `mobile-layout.spec.mjs` checks 320px and 390px layouts: task tabs, complete invite
 codes, member profile links, calendar filters, task-modal actions and form fields.
 It also checks drawer state across viewport resizes and the assistant's clearance

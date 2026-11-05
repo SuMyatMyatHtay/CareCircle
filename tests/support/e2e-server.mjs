@@ -1,6 +1,6 @@
 import { mkdir, writeFile, rm } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
-import { createServer } from '../../client/node_modules/vite/dist/node/index.js'
+import { createE2eViteServer } from './e2e-vite.mjs'
 import { app } from '../../server/src/app.js'
 import { startTestDatabase } from '../../server/test/support/database.js'
 import { resetFixtures } from '../../server/test/support/fixtures.js'
@@ -35,8 +35,8 @@ try {
   process.env.VITE_API_URL = apiURL
   await mkdir(runtime, { recursive: true })
   await writeFile(new URL('e2e.json', runtime), JSON.stringify({ uri: database.uri, apiURL }))
-  vite = await createServer({ root: `${root}client`, configFile: `${root}client/vite.config.js`,
-    server: { host: '127.0.0.1', port: 5180, strictPort: true } })
+  vite = await createE2eViteServer({ root: `${root}client`,
+    cacheDir: fileURLToPath(new URL('vite-cache/', runtime)) })
   await vite.listen()
   console.log('Isolated CareCircle E2E app ready at http://127.0.0.1:5180')
 } catch (error) {
