@@ -57,6 +57,27 @@ async function request(path, { user = admin, body = {}, authenticated = true, fa
 }
 const chat = (options = {}) => request('chat', { body: { messages: [{ role: 'user', content: 'Add an eye check for Grandpa on Friday at 10:30 am at Eye Centre.' }] }, ...options })
 
+test('streaming chat emits real retry progress followed by the final reply', async t => {
+  let calls = 0
+  t.mock.method(globalThis, 'fetch', async () => {
+    if (++calls === 1) return new Response('', { status: 503 })
+    return new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: {
+      parts: [{ text: JSON.stringify({ intent: 'reply', message: 'Hello', suggestions: [] }) }]
+    } }] }))
+  })
+  const token = jwt.sign({ userId: admin, tokenVersion: 0 }, 'assistant-test-secret', { algorithm: 'HS256' })
+  const response = await nativeFetch(`${base}/families/${familyId}/assistant/chat`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/x-ndjson', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ messages: [{ role: 'user', content: 'Hi' }] })
+  })
+  assert.match(response.headers.get('content-type'), /application\/x-ndjson/)
+  const events = (await response.text()).trim().split('\n').map(line => JSON.parse(line))
+  assert.deepEqual(events[0], { type: 'retry', retry: 1, maxRetries: 5 })
+  assert.equal(events[1].type, 'result')
+  assert.equal(events[1].data.message, 'Hello')
+  assert.equal(calls, 2)
+})
+
 beforeEach(async t => {
   t.mock.method(Task, 'updateOne', async () => ({ matchedCount: 1, modifiedCount: 1 }))
   requestUserCounter++
@@ -258,7 +279,7 @@ test('missing keys, quota failures, malformed and blocked replies produce safe e
   delete process.env.GEMINI_API_KEY
   await assert.rejects(generateReply({ messages: [{ role: 'user', content: 'Hi' }], context: {} }), { status: 503 })
   process.env.GEMINI_API_KEY = 'test-only-never-real-key'; providerStatus = 429
-  await assert.rejects(generateReply({ messages: [{ role: 'user', content: 'Hi' }], context: {} }), error => error.status === 429 && !error.message.includes('test-only'))
+  await assert.rejects(generateReply({ messages: [{ role: 'user', content: 'Hi' }], context: {}, sleepImpl: async () => {} }), error => error.status === 429 && !error.message.includes('test-only'))
   providerStatus = 200; reply = { unexpected: true }
   await assert.rejects(generateReply({ messages: [{ role: 'user', content: 'Hi' }], context: {} }), { status: 502 })
   t.mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ candidates: [{ finishReason: 'SAFETY' }] }), { status: 200 }))

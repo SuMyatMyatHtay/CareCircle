@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "node --watch src/index.js",
     "seed": "node seed.js",
+    "seed:demo": "node seed-demo.js",
     "start": "node src/index.js"
   },
   "dependencies": {

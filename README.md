@@ -205,7 +205,7 @@ Core accounts, families, tasks and care profiles do not need optional providers.
 | Feature | Backend variables | Additional setup |
 | --- | --- | --- |
 | Email OTP | `RESEND_API_KEY`, `PASSWORD_RESET_FROM` | Verified sending domain; [setup guide](docs/PASSWORD-RESET.md) |
-| AI assistant | `GEMINI_API_KEY`, optional `GEMINI_MODEL` | Model access for your provider account |
+| AI assistant | `GEMINI_API_KEY`, optional `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL` | Model access for your provider account; fallback defaults to `gemini-3.8-flash` (`off` disables it) |
 | Translation | `AZURE_TRANSLATOR_KEY`, `AZURE_TRANSLATOR_REGION` | Matching Translator resource region |
 | Voice transcription | `GROQ_API_KEY` | Browser microphone permission; HTTPS or localhost |
 | Google Calendar sync | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | Calendar API, OAuth consent/test users and exact callback URI |

@@ -27,6 +27,7 @@ export function useAssistantChat(user) {
   const queryClient = useQueryClient()
   const messages = ref([]), input = ref(''), busy = ref(false), error = ref(''), retryable = ref(false)
   const selectedTaskId = ref('')
+  const retryProgress = ref(0)
   const editField = ref('')
   let selectingTask = false
   let version = 0, controller
@@ -35,6 +36,7 @@ export function useAssistantChat(user) {
     version++; controller?.abort()
     messages.value = []; input.value = ''; error.value = ''; busy.value = false; retryable.value = false
     selectedTaskId.value = ''; editField.value = ''; selectingTask = false
+    retryProgress.value = 0
   }
   watch([selectedFamilyId, () => toValue(user)?.id], reset)
   onBeforeUnmount(() => { version++; controller?.abort() })
@@ -42,6 +44,7 @@ export function useAssistantChat(user) {
     controller?.abort(); controller = new AbortController()
     const requestVersion = ++version, token = sessionStorage.getItem('token'), familyId = selectedFamilyId.value
     busy.value = true; error.value = ''; retryable.value = false
+    retryProgress.value = 0
     return { familyId, signal: controller.signal,
       current: () => requestVersion === version && token === sessionStorage.getItem('token') && familyId === selectedFamilyId.value,
       finish: () => {
@@ -58,7 +61,8 @@ export function useAssistantChat(user) {
     const request = begin()
     try {
       const result = await sendAssistantMessage(request.familyId, conversationPayload(messages.value), request.signal,
-        selectedTaskId.value ? { selectedTaskId: selectedTaskId.value, selectTask: selectingTask, ...(editField.value ? { editField: editField.value } : {}) } : {})
+        selectedTaskId.value ? { selectedTaskId: selectedTaskId.value, selectTask: selectingTask, ...(editField.value ? { editField: editField.value } : {}) } : {},
+        progress => { if (request.current()) retryProgress.value = progress.retry })
       if (!request.current()) return
       selectingTask = false
       editField.value = result.editField || ''
@@ -130,5 +134,5 @@ export function useAssistantChat(user) {
   }
   async function retry() { if (!busy.value && retryable.value && selectedFamilyId.value) await ask() }
   function stop() { controller?.abort() }
-  return { messages, input, busy, error, retryable, canSend, selectedFamilyId, selectedFamily, send, selectTask, confirm, dismiss, retry, reset, stop }
+  return { messages, input, busy, error, retryable, retryProgress, canSend, selectedFamilyId, selectedFamily, send, selectTask, confirm, dismiss, retry, reset, stop }
 }

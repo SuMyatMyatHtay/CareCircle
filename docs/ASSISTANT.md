@@ -2,6 +2,10 @@
 
 The floating mascot uses the signed-in user's saved dress-up appearance. Chat supports task search and confirmed proposals to create, edit, claim, assign, unclaim, start, complete, cancel or delete tasks. It asks for missing details before showing a confirmation card. Deletion requires a second confirmation. It does not provide medical advice.
 
+## Model fallback
+
+Generation switches to `GEMINI_FALLBACK_MODEL` after two consecutive HTTP 500/502/503/504 responses. The default fallback is `gemini-3.8-flash`; if that is already the primary model, the default fallback is `gemini-3.5-flash-lite`. Set the fallback to `off` to disable switching. Both models share the same API key, five-retry limit and 45-second deadline. Each new message starts with the primary model. Quota errors, network errors, invalid credentials, model access failures and malformed replies do not trigger model switching. Ensure the configured models support the response schema and are accessible to your Google project; fallback usage follows that model's pricing. No live provider request is made by automated tests.
+
 ## Ownership and task actions
 
 - Claim: claim an open, future family task for yourself. Overdue tasks cannot be claimed.
@@ -24,11 +28,12 @@ Add to **server/.env** (the backend's working directory):
 ```dotenv
 GEMINI_API_KEY=your-google-ai-studio-key
 GEMINI_MODEL=gemini-3.5-flash-lite
+GEMINI_FALLBACK_MODEL=gemini-3.8-flash
 ```
 
 Restart the backend after editing the environment. The downloaded `backend.env` file is not loaded automatically: copy the settings into `server/.env`. Keep the key out of frontend/VITE variables, commits, and chat messages. No extra SDK dependency is required; the server calls Google's REST API with Node's native fetch (Node 20+).
 
-The default model is configurable. Choose a structured-output text model available to your Google AI Studio project. Free-tier availability and quotas depend on the project; a 429 produces a helpful message without automatic retries. Current references: [structured output REST API](https://ai.google.dev/gemini-api/docs/generate-content/structured-output), [pricing and free tier](https://ai.google.dev/gemini-api/docs/pricing).
+The default model is configurable. Choose a structured-output text model available to your Google AI Studio project. Free-tier availability and quotas depend on the project; a 429 is retried within the deadline unless Retry-After requires a longer cooldown, and does not trigger model fallback. Current references: [structured output REST API](https://ai.google.dev/gemini-api/docs/generate-content/structured-output), [pricing and free tier](https://ai.google.dev/gemini-api/docs/pricing).
 
 ## Try it
 
@@ -50,7 +55,7 @@ Gemini returns a structured intent; it never receives database tools. The server
 
 Messages stay in browser memory and clear on family/account changes or a new chat. Requests are cancelled and late replies discarded on context changes. A bounded window of conversation and up to 80 recent/upcoming tasks plus 100 recipient names is sent to Gemini for context. Database searches can find tasks outside that snapshot and return up to 10 matching cards. Medical records, passwords, contact details, profile pictures and API credentials are excluded from the context. Task titles, locations and user messages can still contain personal information. The chat includes a data-use disclosure; Google's free tier may use submitted content to improve products, as described on its pricing page. Use sample data for a class demonstration.
 
-Chat requests have a per-user, per-server-process limit of 10/minute, a 45-second Gemini timeout, and bounded input/output. The client has a 55-second request deadline and a Stop waiting button. A deployment with multiple instances needs a shared rate limiter for a global quota. No chat transcript persistence, voice input, recurring tasks, location lookup or proactive reminders are implemented.
+Chat requests have a per-user, per-server-process limit of 10/minute, a shared 45-second Gemini deadline, and bounded input/output. Generation retries network failures and HTTP 429/500/502/503/504 up to five times after the initial attempt, waiting 1, 2, 4, 8 and 8 seconds plus up to 25% jitter. Retry-After is respected when it fits within the remaining deadline; longer cooldowns return the error without retrying. Invalid keys, permissions, model configuration and malformed replies are not retried. Retry logs contain only model, status, attempt and delay, never prompts, keys or provider bodies. Task confirmation writes are not retried by this policy. The chat client requests newline-delimited JSON events using Accept: application/x-ndjson: actual backend retry events update the visible Reconnecting to Gemini counter from 1/5 to 5/5, followed by a final result or error event. Clients without this Accept header retain the ordinary JSON response. Hosting proxies must allow streaming without buffering to show progress immediately. The client has a 55-second request deadline and a Stop waiting button; disconnecting cancels generation and backoff on the server. The deadline can stop a slow request before all five retries. A deployment with multiple instances needs a shared rate limiter for a global quota. No chat transcript persistence, voice input, recurring tasks, location lookup or proactive reminders are implemented.
 
 ## Validation
 
