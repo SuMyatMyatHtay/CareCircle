@@ -151,7 +151,7 @@ export function searchFilter(search, familyId) {
   return filter
 }
 
-export async function chat({ body, familyId, familyName, userId, memberRole, generate = generateReply }) {
+export async function chat({ body, familyId, familyName, userId, memberRole, generate = generateReply, onRetry, signal }) {
   const messages = validateConversation(body)
   let selectedTask = null
   let explicitEdit = null
@@ -214,7 +214,7 @@ export async function chat({ body, familyId, familyName, userId, memberRole, gen
       canStart: task.status === 'claimed' && id(task.claimedBy) === userId,
       canComplete: ['claimed', 'in_progress'].includes(task.status) && id(task.claimedBy) === userId,
       canCancel: ['open', 'claimed', 'in_progress'].includes(task.status) && (id(task.createdBy) === userId || id(task.claimedBy) === userId) })) }
-  const reply = explicitEdit || await generate({ messages, context: { ...context, editField: body.editField || null } })
+  const reply = explicitEdit || await generate({ messages, context: { ...context, editField: body.editField || null }, onRetry, signal })
   if (!reply.taskId && selectedTask && !['reply', 'search', 'create'].includes(reply.intent)) reply.taskId = id(selectedTask)
   if (reply.intent === 'update' && (!plain(reply.task) || !Object.keys(reply.task).length)) {
     if (reply.taskId) {

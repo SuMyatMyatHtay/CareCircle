@@ -6,7 +6,7 @@ import { useAssistantChat } from '../../assistant/composables/useAssistantChat.j
 const props = defineProps({ user: { type: Object, default: () => ({}) } })
 const opened = ref(false), launcher = ref(null), closeButton = ref(null), thread = ref(null)
 const chat = useAssistantChat(computed(() => props.user))
-const { messages, input, busy, error, retryable, canSend, selectedFamilyId, selectedFamily } = chat
+const { messages, input, busy, error, retryable, retryProgress, canSend, selectedFamilyId, selectedFamily } = chat
 const starters = ['What tasks are coming up this week?', 'Help me add a task', 'I want to update a task']
 const dateLabel = date => new Date(date).toLocaleString('en-SG', { timeZone: 'Asia/Singapore', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
 watch([messages, busy, error, opened], async () => {
@@ -50,7 +50,13 @@ watch(() => props.user?.id, () => { opened.value = false })
           <div v-if="index === messages.length - 1 && !busy && message.suggestions?.length" class="assistant-suggestions"><button v-for="suggestion in message.suggestions" :key="suggestion" type="button" @click="chat.send(suggestion)">{{ suggestion }}</button></div>
         </div>
         </TransitionGroup>
-        <div v-if="busy" class="assistant-thinking" role="status"><span class="assistant-dot"></span><span class="assistant-dot"></span><span class="assistant-dot"></span><span class="assistant-dots-static" aria-hidden="true">…</span><span class="visually-hidden">Working on it...</span><button type="button" class="assistant-stop" @click="chat.stop">Stop waiting</button></div>
+        <div v-if="busy" class="assistant-thinking" role="status" aria-live="polite">
+          <div class="assistant-loading-status">
+            <div class="assistant-loading-row"><span class="assistant-dot" aria-hidden="true"></span><span class="assistant-dot" aria-hidden="true"></span><span class="assistant-dot" aria-hidden="true"></span><span class="assistant-dots-static" aria-hidden="true">…</span><span class="assistant-loading-label">Loading…</span></div>
+            <small v-if="retryProgress" class="assistant-reconnecting">Reconnecting {{ retryProgress }}/5</small>
+          </div>
+          <button type="button" class="assistant-stop" @click="chat.stop">Stop waiting</button>
+        </div>
         <div v-if="error" class="assistant-error" role="alert">{{ error }}<button v-if="retryable" type="button" :disabled="busy" @click="chat.retry">Try again</button></div>
       </div>
       <footer class="assistant-composer">
@@ -131,6 +137,10 @@ watch(() => props.user?.id, () => { opened.value = false })
 .assistant-error { padding: 12px; border-radius: 12px; background: var(--theme-danger-soft, #fff0ed); color: var(--theme-danger, #a94442); font-size: 12px; }
 .assistant-error button { display: block; margin-top: 8px; border: 0; background: none; color: inherit; text-decoration: underline; padding: 0; }
 .assistant-thinking { display: flex; align-items: center; gap: 4px; padding: 14px; }
+.assistant-loading-status { display: flex; flex-direction: column; gap: 5px; }
+.assistant-loading-row { display: flex; align-items: center; gap: 4px; }
+.assistant-loading-label { margin-left: 5px; font-size: 13px; }
+.assistant-reconnecting { color: var(--theme-muted, #6d7b75); font-size: 11px; line-height: 1.4; }
 .assistant-dot { width: 6px; height: 6px; border-radius: 50%; background: #6d9c79; animation: assistant-pulse 1.2s ease-in-out infinite; }
 .assistant-dot:nth-child(2) { animation-delay: .2s; } .assistant-dot:nth-child(3) { animation-delay: .4s; }
 .assistant-dots-static { display: none; color: #6d9c79; font-weight: 700; }
